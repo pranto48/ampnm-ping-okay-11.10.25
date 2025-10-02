@@ -11,7 +11,16 @@
             <input type="text" name="ip" placeholder="IP Address" class="sm:col-span-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
             <input type="text" name="name" placeholder="Device Name" class="sm:col-span-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
             <select name="type" class="sm:col-span-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                <option value="server">Server</option> <option value="router">Router</option> <option value="switch">Switch</option> <option value="printer">Printer</option> <option value="nas">NAS</option> <option value="camera">Camera</option> <option value="other">Other</option>
+                <option value="server">Server</option>
+                <option value="router">Router</option>
+                <option value="switch">Switch</option>
+                <option value="firewall">Firewall</option>
+                <option value="printer">Printer</option>
+                <option value="nas">NAS</option>
+                <option value="camera">CC Camera</option>
+                <option value="ipphone">IP Phone</option>
+                <option value="punchdevice">Punch Device</option>
+                <option value="other">Other</option>
             </select>
             <button type="submit" class="sm:col-span-1 px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 focus:ring-2 focus:ring-cyan-500">
                 <i class="fas fa-plus mr-2"></i>Add Device
@@ -33,6 +42,7 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Device</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">IP Address</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Map</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Last Seen</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Actions</th>
@@ -91,6 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <tr data-id="${device.id}" class="border-b border-slate-700 hover:bg-slate-800/50">
                 <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-white">${device.name}</div><div class="text-sm text-slate-400 capitalize">${device.type}</div></td>
                 <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-slate-400 font-mono">${device.ip}</div></td>
+                <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-slate-400">${device.map_name}</div></td>
                 <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex items-center gap-2 text-xs leading-5 font-semibold rounded-full ${statusClass}"><div class="${statusIndicatorClass}"></div>${device.status}</span></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400">${lastSeen}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -126,25 +137,26 @@ document.addEventListener('DOMContentLoaded', function() {
         const { device, history } = await api.get('get_device_details', { id: deviceId });
         
         detailsModalTitle.textContent = `${device.name} (${device.ip})`;
-        const statusClass = device.status === 'online' ? 'text-green-400' : 'text-red-400';
         
         detailsModalContent.innerHTML = `
-            <div class="md:col-span-2 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                <h3 class="font-semibold text-white mb-3">Latency History (Last 20 Pings)</h3>
-                <canvas id="latencyChart"></canvas>
-            </div>
-            <div class="md:col-span-2 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                <h3 class="font-semibold text-white mb-3">Recent Activity</h3>
-                <div class="max-h-48 overflow-y-auto">
-                    <table class="min-w-full">
-                        ${history.map(h => `
-                            <tr class="border-b border-slate-700/50">
-                                <td class="py-2 pr-2 text-sm text-slate-400">${new Date(h.created_at).toLocaleString()}</td>
-                                <td class="py-2 px-2 text-sm ${h.success ? 'text-green-400' : 'text-red-400'}">${h.success ? 'Success' : 'Failed'}</td>
-                                <td class="py-2 pl-2 text-sm text-right">${h.avg_time}ms</td>
-                            </tr>
-                        `).join('') || '<tr><td colspan="3" class="text-center text-slate-500 py-4">No recent history</td></tr>'}
-                    </table>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <h3 class="font-semibold text-white mb-3">Latency History (Last 20 Pings)</h3>
+                    <div class="h-48"><canvas id="latencyChart"></canvas></div>
+                </div>
+                <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <h3 class="font-semibold text-white mb-3">Recent Activity</h3>
+                    <div class="max-h-48 overflow-y-auto">
+                        <table class="min-w-full">
+                            ${history.map(h => `
+                                <tr class="border-b border-slate-700/50">
+                                    <td class="py-2 pr-2 text-sm text-slate-400">${new Date(h.created_at).toLocaleString()}</td>
+                                    <td class="py-2 px-2 text-sm ${h.success ? 'text-green-400' : 'text-red-400'}">${h.success ? 'Success' : 'Failed'}</td>
+                                    <td class="py-2 pl-2 text-sm text-right">${h.avg_time}ms</td>
+                                </tr>
+                            `).join('') || '<tr><td colspan="3" class="text-center text-slate-500 py-4">No recent history</td></tr>'}
+                        </table>
+                    </div>
                 </div>
             </div>
         `;
@@ -180,12 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     addDeviceForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(addDeviceForm);
-        const deviceData = { name: formData.get('name'), ip: formData.get('ip'), type: formData.get('type'), enabled: true };
-        const newDevice = await api.post('create_device', deviceData);
-        devicesTableBody.insertAdjacentHTML('beforeend', renderDeviceRow(newDevice));
-        addDeviceForm.reset();
-        noDevicesMessage.classList.add('hidden');
+        alert("Please add devices from the Map page to assign them to a specific map.");
     });
 
     devicesTableBody.addEventListener('click', async (e) => {
@@ -204,9 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
             button.disabled = true;
             try {
                 await api.post('check_device', { id: deviceId });
-                const devices = await api.get('get_devices');
-                const updatedDevice = devices.find(d => d.id == deviceId);
-                if (updatedDevice) row.outerHTML = renderDeviceRow(updatedDevice);
+                await loadDevices();
             } catch (error) { console.error('Failed to check device:', error); }
             finally { button.disabled = false; icon.classList.remove('fa-spin'); }
         }
@@ -221,14 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     bulkCheckBtn.addEventListener('click', async () => {
-        const originalHtml = bulkCheckBtn.innerHTML;
-        bulkCheckBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Checking...';
-        bulkCheckBtn.disabled = true;
-        try {
-            await api.post('ping_all_devices', {});
-            await loadDevices();
-        } catch (error) { console.error('Failed to check all devices:', error); }
-        finally { bulkCheckBtn.innerHTML = originalHtml; bulkCheckBtn.disabled = false; }
+        alert("Bulk checking is performed from the Map page for a specific map.");
     });
 
     closeDetailsModal.addEventListener('click', () => detailsModal.classList.add('hidden'));

@@ -4,34 +4,18 @@
     #network-map-wrapper { position: relative; }
     #network-map { height: 75vh; background-color: #1e293b; border: 1px solid #334155; border-radius: 0.5rem; }
     #network-map-wrapper:fullscreen #network-map { height: 100vh; border-radius: 0; border: 0; }
-    #network-map-wrapper:fullscreen #map-controls { display: none; } /* Hide normal controls in fullscreen */
+    #network-map-wrapper:fullscreen #map-controls { display: none; }
 
     .vis-tooltip {
-        position: absolute;
-        visibility: hidden;
-        padding: 5px;
-        white-space: nowrap;
-        font-family: 'Inter', sans-serif;
-        font-size: 14px;
-        color: #ffffff;
-        background-color: #0f172a;
-        border: 1px solid #334155;
-        border-radius: 3px;
-        z-index: 10;
+        position: absolute; visibility: hidden; padding: 5px; white-space: nowrap;
+        font-family: 'Inter', sans-serif; font-size: 14px; color: #ffffff;
+        background-color: #0f172a; border: 1px solid #334155; border-radius: 3px; z-index: 10;
     }
     
     #status-legend {
-        position: absolute;
-        bottom: 1.25rem;
-        right: 1.25rem;
-        background-color: rgba(15, 23, 42, 0.8);
-        border: 1px solid #334155;
-        border-radius: 0.5rem;
-        padding: 0.75rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        z-index: 5;
+        position: absolute; bottom: 1.25rem; right: 1.25rem; background-color: rgba(15, 23, 42, 0.8);
+        border: 1px solid #334155; border-radius: 0.5rem; padding: 0.75rem;
+        display: flex; flex-direction: column; gap: 0.5rem; z-index: 5;
     }
     .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
     .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
@@ -90,7 +74,16 @@
                 <input type="text" id="deviceName" name="name" placeholder="Device Name" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
                 <input type="text" id="deviceIp" name="ip" placeholder="IP Address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
                 <select id="deviceType" name="type" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                    <option value="server">Server</option> <option value="router">Router</option> <option value="switch">Switch</option> <option value="printer">Printer</option> <option value="nas">NAS</option> <option value="camera">Camera</option> <option value="other">Other</option>
+                    <option value="server">Server</option>
+                    <option value="router">Router</option>
+                    <option value="switch">Switch</option>
+                    <option value="firewall">Firewall</option>
+                    <option value="printer">Printer</option>
+                    <option value="nas">NAS</option>
+                    <option value="camera">CC Camera</option>
+                    <option value="ipphone">IP Phone</option>
+                    <option value="punchdevice">Punch Device</option>
+                    <option value="other">Other</option>
                 </select>
             </div>
             <div class="flex justify-end gap-4 mt-6">
@@ -113,7 +106,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let nodes = new vis.DataSet([]);
     let edges = new vis.DataSet([]);
     let currentMapId = null;
-    let animationFrameId = null;
 
     const mapWrapper = document.getElementById('network-map-wrapper');
     const mapSelector = document.getElementById('mapSelector');
@@ -136,7 +128,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const iconMap = {
         server: '\uf233', router: '\uf637', switch: '\uf796', printer: '\uf02f',
-        nas: '\uf0a0', camera: '\uf030', other: '\uf108'
+        nas: '\uf0a0', camera: '\uf030', other: '\uf108', firewall: '\uf3ed',
+        ipphone: '\uf87d', punchdevice: '\uf2c2'
     };
     const statusColorMap = {
         online: '#22c55e', offline: '#ef4444', unknown: '#f59e0b'
@@ -189,38 +182,38 @@ document.addEventListener('DOMContentLoaded', function() {
             api.get('get_edges', { map_id: mapId })
         ]);
         
+        const deviceStatusMap = new Map(deviceData.map(d => [d.id, d.status]));
+
         const visNodes = deviceData.map(d => ({
             id: d.id,
             label: d.name,
             title: `${d.name}<br>${d.ip}<br>Status: ${d.status}`,
-            x: d.x,
-            y: d.y,
+            x: d.x, y: d.y,
             shape: 'icon',
             icon: {
-                face: "'Font Awesome 6 Free'",
-                weight: "900",
-                code: iconMap[d.type] || iconMap.other,
-                size: 50,
+                face: "'Font Awesome 6 Free'", weight: "900",
+                code: iconMap[d.type] || iconMap.other, size: 50,
                 color: statusColorMap[d.status] || statusColorMap.unknown
-            }
+            },
+            font: { color: 'white', size: 14 }
         }));
         nodes.clear();
         nodes.add(visNodes);
 
-        const visEdges = edgeData.map(e => ({
-            id: e.id,
-            from: e.source_id,
-            to: e.target_id,
-            dashes: true,
-            arrows: { to: { enabled: true, scaleFactor: 0.7 } }
-        }));
+        const visEdges = edgeData.map(e => {
+            const sourceStatus = deviceStatusMap.get(e.source_id);
+            const targetStatus = deviceStatusMap.get(e.target_id);
+            const isOffline = sourceStatus === 'offline' || targetStatus === 'offline';
+            return {
+                id: e.id, from: e.source_id, to: e.target_id,
+                color: isOffline ? statusColorMap.offline : statusColorMap.online,
+                dashes: true
+            };
+        });
         edges.clear();
         edges.add(visEdges);
 
-        if (!network) {
-            initializeMap();
-        }
-        startEdgeAnimation();
+        if (!network) initializeMap();
     };
 
     const initializeMap = () => {
@@ -229,18 +222,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const options = {
             physics: false,
             interaction: { hover: true },
-            edges: {
-                color: { color: '#64748b', highlight: '#22d3ee', hover: '#22d3ee' },
-                smooth: true,
-                width: 2
-            },
+            edges: { smooth: true, width: 2 },
             manipulation: {
                 enabled: false,
                 addEdge: async (edgeData, callback) => {
                     const newEdge = await api.post('create_edge', { source_id: edgeData.from, target_id: edgeData.to, map_id: currentMapId });
                     edgeData.id = newEdge.id;
+                    edgeData.color = statusColorMap.online;
                     edgeData.dashes = true;
-                    edgeData.arrows = { to: { enabled: true, scaleFactor: 0.7 } };
                     callback(edgeData);
                 },
                 deleteNode: async (data, callback) => {
@@ -270,28 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
         network.on("doubleClick", (params) => {
             if (params.nodes.length > 0) { openDeviceModal(params.nodes[0]); }
         });
-    };
-
-    let dashOffset = 0;
-    const startEdgeAnimation = () => {
-        if (animationFrameId) cancelAnimationFrame(animationFrameId);
-        
-        const animate = () => {
-            dashOffset = (dashOffset - 1) % 20;
-            const allEdges = edges.get({ fields: ['id'] });
-            const updatedEdges = allEdges.map(edge => ({
-                id: edge.id,
-                dashes: [10, 10], // This is a trick to force re-render with new offset
-            }));
-            
-            // This is a conceptual representation; vis.js canvas doesn't support dashOffset directly.
-            // The 'dashes: true' provides a static dashed line. For true animation, a library extension or more complex canvas drawing would be needed.
-            // We will keep the dashed lines as a visual indicator of connectivity.
-            
-            animationFrameId = requestAnimationFrame(animate);
-        };
-        // For now, we will use static dashed lines as the animation is complex.
-        // animate(); 
     };
 
     const openDeviceModal = (deviceId = null) => {
@@ -324,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
             nodes.update({ id: updated.id, label: updated.name, title: `${updated.name}<br>${updated.ip}<br>Status: ${updated.status}`, icon: { code: iconMap[updated.type], color: statusColorMap[updated.status] } });
         } else {
             const created = await api.post('create_device', deviceData);
-            nodes.add({ id: created.id, label: created.name, title: `${created.name}<br>${created.ip}<br>Status: ${created.status}`, x: created.x, y: created.y, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: iconMap[created.type], size: 50, color: statusColorMap[created.status] } });
+            nodes.add({ id: created.id, label: created.name, title: `${created.name}<br>${created.ip}<br>Status: ${created.status}`, x: created.x, y: created.y, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: iconMap[created.type], size: 50, color: statusColorMap[created.status] }, font: { color: 'white', size: 14 } });
         }
         deviceModal.classList.add('hidden');
     });
@@ -334,18 +301,32 @@ document.addEventListener('DOMContentLoaded', function() {
         icon.classList.add('fa-spin');
         await api.post('ping_all_devices', { map_id: currentMapId });
         const devices = await api.get('get_devices', { map_id: currentMapId });
-        const updates = devices.map(d => ({
+        
+        const deviceStatusMap = new Map(devices.map(d => [d.id, d.status]));
+        const nodeUpdates = devices.map(d => ({
             id: d.id,
             title: `${d.name}<br>${d.ip}<br>Status: ${d.status}`,
             icon: { color: statusColorMap[d.status] }
         }));
-        nodes.update(updates);
+        nodes.update(nodeUpdates);
+
+        const edgeUpdates = edges.get().map(edge => {
+            const sourceStatus = deviceStatusMap.get(edge.from);
+            const targetStatus = deviceStatusMap.get(edge.to);
+            const isOffline = sourceStatus === 'offline' || targetStatus === 'offline';
+            return {
+                id: edge.id,
+                color: isOffline ? statusColorMap.offline : statusColorMap.online
+            };
+        });
+        edges.update(edgeUpdates);
+
         icon.classList.remove('fa-spin');
     });
 
     fullscreenBtn.addEventListener('click', () => {
         if (!document.fullscreenElement) {
-            mapWrapper.requestFullscreen().catch(err => alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`));
+            mapWrapper.requestFullscreen().catch(err => alert(`Error: ${err.message}`));
         } else {
             document.exitFullscreen();
         }

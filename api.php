@@ -28,8 +28,12 @@ switch ($action) {
 
     case 'ping_all_devices':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $stmt = $pdo->prepare("SELECT id, ip, status, last_seen FROM devices WHERE enabled = TRUE");
-            $stmt->execute();
+            $input = json_decode(file_get_contents('php://input'), true);
+            $map_id = $input['map_id'] ?? null;
+            if (!$map_id) { http_response_code(400); echo json_encode(['error' => 'Map ID is required']); exit; }
+
+            $stmt = $pdo->prepare("SELECT id, ip, status, last_seen FROM devices WHERE enabled = TRUE AND map_id = ?");
+            $stmt->execute([$map_id]);
             $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             foreach ($devices as $device) {
@@ -79,13 +83,8 @@ switch ($action) {
             $parsedResult = parsePingOutput($pingResult['output']);
             
             $status = 'offline';
-            if ($pingResult['return_code'] === 0 || $parsedResult['packet_loss'] < 100) {
+            if ($pingResult['return_code'] === 0 && $parsedResult['packet_loss'] < 100) {
                 $status = 'online';
-            } else {
-                $httpResult = checkHttpConnectivity($device['ip']);
-                if ($httpResult['success']) {
-                    $status = 'online';
-                }
             }
             
             $last_seen = ($status === 'online') ? date('Y-m-d H:i:s') : $device['last_seen'];
@@ -125,10 +124,15 @@ switch ($action) {
     // --- Device Management Endpoints ---
     case 'get_devices':
         $map_id = $_GET['map_id'] ?? null;
-        if (!$map_id) { http_response_code(400); echo json_encode(['error' => 'Map ID is required']); exit; }
-        $sql = "SELECT * FROM devices WHERE map_id = ? ORDER BY created_at ASC";
+        $sql = "SELECT d.*, m.name as map_name FROM devices d JOIN maps m ON d.map_id = m.id";
+        $params = [];
+        if ($map_id) {
+            $sql .= " WHERE d.map_id = ?";
+            $params[] = $map_id;
+        }
+        $sql .= " ORDER BY d.created_at ASC";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$map_id]);
+        $stmt->execute($params);
         $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($devices);
         break;
