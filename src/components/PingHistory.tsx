@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { History, Calendar, BarChart3, Download } from "lucide-react";
-import { getPingHistory, type PingStorageResult } from "@/services/pingStorage";
+import { History, Calendar, BarChart3, Download, LineChart } from "lucide-react";
+import { getPingHistory, getPingStats, type PingStorageResult } from "@/services/pingStorage";
 import { showError } from "@/utils/toast";
+import PingHistoryChart from "./PingHistoryChart";
 
 interface PingHistoryResult extends PingStorageResult {
   created_at: string;
@@ -16,6 +17,11 @@ const PingHistory = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [filterHost, setFilterHost] = useState("");
   const [limit, setLimit] = useState(20);
+
+  const [chartHost, setChartHost] = useState("");
+  const [chartData, setChartData] = useState<PingHistoryResult[]>([]);
+  const [isChartLoading, setIsChartLoading] = useState(false);
+  const [showChart, setShowChart] = useState(false);
 
   const loadHistory = async () => {
     setIsLoading(true);
@@ -32,6 +38,24 @@ const PingHistory = () => {
   useEffect(() => {
     loadHistory();
   }, [filterHost, limit]);
+
+  const handleGenerateChart = async () => {
+    if (!chartHost.trim()) {
+      showError("Please enter a host to generate a chart.");
+      return;
+    }
+    setIsChartLoading(true);
+    setShowChart(true);
+    try {
+      const data = await getPingStats(chartHost, 24);
+      setChartData(data as PingHistoryResult[]);
+    } catch (error) {
+      showError(`Failed to load chart data for ${chartHost}`);
+      setChartData([]);
+    } finally {
+      setIsChartLoading(false);
+    }
+  };
 
   const exportToCSV = () => {
     const csvContent = [
@@ -61,11 +85,46 @@ const PingHistory = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            Ping History
+            <LineChart className="h-5 w-5" />
+            Latency Chart
           </CardTitle>
           <CardDescription>
-            View historical ping results stored in the database
+            Visualize ping latency and packet loss for a specific host over the last 24 hours.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2 mb-4">
+            <Input
+              placeholder="Enter host to chart (e.g., 192.168.1.1)"
+              value={chartHost}
+              onChange={(e) => setChartHost(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={handleGenerateChart} disabled={isChartLoading}>
+              {isChartLoading ? "Loading..." : "Generate Chart"}
+            </Button>
+          </div>
+          {showChart && (
+            isChartLoading ? (
+              <div className="text-center p-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-sm text-muted-foreground">Loading chart data...</p>
+              </div>
+            ) : (
+              <PingHistoryChart data={chartData} host={chartHost} />
+            )
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Recent Ping History
+          </CardTitle>
+          <CardDescription>
+            View the most recent ping results stored in the database
           </CardDescription>
         </CardHeader>
         <CardContent>
