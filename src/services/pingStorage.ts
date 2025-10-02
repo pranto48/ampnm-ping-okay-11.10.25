@@ -10,6 +10,7 @@ export interface PingStorageResult {
   max_time: number;
   success: boolean;
   output?: string;
+  created_at?: string;
 }
 
 export const storePingResult = async (result: PingStorageResult) => {

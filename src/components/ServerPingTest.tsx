@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Network, Clock, Server, Wifi, WifiOff, AlertCircle } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { performServerPing, parsePingOutput, type PingResult } from "@/services/pingService";
+import { storePingResult } from "@/services/pingStorage";
 
 interface ServerPingResult extends PingResult {
   parsedStats?: {
@@ -42,6 +43,17 @@ const ServerPingTest = () => {
 
       setPingResults(prev => [enhancedResult, ...prev.slice(0, 9)]);
       
+      // Store the result in the database
+      await storePingResult({
+        host: result.host,
+        packet_loss: parsedStats.packetLoss,
+        avg_time: parsedStats.avgTime,
+        min_time: parsedStats.minTime,
+        max_time: parsedStats.maxTime,
+        success: result.success,
+        output: result.output
+      });
+
       if (result.success) {
         showSuccess(`Server ping to ${host} successful (${parsedStats.avgTime}ms avg)`);
       } else {

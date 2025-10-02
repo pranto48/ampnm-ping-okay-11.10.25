@@ -3,12 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Wifi, Server, Clock, RefreshCw, Monitor, Network, WifiOff } from "lucide-react";
+import { Activity, Wifi, Server, Clock, RefreshCw, Monitor, Network, WifiOff, History } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
 import NetworkScanner from "@/components/NetworkScanner";
 import ServerPingTest from "@/components/ServerPingTest";
+import PingHistory from "@/components/PingHistory";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const Index = () => {
@@ -121,6 +122,7 @@ const Index = () => {
             <TabsTrigger value="server-ping">Server Ping</TabsTrigger>
             <TabsTrigger value="status">Network Status</TabsTrigger>
             <TabsTrigger value="scanner">Network Scanner</TabsTrigger>
+            <TabsTrigger value="history">Ping History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -251,6 +253,10 @@ const Index = () => {
 
           <TabsContent value="scanner">
             <NetworkScanner />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <PingHistory />
           </TabsContent>
         </Tabs>
 
