@@ -8,6 +8,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
 import NetworkScanner from "@/components/NetworkScanner";
+import ServerPingTest from "@/components/ServerPingTest";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const Index = () => {
@@ -116,7 +117,8 @@ const Index = () => {
           <TabsList className="mb-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="devices">Local Devices</TabsTrigger>
-            <TabsTrigger value="ping">Ping Test</TabsTrigger>
+            <TabsTrigger value="ping">Browser Ping</TabsTrigger>
+            <TabsTrigger value="server-ping">Server Ping</TabsTrigger>
             <TabsTrigger value="status">Network Status</TabsTrigger>
             <TabsTrigger value="scanner">Network Scanner</TabsTrigger>
           </TabsList>
@@ -237,6 +239,10 @@ const Index = () => {
 
           <TabsContent value="ping">
             <PingTest />
+          </TabsContent>
+
+          <TabsContent value="server-ping">
+            <ServerPingTest />
           </TabsContent>
 
           <TabsContent value="status">
