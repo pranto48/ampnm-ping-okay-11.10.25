@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Wifi, Server, Clock, RefreshCw, Monitor, Network } from "lucide-react";
+import { Activity, Wifi, Server, Clock, RefreshCw, Monitor, Network, WifiOff } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
