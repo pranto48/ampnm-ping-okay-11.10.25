@@ -1,6 +1,4 @@
-import { createClient } from '@/integrations/supabase/client'
-
-const supabase = createClient()
+import { supabase } from '@/integrations/supabase/client'
 
 export interface PingStorageResult {
   host: string;
