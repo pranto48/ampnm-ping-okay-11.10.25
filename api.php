@@ -101,6 +101,27 @@ switch ($action) {
         }
         break;
 
+    case 'get_device_details':
+        $deviceId = $_GET['id'] ?? 0;
+        if (!$deviceId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Device ID is required']);
+            exit;
+        }
+        $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ?");
+        $stmt->execute([$deviceId]);
+        $device = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$device) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Device not found']);
+            exit;
+        }
+        $stmt = $pdo->prepare("SELECT * FROM ping_results WHERE host = ? ORDER BY created_at DESC LIMIT 20");
+        $stmt->execute([$device['ip']]);
+        $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['device' => $device, 'history' => $history]);
+        break;
+
     // --- Device Management Endpoints ---
     case 'get_devices':
         $map_id = $_GET['map_id'] ?? null;
