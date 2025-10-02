@@ -11,6 +11,7 @@ import NetworkScanner from "@/components/NetworkScanner";
 import ServerPingTest from "@/components/ServerPingTest";
 import PingHistory from "@/components/PingHistory";
 import { MadeWithDyad } from "@/components/made-with-dyad";
+import NetworkMap from "@/components/NetworkMap";
 
 const Index = () => {
   const [networkStatus, setNetworkStatus] = useState<boolean>(true);
@@ -123,6 +124,7 @@ const Index = () => {
             <TabsTrigger value="status">Network Status</TabsTrigger>
             <TabsTrigger value="scanner">Network Scanner</TabsTrigger>
             <TabsTrigger value="history">Ping History</TabsTrigger>
+            <TabsTrigger value="map">Network Map</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -257,6 +259,10 @@ const Index = () => {
 
           <TabsContent value="history">
             <PingHistory />
+          </TabsContent>
+
+          <TabsContent value="map">
+            <NetworkMap />
           </TabsContent>
         </Tabs>
 
