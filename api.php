@@ -54,6 +54,53 @@ switch ($action) {
         }
         break;
 
+    case 'check_device':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $deviceId = $input['id'] ?? 0;
+            
+            if (!$deviceId) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Device ID is required']);
+                exit;
+            }
+            
+            $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ?");
+            $stmt->execute([$deviceId]);
+            $device = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$device) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Device not found']);
+                exit;
+            }
+            
+            $pingResult = executePing($device['ip'], 1);
+            $parsedResult = parsePingOutput($pingResult['output']);
+            
+            $status = 'offline';
+            if ($pingResult['return_code'] === 0 || $parsedResult['packet_loss'] < 100) {
+                $status = 'online';
+            } else {
+                $httpResult = checkHttpConnectivity($device['ip']);
+                if ($httpResult['success']) {
+                    $status = 'online';
+                }
+            }
+            
+            $last_seen = ($status === 'online') ? date('Y-m-d H:i:s') : $device['last_seen'];
+            
+            $stmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ? WHERE id = ?");
+            $stmt->execute([$status, $last_seen, $deviceId]);
+            
+            echo json_encode([
+                'id' => $deviceId,
+                'status' => $status,
+                'last_seen' => $last_seen
+            ]);
+        }
+        break;
+
     // --- Device Management Endpoints ---
     case 'get_devices':
         $map_id = $_GET['map_id'] ?? null;
