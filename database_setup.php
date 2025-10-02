@@ -1,5 +1,5 @@
 <?php
-// Database setup script
+// Database configuration
 $servername = "localhost";
 $username = "root";
 $password = "";
@@ -15,7 +15,7 @@ if ($conn->connect_error) {
 
 // Create database
 $sql = "CREATE DATABASE IF NOT EXISTS $dbname";
-if ($conn->query($sql) {
+if ($conn->query($sql) === TRUE) {
     echo "Database created successfully<br>";
 } else {
     echo "Error creating database: " . $conn->error . "<br>";
@@ -24,7 +24,7 @@ if ($conn->query($sql) {
 // Select database
 $conn->select_db($dbname);
 
-// Create table
+// Create ping_results table
 $sql = "CREATE TABLE IF NOT EXISTS ping_results (
     id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     host VARCHAR(100) NOT NULL,
@@ -37,8 +37,25 @@ $sql = "CREATE TABLE IF NOT EXISTS ping_results (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )";
 
-if ($conn->query($sql)) {
-    echo "Table created successfully<br>";
+if ($conn->query($sql) === TRUE) {
+    echo "Table ping_results created successfully<br>";
+} else {
+    echo "Error creating table: " . $conn->error . "<br>";
+}
+
+// Create devices table
+$sql = "CREATE TABLE IF NOT EXISTS devices (
+    id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    ip VARCHAR(15) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    status ENUM('online', 'offline', 'unknown') DEFAULT 'unknown',
+    last_seen TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_ip (ip)
+)";
+
+if ($conn->query($sql) === TRUE) {
+    echo "Table devices created successfully<br>";
 } else {
     echo "Error creating table: " . $conn->error . "<br>";
 }
