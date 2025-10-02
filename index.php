@@ -64,12 +64,15 @@ $networkStatus = $onlineDevices > 0;
         <!-- Ping Test -->
         <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6">
             <h2 class="text-xl font-semibold text-white mb-4">Manual Ping Test</h2>
-            <form method="POST" action="index.php" class="flex flex-col sm:flex-row gap-4 mb-6">
-                <input type="text" name="ping_host" placeholder="Enter hostname or IP" value="192.168.1.1" class="flex-1 px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
-                <button type="submit" class="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 focus:ring-2 focus:ring-cyan-500">
+            <form id="pingForm" class="flex flex-col sm:flex-row gap-4 mb-4">
+                <input type="text" id="pingHostInput" name="ping_host" placeholder="Enter hostname or IP" value="192.168.1.1" class="flex-1 px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent">
+                <button type="submit" id="pingButton" class="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 focus:ring-2 focus:ring-cyan-500">
                     <i class="fas fa-bolt mr-2"></i>Ping
                 </button>
             </form>
+            <div id="pingResultContainer" class="hidden mt-4">
+                <pre id="pingResultPre" class="bg-slate-900/50 text-white text-sm p-4 rounded-lg overflow-x-auto"></pre>
+            </div>
         </div>
 
         <!-- Network Devices -->
@@ -96,5 +99,7 @@ $networkStatus = $onlineDevices > 0;
         </div>
     </div>
 </div>
+
+<script src="assets/js/dashboard.js" defer></script>
 
 <?php include 'footer.php'; ?>

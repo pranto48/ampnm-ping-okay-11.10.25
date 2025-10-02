@@ -5,27 +5,13 @@
         <h1 class="text-3xl font-bold text-white">Device Management</h1>
     </div>
 
-    <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 mb-8">
-        <h2 class="text-xl font-semibold text-white mb-4">Add New Device</h2>
-        <form id="addDeviceForm" class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <input type="text" name="ip" placeholder="IP Address" class="sm:col-span-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
-            <input type="text" name="name" placeholder="Device Name" class="sm:col-span-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
-            <select name="type" class="sm:col-span-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                <option value="server">Server</option>
-                <option value="router">Router</option>
-                <option value="switch">Switch</option>
-                <option value="firewall">Firewall</option>
-                <option value="printer">Printer</option>
-                <option value="nas">NAS</option>
-                <option value="camera">CC Camera</option>
-                <option value="ipphone">IP Phone</option>
-                <option value="punchdevice">Punch Device</option>
-                <option value="other">Other</option>
-            </select>
-            <button type="submit" class="sm:col-span-1 px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 focus:ring-2 focus:ring-cyan-500">
-                <i class="fas fa-plus mr-2"></i>Add Device
-            </button>
-        </form>
+    <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 mb-8 text-center">
+        <i class="fas fa-map-marked-alt text-cyan-400 text-3xl mb-3"></i>
+        <h2 class="text-xl font-semibold text-white mb-2">Add and Manage Devices on the Map</h2>
+        <p class="text-slate-400 mb-4">To add, edit, or position devices, please use the interactive Network Map.</p>
+        <a href="map.php" class="inline-block px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 focus:ring-2 focus:ring-cyan-500">
+            <i class="fas fa-arrow-right mr-2"></i>Go to Network Map
+        </a>
     </div>
 
     <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6">

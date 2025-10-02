@@ -8,6 +8,38 @@ $action = $_GET['action'] ?? '';
 
 switch ($action) {
     // --- Ping Service Endpoints ---
+    case 'manual_ping':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $host = $input['host'] ?? '';
+            if (empty($host)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Host is required']);
+                exit;
+            }
+            $result = executePing($host);
+            echo json_encode($result);
+        }
+        break;
+
+    case 'check_all_devices':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $stmt = $pdo->prepare("SELECT id, ip, status, last_seen FROM devices WHERE enabled = TRUE");
+            $stmt->execute();
+            $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($devices as $device) {
+                $pingData = pingDevice($device['ip']);
+                $status = $pingData['alive'] ? 'online' : 'offline';
+                
+                $updateStmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ? WHERE id = ?");
+                $updateStmt->execute([$status, ($status === 'online') ? date('Y-m-d H:i:s') : $device['last_seen'], $device['id']]);
+            }
+            
+            echo json_encode(['success' => true, 'message' => 'All enabled devices have been pinged.', 'count' => count($devices)]);
+        }
+        break;
+
     case 'health':
         echo json_encode(['status' => 'ok', 'timestamp' => date('c')]);
         break;

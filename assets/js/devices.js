@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const API_URL = 'api.php';
     const devicesTableBody = document.getElementById('devicesTableBody');
-    const addDeviceForm = document.getElementById('addDeviceForm');
     const bulkCheckBtn = document.getElementById('bulkCheckBtn');
     const tableLoader = document.getElementById('tableLoader');
     const noDevicesMessage = document.getElementById('noDevicesMessage');
@@ -15,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const api = {
         get: (action, params = {}) => fetch(`${API_URL}?action=${action}&${new URLSearchParams(params)}`).then(res => res.json()),
-        post: (action, body) => fetch(`${API_URL}?action=${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(res => res.json())
+        post: (action, body = {}) => fetch(`${API_URL}?action=${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(res => res.json())
     };
 
     const renderDeviceRow = (device) => {
@@ -116,11 +115,6 @@ document.addEventListener('DOMContentLoaded', function() {
         detailsModalContent.classList.remove('hidden');
     };
 
-    addDeviceForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        alert("Please add devices from the Map page to assign them to a specific map.");
-    });
-
     devicesTableBody.addEventListener('click', async (e) => {
         const button = e.target.closest('button');
         if (!button) return;
@@ -152,7 +146,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     bulkCheckBtn.addEventListener('click', async () => {
-        alert("Bulk checking is performed from the Map page for a specific map.");
+        const icon = bulkCheckBtn.querySelector('i');
+        icon.classList.add('fa-spin');
+        bulkCheckBtn.disabled = true;
+        try {
+            await api.post('check_all_devices');
+            await loadDevices();
+        } catch (error) {
+            console.error('Failed to check all devices:', error);
+            alert('An error occurred while checking all devices.');
+        } finally {
+            icon.classList.remove('fa-spin');
+            bulkCheckBtn.disabled = false;
+        }
     });
 
     closeDetailsModal.addEventListener('click', () => detailsModal.classList.add('hidden'));
