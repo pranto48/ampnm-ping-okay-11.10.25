@@ -1,61 +1,104 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Clock, Monitor, Server, LogOut } from "lucide-react";
-import { showError } from "@/utils/toast";
+import { Activity, Wifi, Server, Clock, RefreshCw, Monitor, Network, WifiOff, History } from "lucide-react";
+import { showSuccess, showError } from "@/utils/toast";
+import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
+import NetworkScanner from "@/components/NetworkScanner";
 import ServerPingTest from "@/components/ServerPingTest";
 import PingHistory from "@/components/PingHistory";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import NetworkMap from "@/components/NetworkMap";
-import { DeviceList } from "@/components/DeviceList";
-import { getDevices } from "@/services/networkDeviceService";
-import { useSession } from "@/contexts/SessionContext";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 
 const Index = () => {
-  const { session } = useSession();
   const [networkStatus, setNetworkStatus] = useState<boolean>(true);
   const [lastChecked, setLastChecked] = useState<Date>(new Date());
-  const [deviceCount, setDeviceCount] = useState({ online: 0, total: 0 });
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
+  const [localDevices, setLocalDevices] = useState([
+    { ip: "192.168.9.1", name: "Router", status: "unknown", lastSeen: null },
+    { ip: "192.168.9.3", name: "Desktop PC", status: "unknown", lastSeen: null },
+    { ip: "192.168.9.10", name: "NAS", status: "unknown", lastSeen: null },
+    { ip: "192.168.9.20", name: "Printer", status: "unknown", lastSeen: null },
+  ]);
 
   const checkNetworkStatus = async () => {
     try {
-      await fetch("https://www.google.com/favicon.ico", { mode: 'no-cors', cache: 'no-cache' });
+      // Simple network check by trying to fetch a small resource
+      await fetch("https://www.google.com/favicon.ico", { mode: 'no-cors' });
       setNetworkStatus(true);
+      showSuccess("Internet connection is online");
     } catch (error) {
       setNetworkStatus(false);
-      showError("Internet connection appears to be offline");
+      showError("Internet connection is offline");
     }
     setLastChecked(new Date());
   };
 
-  const fetchDeviceStats = async () => {
-    try {
-      const devices = await getDevices();
-      const online = devices.filter(d => d.status === 'online').length;
-      setDeviceCount({ online, total: devices.length });
-    } catch (error) {
-      console.error("Failed to fetch device stats:", error);
+  const checkLocalDevices = async () => {
+    const updatedDevices = [...localDevices];
+    
+    for (let i = 0; i < updatedDevices.length; i++) {
+      const device = updatedDevices[i];
+      try {
+        // Try WebSocket connection first
+        const ws = new WebSocket(`ws://${device.ip}:80`);
+        
+        await new Promise((resolve, reject) => {
+          ws.onopen = resolve;
+          ws.onerror = reject;
+          setTimeout(reject, 2000);
+        });
+        
+        ws.close();
+        updatedDevices[i] = {
+          ...device,
+          status: "online",
+          lastSeen: new Date()
+        };
+        showSuccess(`${device.name} (${device.ip}) is online`);
+      } catch (error) {
+        // Fallback to HTTP ping
+        try {
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = `http://${device.ip}/?ping=${Date.now()}`;
+            setTimeout(reject, 2000);
+          });
+          
+          updatedDevices[i] = {
+            ...device,
+            status: "online",
+            lastSeen: new Date()
+          };
+          showSuccess(`${device.name} (${device.ip}) is online`);
+        } catch (httpError) {
+          updatedDevices[i] = {
+            ...device,
+            status: "offline",
+            lastSeen: device.lastSeen
+          };
+          showError(`${device.name} (${device.ip}) is offline`);
+        }
+      }
     }
+    
+    setLocalDevices(updatedDevices);
   };
 
   useEffect(() => {
     checkNetworkStatus();
-    fetchDeviceStats();
+    checkLocalDevices();
     
-    const networkInterval = setInterval(checkNetworkStatus, 60000);
-    const deviceStatsInterval = setInterval(fetchDeviceStats, 30000);
+    const networkInterval = setInterval(checkNetworkStatus, 30000);
+    const deviceInterval = setInterval(checkLocalDevices, 60000);
     
     return () => {
       clearInterval(networkInterval);
-      clearInterval(deviceStatsInterval);
+      clearInterval(deviceInterval);
     };
   }, []);
 
@@ -65,32 +108,23 @@ const Index = () => {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Monitor className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold">Network Monitor</h1>
+            <h1 className="text-3xl font-bold">Local Network Monitor</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <Badge variant={networkStatus ? "default" : "destructive"} className="text-sm hidden sm:flex">
-              {networkStatus ? "Internet Online" : "Internet Offline"}
-            </Badge>
-            {session?.user?.email && (
-              <span className="text-sm text-muted-foreground hidden lg:inline truncate max-w-xs" title={session.user.email}>
-                {session.user.email}
-              </span>
-            )}
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </Button>
-          </div>
+          <Badge variant={networkStatus ? "default" : "destructive"} className="text-sm">
+            {networkStatus ? "Internet Online" : "Internet Offline"}
+          </Badge>
         </div>
 
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="mb-4 grid w-full grid-cols-3 md:grid-cols-6">
+          <TabsList className="mb-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="map">Network Map</TabsTrigger>
-            <TabsTrigger value="devices">Device List</TabsTrigger>
-            <TabsTrigger value="server-ping">Manual Ping</TabsTrigger>
+            <TabsTrigger value="devices">Local Devices</TabsTrigger>
+            <TabsTrigger value="ping">Browser Ping</TabsTrigger>
+            <TabsTrigger value="server-ping">Server Ping</TabsTrigger>
+            <TabsTrigger value="status">Network Status</TabsTrigger>
+            <TabsTrigger value="scanner">Network Scanner</TabsTrigger>
             <TabsTrigger value="history">Ping History</TabsTrigger>
-            <TabsTrigger value="status">Connectivity</TabsTrigger>
+            <TabsTrigger value="map">Network Map</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -120,63 +154,116 @@ const Index = () => {
                     {lastChecked.toLocaleTimeString()}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Last internet status check
+                    Last status check
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Monitored Devices</CardTitle>
+                  <CardTitle className="text-sm font-medium">Local Devices</CardTitle>
                   <Server className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {deviceCount.online}/{deviceCount.total}
+                    {localDevices.filter(d => d.status === "online").length}/{localDevices.length}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Online
+                    Devices online
                   </p>
                 </CardContent>
               </Card>
             </div>
-            <Card>
+
+            <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Welcome to your Network Monitor</CardTitle>
-                <CardContent className="pt-4">
-                  <p>Use the tabs above to navigate:</p>
-                  <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li><b>Network Map:</b> Visualize your devices and their connections.</li>
-                    <li><b>Device List:</b> See a detailed table of all your monitored devices.</li>
-                    <li><b>Manual Ping:</b> Run a one-off ICMP ping from the server.</li>
-                    <li><b>Ping History:</b> Review historical ping results.</li>
-                    <li><b>Connectivity:</b> Check your browser's internet connection history.</li>
-                  </ul>
-                </CardContent>
+                <CardTitle className="flex items-center gap-2">
+                  <Network className="h-5 w-5" />
+                  Quick Actions
+                </CardTitle>
               </CardHeader>
+              <CardContent className="flex gap-4">
+                <Button onClick={checkNetworkStatus}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Check Internet
+                </Button>
+                <Button onClick={checkLocalDevices}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Check Local Devices
+                </Button>
+              </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="map">
-            <NetworkMap />
+          <TabsContent value="devices">
+            <Card>
+              <CardHeader>
+                <CardTitle>Local Network Devices</CardTitle>
+                <CardDescription>
+                  Monitor the status of devices on your local network
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {localDevices.map((device, index) => (
+                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {device.status === "online" ? (
+                          <Wifi className="h-5 w-5 text-green-500" />
+                        ) : device.status === "offline" ? (
+                          <WifiOff className="h-5 w-5 text-red-500" />
+                        ) : (
+                          <Wifi className="h-5 w-5 text-gray-500" />
+                        )}
+                        <div>
+                          <span className="font-medium">{device.name}</span>
+                          <p className="text-sm text-muted-foreground">{device.ip}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant={
+                          device.status === "online" ? "default" :
+                          device.status === "offline" ? "destructive" : "secondary"
+                        }>
+                          {device.status === "online" ? "Online" :
+                           device.status === "offline" ? "Offline" : "Unknown"}
+                        </Badge>
+                        {device.lastSeen && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Last seen: {device.lastSeen.toLocaleTimeString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          <TabsContent value="devices">
-            <DeviceList />
+          <TabsContent value="ping">
+            <PingTest />
           </TabsContent>
 
           <TabsContent value="server-ping">
             <ServerPingTest />
           </TabsContent>
 
-          <TabsContent value="history">
-            <PingHistory />
-          </TabsContent>
-
           <TabsContent value="status">
             <NetworkStatus />
           </TabsContent>
 
+          <TabsContent value="scanner">
+            <NetworkScanner />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <PingHistory />
+          </TabsContent>
+
+          <TabsContent value="map">
+            <NetworkMap />
+          </TabsContent>
         </Tabs>
 
         <MadeWithDyad />

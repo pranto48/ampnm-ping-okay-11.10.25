@@ -9,7 +9,6 @@ export interface NetworkDevice {
   icon: string;
   status?: 'online' | 'offline' | 'unknown';
   ping_interval?: number;
-  user_id?: string;
 }
 
 export const getDevices = async () => {
@@ -18,12 +17,8 @@ export const getDevices = async () => {
   return data;
 };
 
-export const addDevice = async (device: Omit<NetworkDevice, 'id' | 'user_id'>) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("User not authenticated");
-
-  const deviceWithUser = { ...device, user_id: user.id };
-  const { data, error } = await supabase.from('network_devices').insert(deviceWithUser).select().single();
+export const addDevice = async (device: NetworkDevice) => {
+  const { data, error } = await supabase.from('network_devices').insert(device).select().single();
   if (error) throw new Error(error.message);
   return data;
 };
@@ -46,11 +41,7 @@ export const getEdges = async () => {
 };
 
 export const addEdgeToDB = async (edge: { source: string; target: string }) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("User not authenticated");
-
-  const edgeWithUser = { source_id: edge.source, target_id: edge.target, user_id: user.id };
-  const { data, error } = await supabase.from('network_edges').insert(edgeWithUser).select().single();
+  const { data, error } = await supabase.from('network_edges').insert({ source_id: edge.source, target_id: edge.target }).select().single();
   if (error) throw new Error(error.message);
   return data;
 };
