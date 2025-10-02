@@ -60,6 +60,29 @@ if ($conn->query($sql) === TRUE) {
     echo "Error creating table: " . $conn->error . "<br>";
 }
 
+// --- Add new columns to devices table if they don't exist ---
+$columns = [
+    'type' => "VARCHAR(50) NOT NULL DEFAULT 'server'",
+    'location' => "TEXT",
+    'description' => "TEXT",
+    'enabled' => "BOOLEAN DEFAULT TRUE",
+    'x' => "DECIMAL(10, 4)",
+    'y' => "DECIMAL(10, 4)",
+    'updated_at' => "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+];
+
+foreach ($columns as $column => $definition) {
+    $result = $conn->query("SHOW COLUMNS FROM `devices` LIKE '$column'");
+    if ($result->num_rows == 0) {
+        $alterSql = "ALTER TABLE devices ADD COLUMN `$column` $definition";
+        if ($conn->query($alterSql) === TRUE) {
+            echo "Column `$column` added to devices table successfully<br>";
+        } else {
+            echo "Error adding column `$column`: " . $conn->error . "<br>";
+        }
+    }
+}
+
 // Create maps table
 $sql = "CREATE TABLE IF NOT EXISTS maps (
     id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
