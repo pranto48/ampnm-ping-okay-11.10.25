@@ -7,6 +7,8 @@ export interface NetworkDevice {
   position_x: number;
   position_y: number;
   icon: string;
+  status?: 'online' | 'offline' | 'unknown';
+  ping_interval?: number;
 }
 
 export const getDevices = async () => {

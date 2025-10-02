@@ -26,6 +26,9 @@ const DeviceNode = ({ data }: { data: any }) => {
     setPingResult(null);
     try {
       const result = await performServerPing(data.ip_address, 1);
+      const newStatus = result.success ? 'online' : 'offline';
+      data.onStatusChange(data.id, newStatus);
+
       if (result.success) {
         const parsed = parsePingOutput(result.output);
         setPingResult({ time: parsed.avgTime, loss: parsed.packetLoss });
@@ -35,12 +38,19 @@ const DeviceNode = ({ data }: { data: any }) => {
     } catch (error) {
       showError(`Ping failed: ${error.message}`);
       setPingResult({ time: -1, loss: 100 });
+      data.onStatusChange(data.id, 'offline');
     } finally {
       setIsPinging(false);
     }
   };
 
   const IconComponent = iconMap[data.icon] || <Server className="h-6 w-6" />;
+  const statusBorderColor =
+    data.status === 'online'
+      ? 'border-green-500'
+      : data.status === 'offline'
+      ? 'border-red-500'
+      : 'border-yellow-500';
 
   return (
     <>
@@ -48,7 +58,7 @@ const DeviceNode = ({ data }: { data: any }) => {
       <Handle type="source" position={Position.Right} />
       <Handle type="source" position={Position.Bottom} />
       <Handle type="source" position={Position.Left} />
-      <Card className="w-64 shadow-lg bg-gray-800 border-gray-700 text-white">
+      <Card className={`w-64 shadow-lg bg-gray-800 border-gray-700 text-white border-2 ${statusBorderColor}`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-white">{data.name}</CardTitle>
           {IconComponent}

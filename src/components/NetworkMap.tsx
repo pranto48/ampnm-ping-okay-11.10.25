@@ -28,6 +28,7 @@ import {
 import { DeviceEditorDialog } from './DeviceEditorDialog';
 import DeviceNode from './DeviceNode';
 import { showSuccess, showError } from '@/utils/toast';
+import { performServerPing } from '@/services/pingService';
 
 const NetworkMap = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -36,6 +37,25 @@ const NetworkMap = () => {
   const [editingDevice, setEditingDevice] = useState<Partial<NetworkDevice> | undefined>(undefined);
 
   const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
+
+  const handleStatusChange = useCallback(
+    async (nodeId: string, status: 'online' | 'offline') => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return { ...node, data: { ...node.data, status } };
+          }
+          return node;
+        })
+      );
+      try {
+        await updateDevice(nodeId, { status });
+      } catch (error) {
+        showError('Failed to update device status in DB.');
+      }
+    },
+    [setNodes]
+  );
 
   const loadNetworkData = useCallback(async () => {
     try {
@@ -49,8 +69,11 @@ const NetworkMap = () => {
           name: device.name,
           ip_address: device.ip_address,
           icon: device.icon,
+          status: device.status,
+          ping_interval: device.ping_interval,
           onEdit: handleEdit,
           onDelete: handleDelete,
+          onStatusChange: handleStatusChange,
         },
       }));
       setNodes(mappedNodes);
@@ -66,11 +89,34 @@ const NetworkMap = () => {
     } catch (error) {
       showError('Failed to load network data.');
     }
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, handleStatusChange]);
 
   useEffect(() => {
     loadNetworkData();
   }, [loadNetworkData]);
+
+  useEffect(() => {
+    const intervals: NodeJS.Timeout[] = [];
+
+    nodes.forEach((node) => {
+      if (node.data.ping_interval && node.data.ping_interval > 0) {
+        const intervalId = setInterval(async () => {
+          try {
+            const result = await performServerPing(node.data.ip_address, 1);
+            const newStatus = result.success ? 'online' : 'offline';
+            handleStatusChange(node.id, newStatus);
+          } catch (error) {
+            handleStatusChange(node.id, 'offline');
+          }
+        }, node.data.ping_interval * 1000);
+        intervals.push(intervalId);
+      }
+    });
+
+    return () => {
+      intervals.forEach(clearInterval);
+    };
+  }, [nodes, handleStatusChange]);
 
   const onConnect = useCallback(
     async (params: Connection) => {
@@ -83,10 +129,10 @@ const NetworkMap = () => {
       try {
         await addEdgeToDB({ source: params.source!, target: params.target! });
         showSuccess('Connection saved.');
-        loadNetworkData(); // Reload to get DB-generated ID
+        loadNetworkData();
       } catch (error) {
         showError('Failed to save connection.');
-        loadNetworkData(); // Revert optimistic update
+        loadNetworkData();
       }
     },
     [setEdges, loadNetworkData]
@@ -105,6 +151,7 @@ const NetworkMap = () => {
         name: nodeToEdit.data.name,
         ip_address: nodeToEdit.data.ip_address,
         icon: nodeToEdit.data.icon,
+        ping_interval: nodeToEdit.data.ping_interval,
       });
       setIsEditorOpen(true);
     }
@@ -125,31 +172,13 @@ const NetworkMap = () => {
   const handleSaveDevice = async (deviceData: Omit<NetworkDevice, 'id' | 'position_x' | 'position_y'>) => {
     try {
       if (editingDevice?.id) {
-        const updatedDevice = await updateDevice(editingDevice.id, deviceData);
-        setNodes((nds) =>
-          nds.map((node) => {
-            if (node.id === updatedDevice.id) {
-              node.data = { ...node.data, name: updatedDevice.name, ip_address: updatedDevice.ip_address, icon: updatedDevice.icon };
-            }
-            return node;
-          })
-        );
+        await updateDevice(editingDevice.id, deviceData);
         showSuccess('Device updated successfully.');
       } else {
-        const newDevice = await addDevice({ ...deviceData, position_x: 100, position_y: 100 });
-        const newNode: Node = {
-          id: newDevice.id,
-          type: 'device',
-          position: { x: newDevice.position_x, y: newDevice.position_y },
-          data: {
-            ...newDevice,
-            onEdit: handleEdit,
-            onDelete: handleDelete,
-          },
-        };
-        setNodes((nds) => [...nds, newNode]);
+        await addDevice({ ...deviceData, position_x: 100, position_y: 100, status: 'unknown' });
         showSuccess('Device added successfully.');
       }
+      loadNetworkData();
     } catch (error) {
       showError('Failed to save device.');
     }
@@ -167,20 +196,23 @@ const NetworkMap = () => {
     [loadNetworkData]
   );
 
-  const onEdgesChangeHandler: OnEdgesChange = useCallback((changes) => {
-    onEdgesChange(changes);
-    changes.forEach(async (change) => {
-      if (change.type === 'remove') {
-        try {
-          await deleteEdgeFromDB(change.id);
-          showSuccess('Connection deleted.');
-        } catch (error) {
-          showError('Failed to delete connection.');
-          loadNetworkData();
+  const onEdgesChangeHandler: OnEdgesChange = useCallback(
+    (changes) => {
+      onEdgesChange(changes);
+      changes.forEach(async (change) => {
+        if (change.type === 'remove') {
+          try {
+            await deleteEdgeFromDB(change.id);
+            showSuccess('Connection deleted.');
+          } catch (error) {
+            showError('Failed to delete connection.');
+            loadNetworkData();
+          }
         }
-      }
-    });
-  }, [onEdgesChange, loadNetworkData]);
+      });
+    },
+    [onEdgesChange, loadNetworkData]
+  );
 
   return (
     <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg bg-gray-900">

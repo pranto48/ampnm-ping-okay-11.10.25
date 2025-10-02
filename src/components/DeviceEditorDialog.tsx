@@ -20,6 +20,7 @@ const deviceSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   ip_address: z.string().min(1, 'IP address is required'),
   icon: z.string().min(1, 'Icon is required'),
+  ping_interval: z.coerce.number().int().positive().optional().nullable(),
 });
 
 interface DeviceEditorDialogProps {
@@ -38,6 +39,7 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
       name: device?.name || '',
       ip_address: device?.ip_address || '',
       icon: device?.icon || 'server',
+      ping_interval: device?.ping_interval || undefined,
     },
   });
 
@@ -103,6 +105,25 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="ping_interval"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ping Interval (seconds)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 60 (leave blank for no auto ping)"
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
