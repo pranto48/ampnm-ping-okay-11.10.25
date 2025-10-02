@@ -8,6 +8,7 @@ import { Activity, Wifi, Server, Clock, RefreshCw } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
+import NetworkScanner from "@/components/NetworkScanner";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const Index = () => {
@@ -51,6 +52,7 @@ const Index = () => {
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="ping">Ping Test</TabsTrigger>
             <TabsTrigger value="status">Network Status</TabsTrigger>
+            <TabsTrigger value="scanner">Network Scanner</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -106,6 +108,10 @@ const Index = () => {
 
           <TabsContent value="status">
             <NetworkStatus />
+          </TabsContent>
+
+          <TabsContent value="scanner">
+            <NetworkScanner />
           </TabsContent>
         </Tabs>
 
