@@ -28,11 +28,72 @@ const PingTest = () => {
     const startTime = performance.now();
 
     try {
-      // Using fetch with no-cors to simulate ping (limited but works for demo)
-      await fetch(`https://${host}`, { 
-        mode: 'no-cors',
-        method: 'HEAD'
+      // Create a more robust ping method using Image object for local IPs
+      const pingPromise = new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        let timeoutId: NodeJS.Timeout;
+
+        const cleanup = () => {
+          clearTimeout(timeoutId);
+          img.onload = null;
+          img.onerror = null;
+        };
+
+        img.onload = () => {
+          cleanup();
+          resolve();
+        };
+
+        img.onerror = () => {
+          cleanup();
+          reject(new Error("Ping failed"));
+        };
+
+        // Use a unique query parameter to avoid caching
+        const timestamp = Date.now();
+        
+        // For local IPs, try HTTP and different ports
+        const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|127\.)/.test(host);
+        
+        if (isLocalIP) {
+          // Try common local services
+          const urls = [
+            `http://${host}/?ping=${timestamp}`,
+            `http://${host}:80/?ping=${timestamp}`,
+            `http://${host}:8080/?ping=${timestamp}`,
+            `http://${host}:3000/?ping=${timestamp}`
+          ];
+          
+          let currentUrlIndex = 0;
+          
+          const tryNextUrl = () => {
+            if (currentUrlIndex >= urls.length) {
+              reject(new Error("All local ping attempts failed"));
+              return;
+            }
+            
+            img.src = urls[currentUrlIndex];
+            currentUrlIndex++;
+            
+            // Set timeout for this specific attempt
+            timeoutId = setTimeout(() => {
+              tryNextUrl();
+            }, 1000);
+          };
+          
+          tryNextUrl();
+        } else {
+          // For public hosts, use HTTPS
+          img.src = `https://${host}/?ping=${timestamp}`;
+          
+          timeoutId = setTimeout(() => {
+            cleanup();
+            reject(new Error("Ping timeout"));
+          }, 5000);
+        }
       });
+
+      await pingPromise;
       
       const endTime = performance.now();
       const pingTime = Math.round(endTime - startTime);
@@ -55,7 +116,7 @@ const PingTest = () => {
       };
 
       setPingResults(prev => [result, ...prev.slice(0, 9)]);
-      showError(`Ping to ${host} failed`);
+      showError(`Ping to ${host} failed - ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsPinging(false);
     }
@@ -70,13 +131,13 @@ const PingTest = () => {
             Ping Test
           </CardTitle>
           <CardDescription>
-            Test network connectivity to any host
+            Test network connectivity to any host (supports local IPs)
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 mb-4">
             <Input
-              placeholder="Enter hostname or IP (e.g., google.com)"
+              placeholder="Enter hostname or IP (e.g., 192.168.1.1 or google.com)"
               value={host}
               onChange={(e) => setHost(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && performPing()}
@@ -84,6 +145,11 @@ const PingTest = () => {
             <Button onClick={performPing} disabled={isPinging}>
               {isPinging ? "Pinging..." : "Ping"}
             </Button>
+          </div>
+
+          <div className="text-sm text-muted-foreground mb-4">
+            <p>For local IPs: Make sure the device is online and has a web server running</p>
+            <p>Common ports tried: 80, 8080, 3000</p>
           </div>
 
           {pingResults.length > 0 && (
