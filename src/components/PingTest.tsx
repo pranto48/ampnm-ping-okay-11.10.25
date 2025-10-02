@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Ping, Clock, AlertCircle } from "lucide-react";
+import { Network, Clock, AlertCircle } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 
 interface PingResult {
@@ -66,7 +66,7 @@ const PingTest = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Ping className="h-5 w-5" />
+            <Network className="h-5 w-5" />
             Ping Test
           </CardTitle>
           <CardDescription>
