@@ -18,62 +18,63 @@ const PingTest = () => {
   const [isPinging, setIsPinging] = useState(false);
   const [pingResults, setPingResults] = useState<PingResult[]>([]);
 
-  // True ICMP-like ping using WebRTC techniques
-  const performICMPLikePing = async (ip: string): Promise<number> => {
+  // WebSocket-based ping for local devices
+  const performWebSocketPing = async (ip: string): Promise<number> => {
     return new Promise((resolve, reject) => {
       const startTime = performance.now();
       
-      // Create a WebRTC connection attempt to detect local devices
-      // This works because WebRTC will try to establish connections
-      const rtcConnection = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-      });
+      // Try WebSocket connection on common ports
+      const ports = [80, 8080, 3000, 8000, 8081, 9000];
+      let currentPortIndex = 0;
       
-      let timeoutId: NodeJS.Timeout;
-
-      const cleanup = () => {
-        clearTimeout(timeoutId);
-        rtcConnection.close();
+      const tryNextPort = () => {
+        if (currentPortIndex >= ports.length) {
+          reject(new Error("No responsive ports found"));
+          return;
+        }
+        
+        const port = ports[currentPortIndex];
+        const ws = new WebSocket(`ws://${ip}:${port}`);
+        
+        ws.onopen = () => {
+          const endTime = performance.now();
+          ws.close();
+          resolve(Math.round(endTime - startTime));
+        };
+        
+        ws.onerror = () => {
+          currentPortIndex++;
+          setTimeout(tryNextPort, 100);
+        };
+        
+        // Set timeout for this port attempt
+        setTimeout(() => {
+          ws.close();
+          currentPortIndex++;
+          setTimeout(tryNextPort, 100);
+        }, 1000);
       };
-
-      // Set timeout
-      timeoutId = setTimeout(() => {
-        cleanup();
-        reject(new Error("Device not responding"));
-      }, 2000);
-
-      // Try to create a data channel (this will trigger ICE candidate gathering)
-      const dataChannel = rtcConnection.createDataChannel('ping');
       
-      dataChannel.onopen = () => {
-        cleanup();
-        const endTime = performance.now();
-        resolve(Math.round(endTime - startTime));
-      };
-      
-      dataChannel.onerror = () => {
-        cleanup();
-        reject(new Error("Connection failed"));
-      };
+      tryNextPort();
+    });
+  };
 
-      // Create offer to start ICE process
-      rtcConnection.createOffer()
-        .then(offer => rtcConnection.setLocalDescription(offer))
-        .catch(() => {
-          cleanup();
-          reject(new Error("WebRTC setup failed"));
-        });
-
-      // Also try traditional HTTP methods as fallback
+  // HTTP-based ping for devices with web servers
+  const performHTTPPing = async (ip: string): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const startTime = performance.now();
       const img = new Image();
+      
       img.onload = () => {
-        cleanup();
         const endTime = performance.now();
         resolve(Math.round(endTime - startTime));
       };
-      img.onerror = () => {}; // Ignore errors here, we're using WebRTC as primary
-
-      // Try common endpoints
+      
+      img.onerror = () => {
+        reject(new Error("HTTP request failed"));
+      };
+      
+      // Try various common endpoints
       const endpoints = [
         `http://${ip}/?ping=${Date.now()}`,
         `http://${ip}:80/?ping=${Date.now()}`,
@@ -85,11 +86,15 @@ const PingTest = () => {
       
       let currentIndex = 0;
       const tryNextEndpoint = () => {
-        if (currentIndex < endpoints.length) {
-          img.src = endpoints[currentIndex];
-          currentIndex++;
-          setTimeout(tryNextEndpoint, 100);
+        if (currentIndex >= endpoints.length) {
+          reject(new Error("No HTTP endpoints responsive"));
+          return;
         }
+        
+        img.src = endpoints[currentIndex];
+        currentIndex++;
+        
+        setTimeout(tryNextEndpoint, 200);
       };
       
       tryNextEndpoint();
@@ -130,7 +135,12 @@ const PingTest = () => {
       const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|127\.|localhost)/.test(host);
       
       if (isLocalIP) {
-        pingTime = await performICMPLikePing(host);
+        // Try WebSocket first, then HTTP as fallback
+        try {
+          pingTime = await performWebSocketPing(host);
+        } catch (webSocketError) {
+          pingTime = await performHTTPPing(host);
+        }
       } else {
         pingTime = await performFetchPing(host);
       }
@@ -153,7 +163,7 @@ const PingTest = () => {
       };
 
       setPingResults(prev => [result, ...prev.slice(0, 9)]);
-      showError(`Ping to ${host} failed - Device may be offline or not responding`);
+      showError(`Ping to ${host} failed - Device is online but not responding to browser requests`);
     } finally {
       setIsPinging(false);
     }
@@ -165,10 +175,10 @@ const PingTest = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Network className="h-5 w-5" />
-            Advanced Ping Test
+            Browser Ping Test
           </CardTitle>
           <CardDescription>
-            Test network connectivity using WebRTC techniques (works without web servers)
+            Test connectivity using browser-compatible methods (WebSocket/HTTP)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -187,13 +197,13 @@ const PingTest = () => {
           <div className="text-sm text-muted-foreground mb-4 p-3 bg-muted rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <Info className="h-4 w-4" />
-              <span className="font-medium">Advanced Ping Technology:</span>
+              <span className="font-medium">Browser Limitations:</span>
             </div>
             <ul className="list-disc list-inside space-y-1">
-              <li>Uses WebRTC to detect devices even without web servers</li>
-              <li>Works with most modern browsers</li>
-              <li>Detects devices that are online and reachable</li>
-              <li>May not work with heavily firewalled devices</li>
+              <li>Browsers cannot send ICMP packets (like terminal ping)</li>
+              <li>Uses WebSocket and HTTP connections instead</li>
+              <li>Device must have open ports or running services</li>
+              <li>Works best with web servers, APIs, or WebSocket services</li>
             </ul>
           </div>
 
@@ -216,7 +226,7 @@ const PingTest = () => {
                     </div>
                   </div>
                   <Badge variant={result.status === "success" ? "default" : "destructive"}>
-                    {result.status === "success" ? `${result.time}ms` : "Offline"}
+                    {result.status === "success" ? `${result.time}ms` : "No response"}
                   </Badge>
                 </div>
               ))}
