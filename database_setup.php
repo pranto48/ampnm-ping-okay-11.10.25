@@ -60,6 +60,54 @@ if ($conn->query($sql) === TRUE) {
     echo "Error creating table: " . $conn->error . "<br>";
 }
 
+// Create maps table
+$sql = "CREATE TABLE IF NOT EXISTS maps (
+    id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    description TEXT,
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)";
+
+if ($conn->query($sql) === TRUE) {
+    echo "Table maps created successfully<br>";
+} else {
+    echo "Error creating table: " . $conn->error . "<br>";
+}
+
+// Check if map_id column exists in devices table and add it if not
+$result = $conn->query("SHOW COLUMNS FROM `devices` LIKE 'map_id'");
+if ($result->num_rows == 0) {
+    $sql = "ALTER TABLE devices ADD COLUMN map_id INT(6) UNSIGNED, ADD CONSTRAINT fk_map_id FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE";
+    if ($conn->query($sql) === TRUE) {
+        echo "Table devices updated successfully with map_id<br>";
+    } else {
+        echo "Error updating devices table: " . $conn->error . "<br>";
+    }
+}
+
+// Create device_edges table
+$sql = "CREATE TABLE IF NOT EXISTS device_edges (
+    id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    source_id INT(6) UNSIGNED NOT NULL,
+    target_id INT(6) UNSIGNED NOT NULL,
+    map_id INT(6) UNSIGNED NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (source_id) REFERENCES devices(id) ON DELETE CASCADE,
+    FOREIGN KEY (target_id) REFERENCES devices(id) ON DELETE CASCADE,
+    FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_edge (source_id, target_id, map_id)
+)";
+
+if ($conn->query($sql) === TRUE) {
+    echo "Table device_edges created successfully<br>";
+} else {
+    echo "Error creating table: " . $conn->error . "<br>";
+}
+
+
 $conn->close();
 echo "Database setup completed successfully!";
 ?>
