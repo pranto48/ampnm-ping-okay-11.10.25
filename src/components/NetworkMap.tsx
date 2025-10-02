@@ -60,7 +60,7 @@ const NetworkMap = () => {
   const loadNetworkData = useCallback(async () => {
     try {
       const [devices, edgesData] = await Promise.all([getDevices(), getEdges()]);
-      const mappedNodes = devices.map((device) => ({
+      const mappedNodes: Node[] = devices.map((device) => ({
         id: device.id,
         type: 'device',
         position: { x: device.position_x, y: device.position_y },
@@ -69,7 +69,7 @@ const NetworkMap = () => {
           name: device.name,
           ip_address: device.ip_address,
           icon: device.icon,
-          status: device.status,
+          status: device.status || 'unknown',
           ping_interval: device.ping_interval,
           onEdit: handleEdit,
           onDelete: handleDelete,
@@ -78,7 +78,7 @@ const NetworkMap = () => {
       }));
       setNodes(mappedNodes);
 
-      const mappedEdges = edgesData.map((edge: any) => ({
+      const mappedEdges: Edge[] = edgesData.map((edge: any) => ({
         id: edge.id,
         source: edge.source,
         target: edge.target,
@@ -97,14 +97,12 @@ const NetworkMap = () => {
 
   useEffect(() => {
     const intervals: NodeJS.Timeout[] = [];
-
     nodes.forEach((node) => {
       if (node.data.ping_interval && node.data.ping_interval > 0) {
         const intervalId = setInterval(async () => {
           try {
             const result = await performServerPing(node.data.ip_address, 1);
-            const newStatus = result.success ? 'online' : 'offline';
-            handleStatusChange(node.id, newStatus);
+            handleStatusChange(node.id, result.success ? 'online' : 'offline');
           } catch (error) {
             handleStatusChange(node.id, 'offline');
           }
@@ -112,11 +110,30 @@ const NetworkMap = () => {
         intervals.push(intervalId);
       }
     });
-
     return () => {
       intervals.forEach(clearInterval);
     };
   }, [nodes, handleStatusChange]);
+
+  useEffect(() => {
+    setEdges((eds) =>
+      eds.map((edge) => {
+        const sourceNode = nodes.find((n) => n.id === edge.source);
+        const targetNode = nodes.find((n) => n.id === edge.target);
+        const isConnectionBroken = sourceNode?.data.status === 'offline' || targetNode?.data.status === 'offline';
+        
+        return {
+          ...edge,
+          animated: !isConnectionBroken,
+          style: {
+            ...edge.style,
+            stroke: isConnectionBroken ? '#ef4444' : '#fff',
+            strokeWidth: 2,
+          },
+        };
+      })
+    );
+  }, [nodes, setEdges]);
 
   const onConnect = useCallback(
     async (params: Connection) => {
@@ -125,14 +142,14 @@ const NetworkMap = () => {
         animated: true,
         style: { stroke: '#fff', strokeWidth: 2 },
       };
-      setEdges((eds) => addEdge(newEdge, eds));
+      setEdges((eds) => addEdge(newEdge as Edge, eds));
       try {
         await addEdgeToDB({ source: params.source!, target: params.target! });
         showSuccess('Connection saved.');
-        loadNetworkData();
+        await loadNetworkData();
       } catch (error) {
         showError('Failed to save connection.');
-        loadNetworkData();
+        await loadNetworkData();
       }
     },
     [setEdges, loadNetworkData]
@@ -178,7 +195,7 @@ const NetworkMap = () => {
         await addDevice({ ...deviceData, position_x: 100, position_y: 100, status: 'unknown' });
         showSuccess('Device added successfully.');
       }
-      loadNetworkData();
+      await loadNetworkData();
     } catch (error) {
       showError('Failed to save device.');
     }
@@ -190,7 +207,7 @@ const NetworkMap = () => {
         await updateDevice(node.id, { position_x: node.position.x, position_y: node.position.y });
       } catch (error) {
         showError('Failed to save device position.');
-        loadNetworkData();
+        await loadNetworkData();
       }
     },
     [loadNetworkData]
@@ -206,7 +223,7 @@ const NetworkMap = () => {
             showSuccess('Connection deleted.');
           } catch (error) {
             showError('Failed to delete connection.');
-            loadNetworkData();
+            await loadNetworkData();
           }
         }
       });
@@ -227,7 +244,7 @@ const NetworkMap = () => {
         fitView
       >
         <Controls />
-        <MiniMap nodeColor={(n) => '#4a5568'} nodeStrokeWidth={3} />
+        <MiniMap nodeColor={() => '#4a5568'} nodeStrokeWidth={3} />
         <Background gap={16} size={1} color="#444" />
       </ReactFlow>
       <div className="absolute top-4 left-4">
