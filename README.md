@@ -14,7 +14,11 @@
 2. **Place Files in htdocs**
    - Create a new folder in `C:\xampp\htdocs\network-monitor\`
    - Copy all files to this folder:
-     - `index.php` (main application)
+     - `index.php` (main dashboard)
+     - `devices.php` (device management)
+     - `history.php` (ping history with filtering)
+     - `api.php` (AJAX API endpoints)
+     - `export.php` (CSV export functionality)
      - `config.php` (configuration file)
      - `database_setup.php` (database setup script)
      - `README.md` (this file)
@@ -32,13 +36,17 @@
 - View ping history stored in MySQL database
 - Monitor local network devices
 - Real-time network status monitoring
+- Device management (add, remove, check status)
+- Historical data with filtering and pagination
+- Export data to CSV
 - Responsive design with Tailwind CSS
+- AJAX-powered interface for smooth interactions
 
 ## Usage
-1. **Ping Test**: Enter any IP address or hostname and click "Ping" to test connectivity
-2. **Device Monitoring**: The application will automatically monitor devices on your network
-3. **History**: All ping results are stored in the database for historical analysis
-4. **Refresh**: Click the "Refresh" button to update device statuses
+1. **Dashboard**: Main overview of network status and recent activity
+2. **Device Management**: Add/remove devices and check their status
+3. **Ping History**: View historical ping results with filtering and export options
+4. **Real-time Updates**: AJAX-powered updates without page refresh
 
 ## Security Notes
 - This is designed for local network use only
