@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Clock, Monitor, Server } from "lucide-react";
+import { Activity, Clock, Monitor, Server, LogOut } from "lucide-react";
 import { showError } from "@/utils/toast";
 import NetworkStatus from "@/components/NetworkStatus";
 import ServerPingTest from "@/components/ServerPingTest";
@@ -11,11 +11,19 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 import NetworkMap from "@/components/NetworkMap";
 import { DeviceList } from "@/components/DeviceList";
 import { getDevices } from "@/services/networkDeviceService";
+import { useSession } from "@/contexts/SessionContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
+  const { session } = useSession();
   const [networkStatus, setNetworkStatus] = useState<boolean>(true);
   const [lastChecked, setLastChecked] = useState<Date>(new Date());
   const [deviceCount, setDeviceCount] = useState({ online: 0, total: 0 });
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   const checkNetworkStatus = async () => {
     try {
@@ -59,9 +67,20 @@ const Index = () => {
             <Monitor className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold">Network Monitor</h1>
           </div>
-          <Badge variant={networkStatus ? "default" : "destructive"} className="text-sm">
-            {networkStatus ? "Internet Online" : "Internet Offline"}
-          </Badge>
+          <div className="flex items-center gap-4">
+            <Badge variant={networkStatus ? "default" : "destructive"} className="text-sm hidden sm:flex">
+              {networkStatus ? "Internet Online" : "Internet Offline"}
+            </Badge>
+            {session?.user?.email && (
+              <span className="text-sm text-muted-foreground hidden lg:inline truncate max-w-xs" title={session.user.email}>
+                {session.user.email}
+              </span>
+            )}
+            <Button variant="outline" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="dashboard" className="w-full">
