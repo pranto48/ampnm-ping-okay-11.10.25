@@ -31,3 +31,20 @@ export const deleteDevice = async (id: string) => {
   const { error } = await supabase.from('network_devices').delete().eq('id', id);
   if (error) throw new Error(error.message);
 };
+
+export const getEdges = async () => {
+  const { data, error } = await supabase.from('network_edges').select('id, source:source_id, target:target_id');
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const addEdgeToDB = async (edge: { source: string; target: string }) => {
+  const { data, error } = await supabase.from('network_edges').insert({ source_id: edge.source, target_id: edge.target }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const deleteEdgeFromDB = async (edgeId: string) => {
+  const { error } = await supabase.from('network_edges').delete().eq('id', edgeId);
+  if (error) throw new Error(error.message);
+};

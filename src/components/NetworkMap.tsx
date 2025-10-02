@@ -10,11 +10,21 @@ import ReactFlow, {
   Edge,
   Connection,
   NodeDragHandler,
+  OnEdgesChange,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { getDevices, addDevice, updateDevice, deleteDevice, NetworkDevice } from '@/services/networkDeviceService';
+import {
+  getDevices,
+  addDevice,
+  updateDevice,
+  deleteDevice,
+  NetworkDevice,
+  getEdges,
+  addEdgeToDB,
+  deleteEdgeFromDB,
+} from '@/services/networkDeviceService';
 import { DeviceEditorDialog } from './DeviceEditorDialog';
 import DeviceNode from './DeviceNode';
 import { showSuccess, showError } from '@/utils/toast';
@@ -27,9 +37,9 @@ const NetworkMap = () => {
 
   const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
 
-  const loadNetworkDevices = useCallback(async () => {
+  const loadNetworkData = useCallback(async () => {
     try {
-      const devices = await getDevices();
+      const [devices, edgesData] = await Promise.all([getDevices(), getEdges()]);
       const mappedNodes = devices.map((device) => ({
         id: device.id,
         type: 'device',
@@ -44,16 +54,43 @@ const NetworkMap = () => {
         },
       }));
       setNodes(mappedNodes);
+
+      const mappedEdges = edgesData.map((edge: any) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        animated: true,
+        style: { stroke: '#fff', strokeWidth: 2 },
+      }));
+      setEdges(mappedEdges);
     } catch (error) {
-      showError('Failed to load network devices.');
+      showError('Failed to load network data.');
     }
-  }, [setNodes]);
+  }, [setNodes, setEdges]);
 
   useEffect(() => {
-    loadNetworkDevices();
-  }, [loadNetworkDevices]);
+    loadNetworkData();
+  }, [loadNetworkData]);
 
-  const onConnect = useCallback((params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+  const onConnect = useCallback(
+    async (params: Connection) => {
+      const newEdge = {
+        ...params,
+        animated: true,
+        style: { stroke: '#fff', strokeWidth: 2 },
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
+      try {
+        await addEdgeToDB({ source: params.source!, target: params.target! });
+        showSuccess('Connection saved.');
+        loadNetworkData(); // Reload to get DB-generated ID
+      } catch (error) {
+        showError('Failed to save connection.');
+        loadNetworkData(); // Revert optimistic update
+      }
+    },
+    [setEdges, loadNetworkData]
+  );
 
   const handleAddDevice = () => {
     setEditingDevice(undefined);
@@ -88,19 +125,17 @@ const NetworkMap = () => {
   const handleSaveDevice = async (deviceData: Omit<NetworkDevice, 'id' | 'position_x' | 'position_y'>) => {
     try {
       if (editingDevice?.id) {
-        // Update existing device
         const updatedDevice = await updateDevice(editingDevice.id, deviceData);
         setNodes((nds) =>
           nds.map((node) => {
             if (node.id === updatedDevice.id) {
-              node.data = { ...node.data, ...updatedDevice };
+              node.data = { ...node.data, name: updatedDevice.name, ip_address: updatedDevice.ip_address, icon: updatedDevice.icon };
             }
             return node;
           })
         );
         showSuccess('Device updated successfully.');
       } else {
-        // Add new device
         const newDevice = await addDevice({ ...deviceData, position_x: 100, position_y: 100 });
         const newNode: Node = {
           id: newDevice.id,
@@ -126,28 +161,42 @@ const NetworkMap = () => {
         await updateDevice(node.id, { position_x: node.position.x, position_y: node.position.y });
       } catch (error) {
         showError('Failed to save device position.');
-        // Optionally revert position change on error
-        loadNetworkDevices();
+        loadNetworkData();
       }
     },
-    [loadNetworkDevices]
+    [loadNetworkData]
   );
 
+  const onEdgesChangeHandler: OnEdgesChange = useCallback((changes) => {
+    onEdgesChange(changes);
+    changes.forEach(async (change) => {
+      if (change.type === 'remove') {
+        try {
+          await deleteEdgeFromDB(change.id);
+          showSuccess('Connection deleted.');
+        } catch (error) {
+          showError('Failed to delete connection.');
+          loadNetworkData();
+        }
+      }
+    });
+  }, [onEdgesChange, loadNetworkData]);
+
   return (
-    <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg">
+    <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg bg-gray-900">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onEdgesChange={onEdgesChangeHandler}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
         onNodeDragStop={onNodeDragStop}
         fitView
       >
         <Controls />
-        <MiniMap />
-        <Background gap={12} size={1} />
+        <MiniMap nodeColor={(n) => '#4a5568'} nodeStrokeWidth={3} />
+        <Background gap={16} size={1} color="#444" />
       </ReactFlow>
       <div className="absolute top-4 left-4">
         <Button onClick={handleAddDevice}>

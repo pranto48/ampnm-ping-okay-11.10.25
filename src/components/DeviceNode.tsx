@@ -48,13 +48,13 @@ const DeviceNode = ({ data }: { data: any }) => {
       <Handle type="source" position={Position.Right} />
       <Handle type="source" position={Position.Bottom} />
       <Handle type="source" position={Position.Left} />
-      <Card className="w-64 shadow-lg">
+      <Card className="w-64 shadow-lg bg-gray-800 border-gray-700 text-white">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{data.name}</CardTitle>
+          <CardTitle className="text-sm font-medium text-white">{data.name}</CardTitle>
           {IconComponent}
         </CardHeader>
         <CardContent>
-          <div className="font-mono text-xs text-muted-foreground">{data.ip_address}</div>
+          <div className="font-mono text-xs text-gray-400">{data.ip_address}</div>
           <div className="mt-2 flex items-center justify-between">
             <Button size="sm" onClick={handlePing} disabled={isPinging}>
               <Activity className={`mr-2 h-4 w-4 ${isPinging ? 'animate-spin' : ''}`} />
