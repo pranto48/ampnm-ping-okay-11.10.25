@@ -12,22 +12,7 @@ function isActive($page) {
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        * { font-family: 'Inter', sans-serif; }
-        body {
-            background-color: #0f172a; /* slate-900 */
-            background-image: radial-gradient(#334155 1px, transparent 0);
-            background-size: 30px 30px;
-        }
-        .status-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
-        .status-online { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
-        .status-offline { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; animation: none; }
-        .status-unknown { background-color: #64748b; animation: none; }
-        .loader { border: 4px solid #334155; border-top: 4px solid #22d3ee; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    </style>
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="bg-slate-900 text-slate-300 min-h-screen">
     <nav class="bg-slate-800/50 backdrop-blur-lg shadow-lg sticky top-0 z-50">
