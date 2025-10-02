@@ -43,46 +43,6 @@ if ($conn->query($sql) === TRUE) {
     echo "Error creating table: " . $conn->error . "<br>";
 }
 
-// Create devices table
-$sql = "CREATE TABLE IF NOT EXISTS devices (
-    id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    ip VARCHAR(15) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    status ENUM('online', 'offline', 'unknown') DEFAULT 'unknown',
-    last_seen TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_ip (ip)
-)";
-
-if ($conn->query($sql) === TRUE) {
-    echo "Table devices created successfully<br>";
-} else {
-    echo "Error creating table: " . $conn->error . "<br>";
-}
-
-// --- Add new columns to devices table if they don't exist ---
-$columns = [
-    'type' => "VARCHAR(50) NOT NULL DEFAULT 'server'",
-    'location' => "TEXT",
-    'description' => "TEXT",
-    'enabled' => "BOOLEAN DEFAULT TRUE",
-    'x' => "DECIMAL(10, 4)",
-    'y' => "DECIMAL(10, 4)",
-    'updated_at' => "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-];
-
-foreach ($columns as $column => $definition) {
-    $result = $conn->query("SHOW COLUMNS FROM `devices` LIKE '$column'");
-    if ($result->num_rows == 0) {
-        $alterSql = "ALTER TABLE devices ADD COLUMN `$column` $definition";
-        if ($conn->query($alterSql) === TRUE) {
-            echo "Column `$column` added to devices table successfully<br>";
-        } else {
-            echo "Error adding column `$column`: " . $conn->error . "<br>";
-        }
-    }
-}
-
 // Create maps table
 $sql = "CREATE TABLE IF NOT EXISTS maps (
     id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -100,15 +60,29 @@ if ($conn->query($sql) === TRUE) {
     echo "Error creating table: " . $conn->error . "<br>";
 }
 
-// Check if map_id column exists in devices table and add it if not
-$result = $conn->query("SHOW COLUMNS FROM `devices` LIKE 'map_id'");
-if ($result->num_rows == 0) {
-    $sql = "ALTER TABLE devices ADD COLUMN map_id INT(6) UNSIGNED, ADD CONSTRAINT fk_map_id FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE";
-    if ($conn->query($sql) === TRUE) {
-        echo "Table devices updated successfully with map_id<br>";
-    } else {
-        echo "Error updating devices table: " . $conn->error . "<br>";
-    }
+// Create devices table
+$sql = "CREATE TABLE IF NOT EXISTS devices (
+    id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    ip VARCHAR(15) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    status ENUM('online', 'offline', 'unknown') DEFAULT 'unknown',
+    last_seen TIMESTAMP NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'server',
+    description TEXT,
+    enabled BOOLEAN DEFAULT TRUE,
+    x DECIMAL(10, 4) NULL,
+    y DECIMAL(10, 4) NULL,
+    map_id INT(6) UNSIGNED,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_ip_map (ip, map_id),
+    FOREIGN KEY (map_id) REFERENCES maps(id) ON DELETE CASCADE
+)";
+
+if ($conn->query($sql) === TRUE) {
+    echo "Table devices created successfully<br>";
+} else {
+    echo "Error creating table: " . $conn->error . "<br>";
 }
 
 // Create device_edges table

@@ -104,15 +104,10 @@ switch ($action) {
     // --- Device Management Endpoints ---
     case 'get_devices':
         $map_id = $_GET['map_id'] ?? null;
-        $sql = "SELECT * FROM devices";
-        $params = [];
-        if ($map_id) {
-            $sql .= " WHERE map_id = ?";
-            $params[] = $map_id;
-        }
-        $sql .= " ORDER BY created_at ASC";
+        if (!$map_id) { http_response_code(400); echo json_encode(['error' => 'Map ID is required']); exit; }
+        $sql = "SELECT * FROM devices WHERE map_id = ? ORDER BY created_at ASC";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute([$map_id]);
         $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($devices);
         break;
@@ -120,13 +115,13 @@ switch ($action) {
     case 'create_device':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = json_decode(file_get_contents('php://input'), true);
-            $sql = "INSERT INTO devices (name, ip, type, location, description, enabled, x, y, map_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO devices (name, ip, type, description, enabled, x, y, map_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 $input['name'], $input['ip'], $input['type'],
-                $input['location'] ?? null, $input['description'] ?? null,
-                $input['enabled'] ?? true, $input['x'] ?? 0, $input['y'] ?? 0,
-                $input['map_id'] ?? null
+                $input['description'] ?? null, $input['enabled'] ?? true, 
+                $input['x'] ?? rand(50, 800), $input['y'] ?? rand(50, 500),
+                $input['map_id']
             ]);
             $lastId = $pdo->lastInsertId();
             $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ?");
@@ -142,7 +137,7 @@ switch ($action) {
             $id = $input['id'] ?? null;
             $updates = $input['updates'] ?? [];
             if (!$id || empty($updates)) { http_response_code(400); echo json_encode(['error' => 'Device ID and updates are required']); exit; }
-            $allowed_fields = ['name', 'ip', 'type', 'location', 'description', 'enabled', 'x', 'y', 'map_id'];
+            $allowed_fields = ['name', 'ip', 'type', 'description', 'enabled', 'x', 'y'];
             $fields = []; $params = [];
             foreach ($updates as $key => $value) { if (in_array($key, $allowed_fields)) { $fields[] = "$key = ?"; $params[] = $value; } }
             if (empty($fields)) { http_response_code(400); echo json_encode(['error' => 'No valid fields to update']); exit; }
@@ -175,27 +170,11 @@ switch ($action) {
     case 'create_map':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = json_decode(file_get_contents('php://input'), true);
-            $name = $input['name'] ?? ''; $type = $input['type'] ?? '';
-            if (empty($name) || empty($type)) { http_response_code(400); echo json_encode(['error' => 'Name and type are required']); exit; }
+            $name = $input['name'] ?? ''; $type = $input['type'] ?? 'lan';
+            if (empty($name)) { http_response_code(400); echo json_encode(['error' => 'Name is required']); exit; }
             $stmt = $pdo->prepare("INSERT INTO maps (name, type) VALUES (?, ?)"); $stmt->execute([$name, $type]);
             $lastId = $pdo->lastInsertId();
             $stmt = $pdo->prepare("SELECT id, name, type, updated_at as lastModified, 0 as deviceCount FROM maps WHERE id = ?"); $stmt->execute([$lastId]);
-            $map = $stmt->fetch(PDO::FETCH_ASSOC); echo json_encode($map);
-        }
-        break;
-
-    case 'update_map':
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $input = json_decode(file_get_contents('php://input'), true);
-            $id = $input['id'] ?? null; $updates = $input['updates'] ?? [];
-            if (!$id || empty($updates)) { http_response_code(400); echo json_encode(['error' => 'Map ID and updates are required']); exit; }
-            $allowed_fields = ['name', 'type', 'description', 'is_default'];
-            $fields = []; $params = [];
-            foreach ($updates as $key => $value) { if (in_array($key, $allowed_fields)) { $fields[] = "$key = ?"; $params[] = $value; } }
-            if (empty($fields)) { http_response_code(400); echo json_encode(['error' => 'No valid fields to update']); exit; }
-            $params[] = $id;
-            $sql = "UPDATE maps SET " . implode(', ', $fields) . " WHERE id = ?"; $stmt = $pdo->prepare($sql); $stmt->execute($params);
-            $stmt = $pdo->prepare("SELECT m.id, m.name, m.type, m.updated_at as lastModified, (SELECT COUNT(*) FROM devices WHERE map_id = m.id) as deviceCount FROM maps m WHERE m.id = ?"); $stmt->execute([$id]);
             $map = $stmt->fetch(PDO::FETCH_ASSOC); echo json_encode($map);
         }
         break;
@@ -210,6 +189,41 @@ switch ($action) {
         }
         break;
         
+    // --- Edge Management Endpoints ---
+    case 'get_edges':
+        $map_id = $_GET['map_id'] ?? null;
+        if (!$map_id) { http_response_code(400); echo json_encode(['error' => 'Map ID is required']); exit; }
+        $stmt = $pdo->prepare("SELECT * FROM device_edges WHERE map_id = ?");
+        $stmt->execute([$map_id]);
+        $edges = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($edges);
+        break;
+
+    case 'create_edge':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $sql = "INSERT INTO device_edges (source_id, target_id, map_id) VALUES (?, ?, ?)";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$input['source_id'], $input['target_id'], $input['map_id']]);
+            $lastId = $pdo->lastInsertId();
+            $stmt = $pdo->prepare("SELECT * FROM device_edges WHERE id = ?");
+            $stmt->execute([$lastId]);
+            $edge = $stmt->fetch(PDO::FETCH_ASSOC);
+            echo json_encode($edge);
+        }
+        break;
+
+    case 'delete_edge':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = $input['id'] ?? null;
+            if (!$id) { http_response_code(400); echo json_encode(['error' => 'Edge ID is required']); exit; }
+            $stmt = $pdo->prepare("DELETE FROM device_edges WHERE id = ?");
+            $stmt->execute([$id]);
+            echo json_encode(['success' => true]);
+        }
+        break;
+
     default:
         http_response_code(404);
         echo json_encode(['error' => 'Invalid action']);
