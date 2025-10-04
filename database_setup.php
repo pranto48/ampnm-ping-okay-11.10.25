@@ -119,6 +119,27 @@ try {
         message("Table '$tableName' checked/created successfully.");
     }
 
+    // --- Schema migration section to handle upgrades ---
+    function columnExists($pdo, $db, $table, $column) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+        $stmt->execute([$db, $table, $column]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    if (!columnExists($pdo, $dbname, 'maps', 'user_id')) {
+        $pdo->exec("ALTER TABLE `maps` ADD COLUMN `user_id` INT(6) UNSIGNED NOT NULL AFTER `id`, ADD CONSTRAINT `fk_maps_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
+        message("Upgraded 'maps' table with user_id.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'user_id')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `user_id` INT(6) UNSIGNED NOT NULL AFTER `id`, ADD CONSTRAINT `fk_devices_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
+        message("Upgraded 'devices' table with user_id.");
+    }
+    if (!columnExists($pdo, $dbname, 'device_edges', 'user_id')) {
+        $pdo->exec("ALTER TABLE `device_edges` ADD COLUMN `user_id` INT(6) UNSIGNED NOT NULL AFTER `id`, ADD CONSTRAINT `fk_device_edges_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
+        message("Upgraded 'device_edges' table with user_id.");
+    }
+    // --- End schema migration ---
+
     // Check if admin user exists, if not, create it
     $admin_user = 'admin';
     $stmt = $pdo->prepare("SELECT id FROM `users` WHERE username = ?");
