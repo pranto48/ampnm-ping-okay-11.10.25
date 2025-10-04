@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface NetworkDevice {
   id?: string;
+  user_id?: string;
   name: string;
   ip_address: string;
   position_x: number;
@@ -13,14 +14,23 @@ export interface NetworkDevice {
   name_text_size?: number;
 }
 
+export interface MapData {
+  devices: Omit<NetworkDevice, 'user_id' | 'status'>[];
+  edges: { source: string; target: string }[];
+}
+
 export const getDevices = async () => {
   const { data, error } = await supabase.from('network_devices').select('*');
   if (error) throw new Error(error.message);
   return data;
 };
 
-export const addDevice = async (device: NetworkDevice) => {
-  const { data, error } = await supabase.from('network_devices').insert(device).select().single();
+export const addDevice = async (device: Omit<NetworkDevice, 'user_id'>) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+  
+  const deviceWithUser = { ...device, user_id: user.id };
+  const { data, error } = await supabase.from('network_devices').insert(deviceWithUser).select().single();
   if (error) throw new Error(error.message);
   return data;
 };
@@ -51,7 +61,10 @@ export const getEdges = async () => {
 };
 
 export const addEdgeToDB = async (edge: { source: string; target: string }) => {
-  const { data, error } = await supabase.from('network_edges').insert({ source_id: edge.source, target_id: edge.target }).select().single();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase.from('network_edges').insert({ source_id: edge.source, target_id: edge.target, user_id: user.id }).select().single();
   if (error) throw new Error(error.message);
   return data;
 };
@@ -59,4 +72,12 @@ export const addEdgeToDB = async (edge: { source: string; target: string }) => {
 export const deleteEdgeFromDB = async (edgeId: string) => {
   const { error } = await supabase.from('network_edges').delete().eq('id', edgeId);
   if (error) throw new Error(error.message);
+};
+
+export const importMap = async (mapData: MapData) => {
+  const { error } = await supabase.rpc('import_network_map', {
+    devices_data: mapData.devices,
+    edges_data: mapData.edges,
+  });
+  if (error) throw new Error(`Import failed: ${error.message}`);
 };

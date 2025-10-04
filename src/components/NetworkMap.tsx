@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -14,7 +14,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Upload, Download } from 'lucide-react';
 import {
   getDevices,
   addDevice,
@@ -24,10 +24,12 @@ import {
   getEdges,
   addEdgeToDB,
   deleteEdgeFromDB,
+  importMap,
+  MapData,
 } from '@/services/networkDeviceService';
 import { DeviceEditorDialog } from './DeviceEditorDialog';
 import DeviceNode from './DeviceNode';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { performServerPing } from '@/services/pingService';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -36,6 +38,7 @@ const NetworkMap = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Partial<NetworkDevice> | undefined>(undefined);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
 
@@ -103,25 +106,20 @@ const NetworkMap = () => {
       .channel('network-devices-changes')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'network_devices' },
-        (payload) => {
-          const updatedDevice = payload.new as NetworkDevice;
-          setNodes((nds) =>
-            nds.map((node) => {
-              if (node.id === updatedDevice.id) {
-                return { ...node, data: { ...node.data, status: updatedDevice.status } };
-              }
-              return node;
-            })
-          );
-        }
+        { event: '*', schema: 'public', table: 'network_devices' },
+        () => loadNetworkData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'network_edges' },
+        () => loadNetworkData()
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [setNodes]);
+  }, [loadNetworkData]);
 
   useEffect(() => {
     const intervals: NodeJS.Timeout[] = [];
@@ -216,7 +214,7 @@ const NetworkMap = () => {
     }
   };
 
-  const handleSaveDevice = async (deviceData: Omit<NetworkDevice, 'id' | 'position_x' | 'position_y'>) => {
+  const handleSaveDevice = async (deviceData: Omit<NetworkDevice, 'id' | 'position_x' | 'position_y' | 'user_id'>) => {
     try {
       if (editingDevice?.id) {
         await updateDevice(editingDevice.id, deviceData);
@@ -261,6 +259,69 @@ const NetworkMap = () => {
     [onEdgesChange, loadNetworkData]
   );
 
+  const handleExport = async () => {
+    const devices = await getDevices();
+    const edges = await getEdges();
+
+    const exportData: MapData = {
+      devices: devices.map(({ user_id, status, ...rest }) => rest),
+      edges: edges.map(({ id, ...rest }: any) => rest),
+    };
+
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'network-map.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showSuccess('Map exported successfully!');
+  };
+
+  const handleImportClick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm('Are you sure you want to import this map? This will overwrite your current map.')) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const toastId = showLoading('Importing map...');
+      try {
+        const text = e.target?.result;
+        const mapData = JSON.parse(text as string) as MapData;
+
+        // Basic validation
+        if (!mapData.devices || !mapData.edges) {
+          throw new Error('Invalid map file format.');
+        }
+
+        await importMap(mapData);
+        dismissToast(toastId);
+        showSuccess('Map imported successfully!');
+        await loadNetworkData();
+      } catch (error: any) {
+        dismissToast(toastId);
+        showError(error.message || 'Failed to import map.');
+      } finally {
+        // Reset file input
+        if (importInputRef.current) {
+          importInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg bg-gray-900">
       <ReactFlow
@@ -277,11 +338,26 @@ const NetworkMap = () => {
         <MiniMap nodeColor={() => '#4a5568'} nodeStrokeWidth={3} />
         <Background gap={16} size={1} color="#444" />
       </ReactFlow>
-      <div className="absolute top-4 left-4">
+      <div className="absolute top-4 left-4 flex gap-2">
         <Button onClick={handleAddDevice}>
           <PlusCircle className="h-4 w-4 mr-2" />
           Add Device
         </Button>
+        <Button onClick={handleExport} variant="outline">
+          <Download className="h-4 w-4 mr-2" />
+          Export
+        </Button>
+        <Button onClick={handleImportClick} variant="outline">
+          <Upload className="h-4 w-4 mr-2" />
+          Import
+        </Button>
+        <input
+          type="file"
+          ref={importInputRef}
+          onChange={handleFileChange}
+          accept="application/json"
+          className="hidden"
+        />
       </div>
       {isEditorOpen && (
         <DeviceEditorDialog
