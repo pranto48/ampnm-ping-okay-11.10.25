@@ -24,11 +24,12 @@ import {
   getEdges,
   addEdgeToDB,
   deleteEdgeFromDB,
+  updateDeviceStatusByIp,
 } from '@/services/networkDeviceService';
 import { DeviceEditorDialog } from './DeviceEditorDialog';
 import DeviceNode from './DeviceNode';
 import { showSuccess, showError } from '@/utils/toast';
-import { performServerPing } from '@/services/pingService';
+import { performBrowserPing } from '@/services/browserPingService';
 import { supabase } from '@/integrations/supabase/client';
 
 const NetworkMap = () => {
@@ -127,10 +128,10 @@ const NetworkMap = () => {
       if (node.data.ping_interval && node.data.ping_interval > 0) {
         const intervalId = setInterval(async () => {
           try {
-            const result = await performServerPing(node.data.ip_address, 1);
-            handleStatusChange(node.id, result.success ? 'online' : 'offline');
+            await performBrowserPing(node.data.ip_address);
+            await updateDeviceStatusByIp(node.data.ip_address, 'online');
           } catch (error) {
-            handleStatusChange(node.id, 'offline');
+            await updateDeviceStatusByIp(node.data.ip_address, 'offline');
           }
         }, node.data.ping_interval * 1000);
         intervals.push(intervalId);
@@ -139,7 +140,7 @@ const NetworkMap = () => {
     return () => {
       intervals.forEach(clearInterval);
     };
-  }, [nodes, handleStatusChange]);
+  }, [nodes]);
 
   useEffect(() => {
     setEdges((eds) =>

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Network, Clock, AlertCircle, Wifi, WifiOff, Info } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
+import { updateDeviceStatusByIp } from "@/services/networkDeviceService";
 
 interface PingResult {
   host: string;
@@ -154,6 +155,7 @@ const PingTest = () => {
 
       setPingResults(prev => [result, ...prev.slice(0, 9)]);
       showSuccess(`Ping to ${host} successful (${pingTime}ms)`);
+      await updateDeviceStatusByIp(host, 'online');
     } catch (error) {
       const result: PingResult = {
         host,
@@ -164,6 +166,7 @@ const PingTest = () => {
 
       setPingResults(prev => [result, ...prev.slice(0, 9)]);
       showError(`Ping to ${host} failed - Device is online but not responding to browser requests`);
+      await updateDeviceStatusByIp(host, 'offline');
     } finally {
       setIsPinging(false);
     }
