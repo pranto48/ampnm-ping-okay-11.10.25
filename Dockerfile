@@ -10,8 +10,25 @@ RUN apt-get update && apt-get install -y \
     sed \
     && docker-php-ext-install pdo_mysql zip
 
-# Copy application source code to the web server's root directory
-COPY . /var/www/html/
+# Set the working directory
+WORKDIR /var/www/html
+
+# Copy application files explicitly to avoid cache key issues
+COPY api.php .
+COPY config.php .
+COPY database_setup.php .
+COPY devices.php .
+COPY export.php .
+COPY footer.php .
+COPY header.php .
+COPY history.php .
+COPY index.php .
+COPY map.php .
+
+# Copy application directories
+COPY api ./api
+COPY assets ./assets
+COPY includes ./includes
 
 # Set the correct permissions for the web server
 RUN chown -R www-data:www-data /var/www/html

@@ -1,7 +1,7 @@
 .git
 .idea
 node_modules
-Dockerfile
-docker-compose.yml
-docker-entrypoint.sh
-README.md
+*.md
+.vite
+public
+.gitignore
