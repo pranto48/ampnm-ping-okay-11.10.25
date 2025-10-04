@@ -16,7 +16,7 @@ export interface NetworkDevice {
 
 export interface MapData {
   devices: Omit<NetworkDevice, 'user_id' | 'status'>[];
-  edges: { source: string; target: string }[];
+  edges: { source: string; target: string; connection_type: string }[];
 }
 
 export const getDevices = async () => {
@@ -55,7 +55,7 @@ export const deleteDevice = async (id: string) => {
 };
 
 export const getEdges = async () => {
-  const { data, error } = await supabase.from('network_edges').select('id, source:source_id, target:target_id');
+  const { data, error } = await supabase.from('network_edges').select('id, source:source_id, target:target_id, connection_type');
   if (error) throw new Error(error.message);
   return data;
 };
@@ -64,7 +64,13 @@ export const addEdgeToDB = async (edge: { source: string; target: string }) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
-  const { data, error } = await supabase.from('network_edges').insert({ source_id: edge.source, target_id: edge.target, user_id: user.id }).select().single();
+  const { data, error } = await supabase.from('network_edges').insert({ source_id: edge.source, target_id: edge.target, user_id: user.id, connection_type: 'cat5' }).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const updateEdgeInDB = async (id: string, updates: { connection_type: string }) => {
+  const { data, error } = await supabase.from('network_edges').update(updates).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return data;
 };

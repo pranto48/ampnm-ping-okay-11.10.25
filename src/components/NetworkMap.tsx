@@ -24,10 +24,12 @@ import {
   getEdges,
   addEdgeToDB,
   deleteEdgeFromDB,
+  updateEdgeInDB,
   importMap,
   MapData,
 } from '@/services/networkDeviceService';
 import { DeviceEditorDialog } from './DeviceEditorDialog';
+import { EdgeEditorDialog } from './EdgeEditorDialog';
 import DeviceNode from './DeviceNode';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { performServerPing } from '@/services/pingService';
@@ -38,6 +40,8 @@ const NetworkMap = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Partial<NetworkDevice> | undefined>(undefined);
+  const [isEdgeEditorOpen, setIsEdgeEditorOpen] = useState(false);
+  const [editingEdge, setEditingEdge] = useState<Edge | undefined>(undefined);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
@@ -88,8 +92,9 @@ const NetworkMap = () => {
         id: edge.id,
         source: edge.source,
         target: edge.target,
-        animated: true,
-        style: { stroke: '#fff', strokeWidth: 2 },
+        data: {
+          connection_type: edge.connection_type || 'cat5',
+        },
       }));
       setEdges(mappedEdges);
     } catch (error) {
@@ -141,34 +146,37 @@ const NetworkMap = () => {
     };
   }, [nodes, handleStatusChange]);
 
-  useEffect(() => {
-    setEdges((eds) =>
-      eds.map((edge) => {
-        const sourceNode = nodes.find((n) => n.id === edge.source);
-        const targetNode = nodes.find((n) => n.id === edge.target);
-        const isConnectionBroken = sourceNode?.data.status === 'offline' || targetNode?.data.status === 'offline';
-        
-        return {
-          ...edge,
-          animated: !isConnectionBroken,
-          style: {
-            ...edge.style,
-            stroke: isConnectionBroken ? '#ef4444' : '#fff',
-            strokeWidth: 2,
-          },
-        };
-      })
-    );
-  }, [nodes, setEdges]);
+  const styledEdges = useMemo(() => {
+    return edges.map((edge) => {
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      const targetNode = nodes.find((n) => n.id === edge.target);
+      const isConnectionBroken = sourceNode?.data.status === 'offline' || targetNode?.data.status === 'offline';
+      
+      const type = edge.data?.connection_type || 'cat5';
+      let style: React.CSSProperties = { strokeWidth: 2 };
+      
+      if (isConnectionBroken) {
+        style.stroke = '#ef4444'; // Red for offline
+      } else {
+        switch (type) {
+          case 'fiber': style.stroke = '#f97316'; break; // Orange
+          case 'wifi': style.stroke = '#38bdf8'; style.strokeDasharray = '5, 5'; break; // Sky blue
+          case 'radio': style.stroke = '#84cc16'; style.strokeDasharray = '2, 7'; break; // Lime green
+          case 'cat5': default: style.stroke = '#a78bfa'; break; // Violet
+        }
+      }
+
+      return {
+        ...edge,
+        animated: !isConnectionBroken,
+        style: style,
+        label: type,
+      };
+    });
+  }, [nodes, edges]);
 
   const onConnect = useCallback(
     async (params: Connection) => {
-      const newEdge = {
-        ...params,
-        animated: true,
-        style: { stroke: '#fff', strokeWidth: 2 },
-      };
-      setEdges((eds) => addEdge(newEdge as Edge, eds));
       try {
         await addEdgeToDB({ source: params.source!, target: params.target! });
         showSuccess('Connection saved.');
@@ -178,7 +186,7 @@ const NetworkMap = () => {
         await loadNetworkData();
       }
     },
-    [setEdges, loadNetworkData]
+    [loadNetworkData]
   );
 
   const handleAddDevice = () => {
@@ -259,13 +267,32 @@ const NetworkMap = () => {
     [onEdgesChange, loadNetworkData]
   );
 
+  const onEdgeClick = (_event: React.MouseEvent, edge: Edge) => {
+    setEditingEdge(edge);
+    setIsEdgeEditorOpen(true);
+  };
+
+  const handleSaveEdge = async (edgeId: string, connectionType: string) => {
+    try {
+      await updateEdgeInDB(edgeId, { connection_type: connectionType });
+      showSuccess('Connection updated.');
+      await loadNetworkData();
+    } catch (error) {
+      showError('Failed to update connection.');
+    }
+  };
+
   const handleExport = async () => {
     const devices = await getDevices();
-    const edges = await getEdges();
+    const edgesData = await getEdges();
 
     const exportData: MapData = {
       devices: devices.map(({ user_id, status, ...rest }) => rest),
-      edges: edges.map(({ id, ...rest }: any) => rest),
+      edges: edgesData.map(({ id, ...rest }: any) => ({
+        source: rest.source,
+        target: rest.target,
+        connection_type: rest.connection_type || 'cat5',
+      })),
     };
 
     const jsonString = JSON.stringify(exportData, null, 2);
@@ -300,7 +327,6 @@ const NetworkMap = () => {
         const text = e.target?.result;
         const mapData = JSON.parse(text as string) as MapData;
 
-        // Basic validation
         if (!mapData.devices || !mapData.edges) {
           throw new Error('Invalid map file format.');
         }
@@ -313,7 +339,6 @@ const NetworkMap = () => {
         dismissToast(toastId);
         showError(error.message || 'Failed to import map.');
       } finally {
-        // Reset file input
         if (importInputRef.current) {
           importInputRef.current.value = '';
         }
@@ -326,12 +351,13 @@ const NetworkMap = () => {
     <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg bg-gray-900">
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={styledEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChangeHandler}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
         onNodeDragStop={onNodeDragStop}
+        onEdgeClick={onEdgeClick}
         fitView
       >
         <Controls />
@@ -365,6 +391,14 @@ const NetworkMap = () => {
           onClose={() => setIsEditorOpen(false)}
           onSave={handleSaveDevice}
           device={editingDevice}
+        />
+      )}
+      {isEdgeEditorOpen && (
+        <EdgeEditorDialog
+          isOpen={isEdgeEditorOpen}
+          onClose={() => setIsEdgeEditorOpen(false)}
+          onSave={handleSaveEdge}
+          edge={editingEdge}
         />
       )}
     </div>
