@@ -118,6 +118,7 @@ try {
 
 } catch (PDOException $e) {
     message("Database setup failed: " . $e->getMessage(), true);
+    exit(1);
 }
 ?>
     <a href="index.php" style="color: #22d3ee; text-decoration: none; font-size: 1.2rem;">&larr; Back to Dashboard</a>

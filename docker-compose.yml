@@ -15,6 +15,7 @@ services:
       - DB_NAME=network_monitor
       - DB_USER=user
       - DB_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=rootpassword
     restart: unless-stopped
 
   db:
