@@ -21,6 +21,8 @@ const deviceSchema = z.object({
   ip_address: z.string().min(1, 'IP address is required'),
   icon: z.string().min(1, 'Icon is required'),
   ping_interval: z.coerce.number().int().positive().optional().nullable(),
+  icon_size: z.coerce.number().int().min(20).max(100).optional().nullable(),
+  name_text_size: z.coerce.number().int().min(8).max(24).optional().nullable(),
 });
 
 interface DeviceEditorDialogProps {
@@ -40,6 +42,8 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
       ip_address: device?.ip_address || '',
       icon: device?.icon || 'server',
       ping_interval: device?.ping_interval || undefined,
+      icon_size: device?.icon_size || 50,
+      name_text_size: device?.name_text_size || 14,
     },
   });
 
@@ -119,6 +123,44 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
                     <Input
                       type="number"
                       placeholder="e.g., 60 (leave blank for no auto ping)"
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="icon_size"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Icon Size (20-100px)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 50"
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="name_text_size"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name Text Size (8-24px)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 14"
                       {...field}
                       value={field.value ?? ''}
                       onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}

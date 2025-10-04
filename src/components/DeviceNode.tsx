@@ -8,13 +8,13 @@ import { performServerPing, parsePingOutput } from '@/services/pingService';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { showError } from '@/utils/toast';
 
-const iconMap: { [key: string]: React.ReactNode } = {
-  server: <Server className="h-6 w-6" />,
-  router: <Router className="h-6 w-6" />,
-  printer: <Printer className="h-6 w-6" />,
-  laptop: <Laptop className="h-6 w-6" />,
-  wifi: <Wifi className="h-6 w-6" />,
-  database: <Database className="h-6 w-6" />,
+const iconMap: { [key: string]: React.ComponentType<any> } = {
+  server: Server,
+  router: Router,
+  printer: Printer,
+  laptop: Laptop,
+  wifi: Wifi,
+  database: Database,
 };
 
 const DeviceNode = ({ data }: { data: any }) => {
@@ -44,7 +44,10 @@ const DeviceNode = ({ data }: { data: any }) => {
     }
   };
 
-  const IconComponent = iconMap[data.icon] || <Server className="h-6 w-6" />;
+  const IconComponent = iconMap[data.icon] || Server;
+  const iconSize = data.icon_size || 50;
+  const nameTextSize = data.name_text_size || 14;
+
   const statusBorderColor =
     data.status === 'online'
       ? 'border-green-500'
@@ -60,8 +63,8 @@ const DeviceNode = ({ data }: { data: any }) => {
       <Handle type="source" position={Position.Left} />
       <Card className={`w-64 shadow-lg bg-gray-800 border-gray-700 text-white border-2 ${statusBorderColor}`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-white">{data.name}</CardTitle>
-          {IconComponent}
+          <CardTitle style={{ fontSize: `${nameTextSize}px` }} className="font-medium text-white truncate">{data.name}</CardTitle>
+          <IconComponent style={{ height: `${iconSize}px`, width: `${iconSize}px` }} />
         </CardHeader>
         <CardContent>
           <div className="font-mono text-xs text-gray-400">{data.ip_address}</div>

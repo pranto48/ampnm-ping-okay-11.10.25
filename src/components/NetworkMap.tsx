@@ -72,6 +72,8 @@ const NetworkMap = () => {
           icon: device.icon,
           status: device.status || 'unknown',
           ping_interval: device.ping_interval,
+          icon_size: device.icon_size,
+          name_text_size: device.name_text_size,
           onEdit: handleEdit,
           onDelete: handleDelete,
           onStatusChange: handleStatusChange,
@@ -195,6 +197,8 @@ const NetworkMap = () => {
         ip_address: nodeToEdit.data.ip_address,
         icon: nodeToEdit.data.icon,
         ping_interval: nodeToEdit.data.ping_interval,
+        icon_size: nodeToEdit.data.icon_size,
+        name_text_size: nodeToEdit.data.name_text_size,
       });
       setIsEditorOpen(true);
     }
