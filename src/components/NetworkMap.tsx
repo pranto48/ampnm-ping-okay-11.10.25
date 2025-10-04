@@ -29,6 +29,7 @@ import { DeviceEditorDialog } from './DeviceEditorDialog';
 import DeviceNode from './DeviceNode';
 import { showSuccess, showError } from '@/utils/toast';
 import { performServerPing } from '@/services/pingService';
+import { supabase } from '@/integrations/supabase/client';
 
 const NetworkMap = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -94,6 +95,31 @@ const NetworkMap = () => {
   useEffect(() => {
     loadNetworkData();
   }, [loadNetworkData]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('network-devices-changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'network_devices' },
+        (payload) => {
+          const updatedDevice = payload.new as NetworkDevice;
+          setNodes((nds) =>
+            nds.map((node) => {
+              if (node.id === updatedDevice.id) {
+                return { ...node, data: { ...node.data, status: updatedDevice.status } };
+              }
+              return node;
+            })
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [setNodes]);
 
   useEffect(() => {
     const intervals: NodeJS.Timeout[] = [];

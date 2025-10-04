@@ -29,6 +29,14 @@ export const updateDevice = async (id: string, updates: Partial<NetworkDevice>) 
   return data;
 };
 
+export const updateDeviceStatusByIp = async (ip_address: string, status: 'online' | 'offline') => {
+  const { error } = await supabase.rpc('update_device_status_by_ip', {
+    ip_address_in: ip_address,
+    status_in: status,
+  });
+  if (error) throw new Error(error.message);
+};
+
 export const deleteDevice = async (id: string) => {
   const { error } = await supabase.from('network_devices').delete().eq('id', id);
   if (error) throw new Error(error.message);

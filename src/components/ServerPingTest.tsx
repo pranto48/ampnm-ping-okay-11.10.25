@@ -8,6 +8,7 @@ import { Network, Clock, Server, Wifi, WifiOff, AlertCircle } from "lucide-react
 import { showSuccess, showError } from "@/utils/toast";
 import { performServerPing, parsePingOutput, type PingResult } from "@/services/pingService";
 import { storePingResult } from "@/services/pingStorage";
+import { updateDeviceStatusByIp } from "@/services/networkDeviceService";
 
 interface ServerPingResult extends PingResult {
   parsedStats?: {
@@ -43,7 +44,6 @@ const ServerPingTest = () => {
 
       setPingResults(prev => [enhancedResult, ...prev.slice(0, 9)]);
       
-      // Store the result in the database
       await storePingResult({
         host: result.host,
         packet_loss: parsedStats.packetLoss,
@@ -54,6 +54,9 @@ const ServerPingTest = () => {
         output: result.output
       });
 
+      const newStatus = result.success ? 'online' : 'offline';
+      await updateDeviceStatusByIp(result.host, newStatus);
+
       if (result.success) {
         showSuccess(`Server ping to ${host} successful (${parsedStats.avgTime}ms avg)`);
       } else {
@@ -61,6 +64,7 @@ const ServerPingTest = () => {
       }
     } catch (error) {
       showError(`Ping failed: ${error.message}`);
+      await updateDeviceStatusByIp(host, 'offline');
     } finally {
       setIsPinging(false);
     }
