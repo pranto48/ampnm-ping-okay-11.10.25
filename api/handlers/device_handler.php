@@ -35,9 +35,11 @@ switch ($action) {
                 savePingResult($pdo, $device['ip'], $pingResult['output'], $pingResult['return_code']);
                 $parsedResult = parsePingOutput($pingResult['output']);
                 $status = getStatusFromPingResult($device, $pingResult, $parsedResult);
+                $last_avg_time = $parsedResult['avg_time'] ?? null;
+                $last_ttl = $parsedResult['ttl'] ?? null;
                 
-                $updateStmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ? WHERE id = ?");
-                $updateStmt->execute([$status, ($status !== 'offline') ? date('Y-m-d H:i:s') : $device['last_seen'], $device['id']]);
+                $updateStmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ?");
+                $updateStmt->execute([$status, ($status !== 'offline') ? date('Y-m-d H:i:s') : $device['last_seen'], $last_avg_time, $last_ttl, $device['id']]);
             }
             
             echo json_encode(['success' => true, 'message' => 'All enabled devices have been pinged.', 'count' => count($devices)]);
@@ -61,11 +63,13 @@ switch ($action) {
             $parsedResult = parsePingOutput($pingResult['output']);
             $status = getStatusFromPingResult($device, $pingResult, $parsedResult);
             $last_seen = ($status !== 'offline') ? date('Y-m-d H:i:s') : $device['last_seen'];
+            $last_avg_time = $parsedResult['avg_time'] ?? null;
+            $last_ttl = $parsedResult['ttl'] ?? null;
             
-            $stmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ? WHERE id = ?");
-            $stmt->execute([$status, $last_seen, $deviceId]);
+            $stmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ?");
+            $stmt->execute([$status, $last_seen, $last_avg_time, $last_ttl, $deviceId]);
             
-            echo json_encode(['id' => $deviceId, 'status' => $status, 'last_seen' => $last_seen]);
+            echo json_encode(['id' => $deviceId, 'status' => $status, 'last_seen' => $last_seen, 'last_avg_time' => $last_avg_time, 'last_ttl' => $last_ttl]);
         }
         break;
 
@@ -99,13 +103,14 @@ switch ($action) {
 
     case 'create_device':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $sql = "INSERT INTO devices (name, ip, type, map_id, ping_interval, icon_size, name_text_size, warning_latency_threshold, warning_packetloss_threshold, critical_latency_threshold, critical_packetloss_threshold) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO devices (name, ip, type, map_id, ping_interval, icon_size, name_text_size, warning_latency_threshold, warning_packetloss_threshold, critical_latency_threshold, critical_packetloss_threshold, show_live_ping) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 $input['name'], $input['ip'] ?? null, $input['type'], $input['map_id'],
                 $input['ping_interval'] ?? null, $input['icon_size'] ?? 50, $input['name_text_size'] ?? 14,
                 $input['warning_latency_threshold'] ?? null, $input['warning_packetloss_threshold'] ?? null,
-                $input['critical_latency_threshold'] ?? null, $input['critical_packetloss_threshold'] ?? null
+                $input['critical_latency_threshold'] ?? null, $input['critical_packetloss_threshold'] ?? null,
+                $input['show_live_ping'] ?? false
             ]);
             $lastId = $pdo->lastInsertId();
             $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ?");
@@ -120,7 +125,7 @@ switch ($action) {
             $id = $input['id'] ?? null;
             $updates = $input['updates'] ?? [];
             if (!$id || empty($updates)) { http_response_code(400); echo json_encode(['error' => 'Device ID and updates are required']); exit; }
-            $allowed_fields = ['name', 'ip', 'type', 'x', 'y', 'ping_interval', 'icon_size', 'name_text_size', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold'];
+            $allowed_fields = ['name', 'ip', 'type', 'x', 'y', 'ping_interval', 'icon_size', 'name_text_size', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold', 'show_live_ping'];
             $fields = []; $params = [];
             foreach ($updates as $key => $value) { if (in_array($key, $allowed_fields)) { $fields[] = "$key = ?"; $params[] = empty($value) ? null : $value; } }
             if (empty($fields)) { http_response_code(400); echo json_encode(['error' => 'No valid fields to update']); exit; }

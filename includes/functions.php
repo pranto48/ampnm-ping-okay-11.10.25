@@ -39,6 +39,7 @@ function parsePingOutput($output) {
     $avgTime = 0;
     $minTime = 0;
     $maxTime = 0;
+    $ttl = null;
     
     // Regex for Windows
     if (preg_match('/Lost = \d+ \((\d+)% loss\)/', $output, $matches)) {
@@ -48,6 +49,9 @@ function parsePingOutput($output) {
         $minTime = (float)$matches[1];
         $maxTime = (float)$matches[2];
         $avgTime = (float)$matches[3];
+    }
+    if (preg_match('/TTL=(\d+)/', $output, $matches)) {
+        $ttl = (int)$matches[1];
     }
     
     // Regex for Linux/Mac
@@ -59,12 +63,16 @@ function parsePingOutput($output) {
         $avgTime = (float)$matches[2];
         $maxTime = (float)$matches[3];
     }
+    if (preg_match('/ttl=(\d+)/', $output, $matches)) {
+        $ttl = (int)$matches[1];
+    }
     
     return [
         'packet_loss' => $packetLoss,
         'avg_time' => $avgTime,
         'min_time' => $minTime,
-        'max_time' => $maxTime
+        'max_time' => $maxTime,
+        'ttl' => $ttl
     ];
 }
 

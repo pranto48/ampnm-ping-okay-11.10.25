@@ -52,10 +52,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const [deviceData, edgeData] = await Promise.all([api.get('get_devices', { map_id: mapId }), api.get('get_edges', { map_id: mapId })]);
         
         const visNodes = deviceData.map(d => {
+            let label = d.name;
+            if (d.show_live_ping && d.status === 'online' && d.last_avg_time !== null) {
+                label += `\n${d.last_avg_time}ms | TTL:${d.last_ttl || 'N/A'}`;
+            }
+
             if (d.type === 'box') {
                 return { id: d.id, label: d.name, title: d.name, x: d.x, y: d.y, shape: 'box', color: { background: 'rgba(49, 65, 85, 0.5)', border: '#475569' }, font: { color: 'white', size: parseInt(d.name_text_size) || 14 }, margin: 20, deviceData: d, level: -1 };
             }
-            return { id: d.id, label: d.name, title: `${d.name}<br>${d.ip || 'No IP'}<br>Status: ${d.status}`, x: d.x, y: d.y, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: iconMap[d.type] || iconMap.other, size: parseInt(d.icon_size) || 50, color: statusColorMap[d.status] || statusColorMap.unknown }, font: { color: 'white', size: parseInt(d.name_text_size) || 14 }, deviceData: d };
+            return { id: d.id, label: label, title: `${d.name}<br>${d.ip || 'No IP'}<br>Status: ${d.status}`, x: d.x, y: d.y, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: iconMap[d.type] || iconMap.other, size: parseInt(d.icon_size) || 50, color: statusColorMap[d.status] || statusColorMap.unknown }, font: { color: 'white', size: parseInt(d.name_text_size) || 14, multi: true }, deviceData: d };
         });
         nodes.clear(); nodes.add(visNodes);
 
@@ -105,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const node = nodes.get(deviceId);
             document.getElementById('modalTitle').textContent = 'Edit Item';
             document.getElementById('deviceId').value = node.id;
-            document.getElementById('deviceName').value = node.label;
+            document.getElementById('deviceName').value = node.deviceData.name;
             document.getElementById('deviceIp').value = node.deviceData.ip;
             document.getElementById('deviceType').value = node.deviceData.type;
             document.getElementById('pingInterval').value = node.deviceData.ping_interval;
@@ -115,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('warning_packetloss_threshold').value = node.deviceData.warning_packetloss_threshold;
             document.getElementById('critical_latency_threshold').value = node.deviceData.critical_latency_threshold;
             document.getElementById('critical_packetloss_threshold').value = node.deviceData.critical_packetloss_threshold;
+            document.getElementById('showLivePing').checked = node.deviceData.show_live_ping;
         } else {
             document.getElementById('modalTitle').textContent = 'Add Item';
             document.getElementById('deviceName').value = prefill.name || '';
@@ -170,7 +176,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const node = nodes.get(deviceId);
         if (!node) return;
         const result = await api.post('check_device', { id: deviceId });
-        nodes.update({ id: deviceId, deviceData: { ...node.deviceData, status: result.status }, icon: { color: statusColorMap[result.status] }, title: `${node.label}<br>${node.deviceData.ip}<br>Status: ${result.status}` });
+        
+        const updatedDeviceData = { ...node.deviceData, status: result.status, last_avg_time: result.last_avg_time, last_ttl: result.last_ttl };
+
+        let label = updatedDeviceData.name;
+        if (updatedDeviceData.show_live_ping && updatedDeviceData.status === 'online' && updatedDeviceData.last_avg_time !== null) {
+            label += `\n${updatedDeviceData.last_avg_time}ms | TTL:${updatedDeviceData.last_ttl || 'N/A'}`;
+        }
+
+        nodes.update({ 
+            id: deviceId, 
+            deviceData: updatedDeviceData, 
+            icon: { color: statusColorMap[result.status] }, 
+            title: `${updatedDeviceData.name}<br>${updatedDeviceData.ip}<br>Status: ${result.status}`,
+            label: label
+        });
     };
 
     deviceForm.addEventListener('submit', async (e) => {
@@ -187,7 +207,8 @@ document.addEventListener('DOMContentLoaded', function() {
             warning_latency_threshold: document.getElementById('warning_latency_threshold').value,
             warning_packetloss_threshold: document.getElementById('warning_packetloss_threshold').value,
             critical_latency_threshold: document.getElementById('critical_latency_threshold').value,
-            critical_packetloss_threshold: document.getElementById('critical_packetloss_threshold').value
+            critical_packetloss_threshold: document.getElementById('critical_packetloss_threshold').value,
+            show_live_ping: document.getElementById('showLivePing').checked
         };
         if (id) { await api.post('update_device', { id, updates: deviceData }); } else { await api.post('create_device', deviceData); }
         deviceModal.classList.add('hidden'); await switchMap(currentMapId);
