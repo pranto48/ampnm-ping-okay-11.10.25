@@ -1,61 +1,406 @@
-// This component is a work in progress and will be improved in future steps.
-// For now, it provides a basic structure for the network map.
-import React, { useEffect, useRef } from 'react';
-import { DataSet } from 'vis-data/peer';
-import { Network } from 'vis-network/peer';
-import 'vis-network/styles/vis-network.css';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import ReactFlow, {
+  MiniMap,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Node,
+  Edge,
+  Connection,
+  NodeDragHandler,
+  OnEdgesChange,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, Upload, Download } from 'lucide-react';
+import {
+  getDevices,
+  addDevice,
+  updateDevice,
+  deleteDevice,
+  NetworkDevice,
+  getEdges,
+  addEdgeToDB,
+  deleteEdgeFromDB,
+  updateEdgeInDB,
+  importMap,
+  MapData,
+} from '@/services/networkDeviceService';
+import { DeviceEditorDialog } from './DeviceEditorDialog';
+import { EdgeEditorDialog } from './EdgeEditorDialog';
+import DeviceNode from './DeviceNode';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
+import { performServerPing } from '@/services/pingService';
+import { supabase } from '@/integrations/supabase/client';
 
 const NetworkMap = () => {
-  const visJsRef = useRef<HTMLDivElement>(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingDevice, setEditingDevice] = useState<Partial<NetworkDevice> | undefined>(undefined);
+  const [isEdgeEditorOpen, setIsEdgeEditorOpen] = useState(false);
+  const [editingEdge, setEditingEdge] = useState<Edge | undefined>(undefined);
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const nodeTypes = useMemo(() => ({ device: DeviceNode }), []);
+
+  const handleStatusChange = useCallback(
+    async (nodeId: string, status: 'online' | 'offline') => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return { ...node, data: { ...node.data, status } };
+          }
+          return node;
+        })
+      );
+      try {
+        await updateDevice(nodeId, { status });
+      } catch (error) {
+        showError('Failed to update device status in DB.');
+      }
+    },
+    [setNodes]
+  );
+
+  const loadNetworkData = useCallback(async () => {
+    try {
+      const [devices, edgesData] = await Promise.all([getDevices(), getEdges()]);
+      const mappedNodes: Node[] = devices.map((device) => ({
+        id: device.id,
+        type: 'device',
+        position: { x: device.position_x, y: device.position_y },
+        data: {
+          id: device.id,
+          name: device.name,
+          ip_address: device.ip_address,
+          icon: device.icon,
+          status: device.status || 'unknown',
+          ping_interval: device.ping_interval,
+          icon_size: device.icon_size,
+          name_text_size: device.name_text_size,
+          onEdit: handleEdit,
+          onDelete: handleDelete,
+          onStatusChange: handleStatusChange,
+        },
+      }));
+      setNodes(mappedNodes);
+
+      const mappedEdges: Edge[] = edgesData.map((edge: any) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        data: {
+          connection_type: edge.connection_type || 'cat5',
+        },
+      }));
+      setEdges(mappedEdges);
+    } catch (error) {
+      showError('Failed to load network data.');
+    }
+  }, [setNodes, setEdges, handleStatusChange]);
 
   useEffect(() => {
-    const nodes = new DataSet([
-      { id: 1, label: 'Welcome!' },
-      { id: 2, label: 'Add devices to start' },
-    ]);
+    loadNetworkData();
+  }, [loadNetworkData]);
 
-    const edges = new DataSet([
-      { from: 1, to: 2 },
-    ]);
+  useEffect(() => {
+    const channel = supabase
+      .channel('network-devices-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'network_devices' },
+        () => loadNetworkData()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'network_edges' },
+        () => loadNetworkData()
+      )
+      .subscribe();
 
-    const data = { nodes, edges };
-    const options = {
-        nodes: {
-            shape: 'dot',
-            size: 16,
-            font: {
-                color: '#ffffff'
-            },
-            borderWidth: 2
-        },
-        edges: {
-            width: 2,
-            color: {
-                color: '#ffffff'
-            }
-        },
-        physics: {
-            enabled: true
-        },
-        layout: {
-            hierarchical: {
-                enabled: false
-            }
-        },
-        interaction: {
-            dragNodes: true
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadNetworkData]);
+
+  useEffect(() => {
+    const intervals: NodeJS.Timeout[] = [];
+    nodes.forEach((node) => {
+      if (node.data.ping_interval && node.data.ping_interval > 0) {
+        const intervalId = setInterval(async () => {
+          try {
+            const result = await performServerPing(node.data.ip_address, 1);
+            handleStatusChange(node.id, result.success ? 'online' : 'offline');
+          } catch (error) {
+            handleStatusChange(node.id, 'offline');
+          }
+        }, node.data.ping_interval * 1000);
+        intervals.push(intervalId);
+      }
+    });
+    return () => {
+      intervals.forEach(clearInterval);
+    };
+  }, [nodes, handleStatusChange]);
+
+  const styledEdges = useMemo(() => {
+    return edges.map((edge) => {
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      const targetNode = nodes.find((n) => n.id === edge.target);
+      const isConnectionBroken = sourceNode?.data.status === 'offline' || targetNode?.data.status === 'offline';
+      
+      const type = edge.data?.connection_type || 'cat5';
+      let style: React.CSSProperties = { strokeWidth: 2 };
+      
+      if (isConnectionBroken) {
+        style.stroke = '#ef4444'; // Red for offline
+      } else {
+        switch (type) {
+          case 'fiber': style.stroke = '#f97316'; break; // Orange
+          case 'wifi': style.stroke = '#38bdf8'; style.strokeDasharray = '5, 5'; break; // Sky blue
+          case 'radio': style.stroke = '#84cc16'; style.strokeDasharray = '2, 7'; break; // Lime green
+          case 'cat5': default: style.stroke = '#a78bfa'; break; // Violet
         }
+      }
+
+      return {
+        ...edge,
+        animated: !isConnectionBroken,
+        style: style,
+        label: type,
+      };
+    });
+  }, [nodes, edges]);
+
+  const onConnect = useCallback(
+    async (params: Connection) => {
+      try {
+        await addEdgeToDB({ source: params.source!, target: params.target! });
+        showSuccess('Connection saved.');
+        await loadNetworkData();
+      } catch (error) {
+        showError('Failed to save connection.');
+        await loadNetworkData();
+      }
+    },
+    [loadNetworkData]
+  );
+
+  const handleAddDevice = () => {
+    setEditingDevice(undefined);
+    setIsEditorOpen(true);
+  };
+
+  const handleEdit = (deviceId: string) => {
+    const nodeToEdit = nodes.find((n) => n.id === deviceId);
+    if (nodeToEdit) {
+      setEditingDevice({
+        id: nodeToEdit.id,
+        name: nodeToEdit.data.name,
+        ip_address: nodeToEdit.data.ip_address,
+        icon: nodeToEdit.data.icon,
+        ping_interval: nodeToEdit.data.ping_interval,
+        icon_size: nodeToEdit.data.icon_size,
+        name_text_size: nodeToEdit.data.name_text_size,
+      });
+      setIsEditorOpen(true);
+    }
+  };
+
+  const handleDelete = async (deviceId: string) => {
+    if (window.confirm('Are you sure you want to delete this device?')) {
+      try {
+        await deleteDevice(deviceId);
+        setNodes((nds) => nds.filter((node) => node.id !== deviceId));
+        showSuccess('Device deleted successfully.');
+      } catch (error) {
+        showError('Failed to delete device.');
+      }
+    }
+  };
+
+  const handleSaveDevice = async (deviceData: Omit<NetworkDevice, 'id' | 'position_x' | 'position_y' | 'user_id'>) => {
+    try {
+      if (editingDevice?.id) {
+        await updateDevice(editingDevice.id, deviceData);
+        showSuccess('Device updated successfully.');
+      } else {
+        await addDevice({ ...deviceData, position_x: 100, position_y: 100, status: 'unknown' });
+        showSuccess('Device added successfully.');
+      }
+      await loadNetworkData();
+    } catch (error) {
+      showError('Failed to save device.');
+    }
+  };
+
+  const onNodeDragStop: NodeDragHandler = useCallback(
+    async (_event, node) => {
+      try {
+        await updateDevice(node.id, { position_x: node.position.x, position_y: node.position.y });
+      } catch (error) {
+        showError('Failed to save device position.');
+        await loadNetworkData();
+      }
+    },
+    [loadNetworkData]
+  );
+
+  const onEdgesChangeHandler: OnEdgesChange = useCallback(
+    (changes) => {
+      onEdgesChange(changes);
+      changes.forEach(async (change) => {
+        if (change.type === 'remove') {
+          try {
+            await deleteEdgeFromDB(change.id);
+            showSuccess('Connection deleted.');
+          } catch (error) {
+            showError('Failed to delete connection.');
+            await loadNetworkData();
+          }
+        }
+      });
+    },
+    [onEdgesChange, loadNetworkData]
+  );
+
+  const onEdgeClick = (_event: React.MouseEvent, edge: Edge) => {
+    setEditingEdge(edge);
+    setIsEdgeEditorOpen(true);
+  };
+
+  const handleSaveEdge = async (edgeId: string, connectionType: string) => {
+    try {
+      await updateEdgeInDB(edgeId, { connection_type: connectionType });
+      showSuccess('Connection updated.');
+      await loadNetworkData();
+    } catch (error) {
+      showError('Failed to update connection.');
+    }
+  };
+
+  const handleExport = async () => {
+    const devices = await getDevices();
+    const edgesData = await getEdges();
+
+    const exportData: MapData = {
+      devices: devices.map(({ user_id, status, ...rest }) => rest),
+      edges: edgesData.map(({ id, ...rest }: any) => ({
+        source: rest.source,
+        target: rest.target,
+        connection_type: rest.connection_type || 'cat5',
+      })),
     };
 
-    if (visJsRef.current) {
-      new Network(visJsRef.current, data, options);
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'network-map.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showSuccess('Map exported successfully!');
+  };
+
+  const handleImportClick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm('Are you sure you want to import this map? This will overwrite your current map.')) {
+      return;
     }
-  }, []);
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const toastId = showLoading('Importing map...');
+      try {
+        const text = e.target?.result;
+        const mapData = JSON.parse(text as string) as MapData;
+
+        if (!mapData.devices || !mapData.edges) {
+          throw new Error('Invalid map file format.');
+        }
+
+        await importMap(mapData);
+        dismissToast(toastId);
+        showSuccess('Map imported successfully!');
+        await loadNetworkData();
+      } catch (error: any) {
+        dismissToast(toastId);
+        showError(error.message || 'Failed to import map.');
+      } finally {
+        if (importInputRef.current) {
+          importInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
-        <h2 className="text-xl font-semibold text-white mb-4">My Network</h2>
-        <div ref={visJsRef} style={{ height: '75vh', backgroundColor: '#1e293b' }} />
+    <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg bg-gray-900">
+      <ReactFlow
+        nodes={nodes}
+        edges={styledEdges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChangeHandler}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        onNodeDragStop={onNodeDragStop}
+        onEdgeClick={onEdgeClick}
+        fitView
+      >
+        <Controls />
+        <MiniMap nodeColor={() => '#4a5568'} nodeStrokeWidth={3} />
+        <Background gap={16} size={1} color="#444" />
+      </ReactFlow>
+      <div className="absolute top-4 left-4 flex gap-2">
+        <Button onClick={handleAddDevice}>
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Add Device
+        </Button>
+        <Button onClick={handleExport} variant="outline">
+          <Download className="h-4 w-4 mr-2" />
+          Export
+        </Button>
+        <Button onClick={handleImportClick} variant="outline">
+          <Upload className="h-4 w-4 mr-2" />
+          Import
+        </Button>
+        <input
+          type="file"
+          ref={importInputRef}
+          onChange={handleFileChange}
+          accept="application/json"
+          className="hidden"
+        />
+      </div>
+      {isEditorOpen && (
+        <DeviceEditorDialog
+          isOpen={isEditorOpen}
+          onClose={() => setIsEditorOpen(false)}
+          onSave={handleSaveDevice}
+          device={editingDevice}
+        />
+      )}
+      {isEdgeEditorOpen && (
+        <EdgeEditorDialog
+          isOpen={isEdgeEditorOpen}
+          onClose={() => setIsEdgeEditorOpen(false)}
+          onSave={handleSaveEdge}
+          edge={editingEdge}
+        />
+      )}
     </div>
   );
 };
