@@ -12,8 +12,8 @@ import ServerPingTest from "@/components/ServerPingTest";
 import PingHistory from "@/components/PingHistory";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import NetworkMap from "@/components/NetworkMap";
-import { getDevices, NetworkDevice } from "@/services/networkDeviceService";
-import { pingAllDevices } from "@/services/pingService";
+import { getDevices, NetworkDevice, updateDeviceStatusByIp } from "@/services/networkDeviceService";
+import { performServerPing } from "@/services/pingService";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
@@ -51,6 +51,29 @@ const Index = () => {
     };
   }, [fetchDevices]);
 
+  useEffect(() => {
+    const intervals: NodeJS.Timeout[] = [];
+    devices.forEach((device) => {
+      if (device.ping_interval && device.ping_interval > 0 && device.ip_address) {
+        const intervalId = setInterval(async () => {
+          try {
+            const result = await performServerPing(device.ip_address, 1);
+            const newStatus = result.success ? 'online' : 'offline';
+            await updateDeviceStatusByIp(device.ip_address, newStatus);
+          } catch (error) {
+            console.error(`Auto-ping failed for ${device.ip_address}:`, error);
+            await updateDeviceStatusByIp(device.ip_address, 'offline');
+          }
+        }, device.ping_interval * 1000);
+        intervals.push(intervalId);
+      }
+    });
+
+    return () => {
+      intervals.forEach(clearInterval);
+    };
+  }, [devices]);
+
   const checkNetworkStatus = async () => {
     try {
       await fetch("https://www.google.com/favicon.ico", { mode: 'no-cors', cache: 'no-cache' });
@@ -65,16 +88,20 @@ const Index = () => {
 
   const handleCheckAllDevices = async () => {
     setIsCheckingDevices(true);
-    const toastId = showLoading("Pinging all devices...");
+    const toastId = showLoading(`Pinging ${devices.length} devices...`);
     try {
-      const result = await pingAllDevices();
+      const pingPromises = devices.map(async (device) => {
+        if (device.ip_address) {
+          const result = await performServerPing(device.ip_address, 1);
+          const newStatus = result.success ? 'online' : 'offline';
+          await updateDeviceStatusByIp(device.ip_address, newStatus);
+        }
+      });
+
+      await Promise.all(pingPromises);
+      
       dismissToast(toastId);
-      if (result.success) {
-        showSuccess(result.message || `Checked ${result.count} devices.`);
-      } else {
-        showError("Failed to check all devices.");
-      }
-      // The real-time listener will handle updating the UI, but we can refetch just in case.
+      showSuccess(`Finished checking all devices.`);
       await fetchDevices();
     } catch (error: any) {
       dismissToast(toastId);

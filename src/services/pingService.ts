@@ -54,25 +54,6 @@ export const performServerPing = async (host: string, count: number = 4): Promis
   }
 };
 
-export const pingAllDevices = async (): Promise<{ success: boolean; message: string; count: number }> => {
-  try {
-    const response = await fetch(`${LOCAL_API_URL}?action=check_all_devices`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`Network response was not ok: ${response.statusText}`);
-    }
-    return await response.json();
-  } catch (error: any) {
-    console.error('Failed to ping all devices:', error);
-    throw new Error(`Failed to connect to local ping service to check all devices. Error: ${error.message}`);
-  }
-};
-
-
 export const parsePingOutput = (output: string): { packetLoss: number; avgTime: number; minTime: number; maxTime: number } => {
   let packetLoss = 100;
   let avgTime = 0;
