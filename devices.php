@@ -1,25 +1,42 @@
-<?php include 'header.php'; ?>
+<?php 
+require_once 'includes/functions.php';
+include 'header.php'; 
+
+$pdo = getDbConnection();
+$stmt = $pdo->prepare("SELECT id, name FROM maps ORDER BY name ASC");
+$stmt->execute();
+$maps = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$currentMapId = $_GET['map_id'] ?? ($maps[0]['id'] ?? null);
+?>
 
 <div class="container mx-auto px-4 py-8">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
         <h1 class="text-3xl font-bold text-white">Device Management</h1>
-    </div>
-
-    <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 mb-8 text-center">
-        <i class="fas fa-map-marked-alt text-cyan-400 text-3xl mb-3"></i>
-        <h2 class="text-xl font-semibold text-white mb-2">Add and Manage Devices on the Map</h2>
-        <p class="text-slate-400 mb-4">To add, edit, or position devices, please use the interactive Network Map.</p>
-        <a href="map.php" class="inline-block px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 focus:ring-2 focus:ring-cyan-500">
-            <i class="fas fa-arrow-right mr-2"></i>Go to Network Map
-        </a>
+        <?php if (!empty($maps)): ?>
+        <div class="flex items-center gap-2">
+            <label for="mapSelector" class="text-slate-400">Map:</label>
+            <select id="mapSelector" class="bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                <?php foreach ($maps as $map): ?>
+                    <option value="<?= $map['id'] ?>" <?= $currentMapId == $map['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($map['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
     </div>
 
     <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold text-white">Device List</h2>
-            <button id="bulkCheckBtn" class="px-4 py-2 bg-green-600/50 text-green-300 rounded-lg hover:bg-green-600/80">
-                <i class="fas fa-sync-alt mr-2"></i>Check All
-            </button>
+            <div class="flex items-center gap-4">
+                <a href="map.php" class="px-4 py-2 bg-cyan-600/50 text-cyan-300 rounded-lg hover:bg-cyan-600/80 text-sm">
+                    <i class="fas fa-map-marked-alt mr-2"></i>View on Map
+                </a>
+                <button id="bulkCheckBtn" class="px-4 py-2 bg-green-600/50 text-green-300 rounded-lg hover:bg-green-600/80">
+                    <i class="fas fa-sync-alt mr-2"></i>Check All
+                </button>
+            </div>
         </div>
         
         <div class="overflow-x-auto">
@@ -28,7 +45,6 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Device</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">IP Address</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Map</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Last Seen</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Actions</th>
@@ -39,7 +55,7 @@
             <div id="tableLoader" class="text-center py-8 hidden"><div class="loader mx-auto"></div></div>
             <div id="noDevicesMessage" class="text-center py-8 hidden">
                 <i class="fas fa-server text-slate-600 text-4xl mb-4"></i>
-                <p class="text-slate-500">No devices found. Add one to get started.</p>
+                <p class="text-slate-500">No devices found on this map. Add one on the map page.</p>
             </div>
         </div>
     </div>
@@ -57,6 +73,16 @@
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const mapSelector = document.getElementById('mapSelector');
+    if (mapSelector) {
+        mapSelector.addEventListener('change', function() {
+            window.location.href = 'devices.php?map_id=' + this.value;
+        });
+    }
+});
+</script>
 <script src="assets/js/devices.js" defer></script>
 
 <?php include 'footer.php'; ?>

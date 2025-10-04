@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const edgeModal = document.getElementById('edgeModal'), edgeForm = document.getElementById('edgeForm'),
         cancelEdgeBtn = document.getElementById('cancelEdgeBtn');
 
-    const iconMap = { server: '\uf233', router: '\uf637', switch: '\uf796', printer: '\uf02f', nas: '\uf0a0', camera: '\uf030', other: '\uf108', firewall: '\uf3ed', ipphone: '\uf87d', punchdevice: '\uf2c2' };
+    const iconMap = { server: '\uf233', router: '\uf4d7', switch: '\uf796', printer: '\uf02f', nas: '\uf0a0', camera: '\uf030', other: '\uf108', firewall: '\uf3ed', ipphone: '\uf87d', punchdevice: '\uf2c2' };
     const statusColorMap = { online: '#22c55e', offline: '#ef4444', unknown: '#f59e0b' };
     const edgeColorMap = { cat5: '#a78bfa', fiber: '#f97316', wifi: '#38bdf8', radio: '#84cc16' };
 
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }));
         nodes.clear(); nodes.add(visNodes);
 
-        const visEdges = edgeData.map(e => ({ id: e.id, from: e.source_id, to: e.target_id, connection_type: e.connection_type }));
+        const visEdges = edgeData.map(e => ({ id: e.id, from: e.source_id, to: e.target_id, connection_type: e.connection_type, label: e.connection_type }));
         edges.clear(); edges.add(visEdges);
         updateEdgeStyles();
         setupAutoPing(deviceData);
@@ -62,7 +62,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const initializeMap = () => {
         const container = document.getElementById('network-map');
         const data = { nodes, edges };
-        const options = { physics: false, interaction: { hover: true }, edges: { smooth: true, width: 2 }, manipulation: { enabled: false, addEdge: async (edgeData, callback) => { const newEdge = await api.post('create_edge', { source_id: edgeData.from, target_id: edgeData.to, map_id: currentMapId }); edgeData.id = newEdge.id; callback(edgeData); updateEdgeStyles(); }, deleteNode: async (data, callback) => { if (confirm(`Delete ${data.nodes.length} device(s)?`)) { for (const nodeId of data.nodes) { await api.post('delete_device', { id: nodeId }); } callback(data); } }, deleteEdge: async (data, callback) => { if (confirm(`Delete ${data.edges.length} connection(s)?`)) { for (const edgeId of data.edges) { await api.post('delete_edge', { id: edgeId }); } callback(data); } } } };
+        const options = { 
+            physics: false, 
+            interaction: { hover: true }, 
+            edges: { 
+                smooth: true, 
+                width: 2,
+                font: { color: '#ffffff', size: 12, align: 'top', strokeWidth: 0 }
+            }, 
+            manipulation: { 
+                enabled: false, 
+                addEdge: async (edgeData, callback) => { 
+                    const newEdge = await api.post('create_edge', { source_id: edgeData.from, target_id: edgeData.to, map_id: currentMapId, connection_type: 'cat5' }); 
+                    edgeData.id = newEdge.id;
+                    edgeData.label = 'cat5';
+                    callback(edgeData); 
+                    updateEdgeStyles(); 
+                }, 
+                deleteNode: async (data, callback) => { if (confirm(`Delete ${data.nodes.length} device(s)?`)) { for (const nodeId of data.nodes) { await api.post('delete_device', { id: nodeId }); } callback(data); } }, 
+                deleteEdge: async (data, callback) => { if (confirm(`Delete ${data.edges.length} connection(s)?`)) { for (const edgeId of data.edges) { await api.post('delete_edge', { id: edgeId }); } callback(data); } } 
+            } 
+        };
         network = new vis.Network(container, data, options);
         network.on("dragEnd", async (params) => { if (params.nodes.length > 0) { const nodeId = params.nodes[0]; const position = network.getPositions([nodeId])[nodeId]; await api.post('update_device', { id: nodeId, updates: { x: position.x, y: position.y } }); } });
         network.on("doubleClick", (params) => { if (params.nodes.length > 0) openDeviceModal(params.nodes[0]); });
@@ -137,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const connection_type = document.getElementById('connectionType').value;
         await api.post('update_edge', { id, connection_type });
         edgeModal.classList.add('hidden');
-        edges.update({ id, connection_type });
+        edges.update({ id, connection_type, label: connection_type });
         updateEdgeStyles();
     });
 

@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <tr data-id="${device.id}" class="border-b border-slate-700 hover:bg-slate-800/50">
                 <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-white">${device.name}</div><div class="text-sm text-slate-400 capitalize">${device.type}</div></td>
                 <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-slate-400 font-mono">${device.ip}</div></td>
-                <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-slate-400">${device.map_name}</div></td>
                 <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex items-center gap-2 text-xs leading-5 font-semibold rounded-full ${statusClass}"><div class="${statusIndicatorClass}"></div>${device.status}</span></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400">${lastSeen}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -42,8 +41,12 @@ document.addEventListener('DOMContentLoaded', function() {
         tableLoader.classList.remove('hidden');
         noDevicesMessage.classList.add('hidden');
         devicesTableBody.innerHTML = '';
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const mapId = urlParams.get('map_id');
+
         try {
-            const devices = await api.get('get_devices');
+            const devices = await api.get('get_devices', mapId ? { map_id: mapId } : {});
             if (devices.length > 0) {
                 devicesTableBody.innerHTML = devices.map(renderDeviceRow).join('');
             } else {
@@ -137,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (button.classList.contains('delete-device-btn')) {
-            if (confirm('Are you sure you want to delete this device?')) {
+            if (confirm('Are you sure you want to delete this device? This will also remove it from the map.')) {
                 await api.post('delete_device', { id: deviceId });
                 row.remove();
                 if (devicesTableBody.children.length === 0) noDevicesMessage.classList.remove('hidden');
@@ -150,7 +153,13 @@ document.addEventListener('DOMContentLoaded', function() {
         icon.classList.add('fa-spin');
         bulkCheckBtn.disabled = true;
         try {
-            await api.post('check_all_devices');
+            const urlParams = new URLSearchParams(window.location.search);
+            const mapId = urlParams.get('map_id');
+            if (mapId) {
+                await api.post('ping_all_devices', { map_id: mapId });
+            } else {
+                alert("Please select a map first.");
+            }
             await loadDevices();
         } catch (error) {
             console.error('Failed to check all devices:', error);
