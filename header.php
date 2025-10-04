@@ -35,6 +35,9 @@ function isActive($page) {
                         <a href="devices.php" class="px-3 py-2 rounded-md text-sm font-medium <?= isActive('devices.php') ?>">Devices</a>
                         <a href="history.php" class="px-3 py-2 rounded-md text-sm font-medium <?= isActive('history.php') ?>">History</a>
                         <a href="map.php" class="px-3 py-2 rounded-md text-sm font-medium <?= isActive('map.php') ?>">Map</a>
+                        <?php if (isset($_SESSION['username']) && $_SESSION['username'] === 'admin'): ?>
+                            <a href="users.php" class="px-3 py-2 rounded-md text-sm font-medium <?= isActive('users.php') ?>">Users</a>
+                        <?php endif; ?>
                         <a href="logout.php" class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white">Logout</a>
                     </div>
                 </div>

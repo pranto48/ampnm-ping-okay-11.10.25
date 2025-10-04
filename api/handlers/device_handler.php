@@ -1,5 +1,6 @@
 <?php
 // This file is included by api.php and assumes $pdo, $action, and $input are available.
+$current_user_id = $_SESSION['user_id'];
 
 function getStatusFromPingResult($device, $pingResult, $parsedResult) {
     $isAlive = ($pingResult['return_code'] === 0 && $parsedResult['packet_loss'] < 100);
@@ -26,8 +27,8 @@ switch ($action) {
             $map_id = $input['map_id'] ?? null;
             if (!$map_id) { http_response_code(400); echo json_encode(['error' => 'Map ID is required']); exit; }
 
-            $stmt = $pdo->prepare("SELECT * FROM devices WHERE enabled = TRUE AND map_id = ? AND ip IS NOT NULL");
-            $stmt->execute([$map_id]);
+            $stmt = $pdo->prepare("SELECT * FROM devices WHERE enabled = TRUE AND map_id = ? AND user_id = ? AND ip IS NOT NULL");
+            $stmt->execute([$map_id, $current_user_id]);
             $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             foreach ($devices as $device) {
@@ -38,8 +39,8 @@ switch ($action) {
                 $last_avg_time = $parsedResult['avg_time'] ?? null;
                 $last_ttl = $parsedResult['ttl'] ?? null;
                 
-                $updateStmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ?");
-                $updateStmt->execute([$status, ($status !== 'offline') ? date('Y-m-d H:i:s') : $device['last_seen'], $last_avg_time, $last_ttl, $device['id']]);
+                $updateStmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
+                $updateStmt->execute([$status, ($status !== 'offline') ? date('Y-m-d H:i:s') : $device['last_seen'], $last_avg_time, $last_ttl, $device['id'], $current_user_id]);
             }
             
             echo json_encode(['success' => true, 'message' => 'All enabled devices have been pinged.', 'count' => count($devices)]);
@@ -51,8 +52,8 @@ switch ($action) {
             $deviceId = $input['id'] ?? 0;
             if (!$deviceId) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
             
-            $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ?");
-            $stmt->execute([$deviceId]);
+            $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ? AND user_id = ?");
+            $stmt->execute([$deviceId, $current_user_id]);
             $device = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$device) { http_response_code(404); echo json_encode(['error' => 'Device not found']); exit; }
@@ -66,8 +67,8 @@ switch ($action) {
             $last_avg_time = $parsedResult['avg_time'] ?? null;
             $last_ttl = $parsedResult['ttl'] ?? null;
             
-            $stmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ?");
-            $stmt->execute([$status, $last_seen, $last_avg_time, $last_ttl, $deviceId]);
+            $stmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
+            $stmt->execute([$status, $last_seen, $last_avg_time, $last_ttl, $deviceId, $current_user_id]);
             
             echo json_encode(['id' => $deviceId, 'status' => $status, 'last_seen' => $last_seen, 'last_avg_time' => $last_avg_time, 'last_ttl' => $last_ttl]);
         }
@@ -76,8 +77,8 @@ switch ($action) {
     case 'get_device_details':
         $deviceId = $_GET['id'] ?? 0;
         if (!$deviceId) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
-        $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ?");
-        $stmt->execute([$deviceId]);
+        $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ? AND user_id = ?");
+        $stmt->execute([$deviceId, $current_user_id]);
         $device = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$device) { http_response_code(404); echo json_encode(['error' => 'Device not found']); exit; }
         $history = [];
@@ -91,9 +92,9 @@ switch ($action) {
 
     case 'get_devices':
         $map_id = $_GET['map_id'] ?? null;
-        $sql = "SELECT d.*, m.name as map_name FROM devices d JOIN maps m ON d.map_id = m.id";
-        $params = [];
-        if ($map_id) { $sql .= " WHERE d.map_id = ?"; $params[] = $map_id; }
+        $sql = "SELECT d.*, m.name as map_name FROM devices d JOIN maps m ON d.map_id = m.id WHERE d.user_id = ?";
+        $params = [$current_user_id];
+        if ($map_id) { $sql .= " AND d.map_id = ?"; $params[] = $map_id; }
         $sql .= " ORDER BY d.created_at ASC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
@@ -103,18 +104,18 @@ switch ($action) {
 
     case 'create_device':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $sql = "INSERT INTO devices (name, ip, type, map_id, ping_interval, icon_size, name_text_size, warning_latency_threshold, warning_packetloss_threshold, critical_latency_threshold, critical_packetloss_threshold, show_live_ping) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO devices (user_id, name, ip, type, map_id, ping_interval, icon_size, name_text_size, warning_latency_threshold, warning_packetloss_threshold, critical_latency_threshold, critical_packetloss_threshold, show_live_ping) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $input['name'], $input['ip'] ?? null, $input['type'], $input['map_id'],
+                $current_user_id, $input['name'], $input['ip'] ?? null, $input['type'], $input['map_id'],
                 $input['ping_interval'] ?? null, $input['icon_size'] ?? 50, $input['name_text_size'] ?? 14,
                 $input['warning_latency_threshold'] ?? null, $input['warning_packetloss_threshold'] ?? null,
                 $input['critical_latency_threshold'] ?? null, $input['critical_packetloss_threshold'] ?? null,
                 $input['show_live_ping'] ?? false
             ]);
             $lastId = $pdo->lastInsertId();
-            $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ?");
-            $stmt->execute([$lastId]);
+            $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ? AND user_id = ?");
+            $stmt->execute([$lastId, $current_user_id]);
             $device = $stmt->fetch(PDO::FETCH_ASSOC);
             echo json_encode($device);
         }
@@ -129,10 +130,10 @@ switch ($action) {
             $fields = []; $params = [];
             foreach ($updates as $key => $value) { if (in_array($key, $allowed_fields)) { $fields[] = "$key = ?"; $params[] = empty($value) ? null : $value; } }
             if (empty($fields)) { http_response_code(400); echo json_encode(['error' => 'No valid fields to update']); exit; }
-            $params[] = $id;
-            $sql = "UPDATE devices SET " . implode(', ', $fields) . " WHERE id = ?";
+            $params[] = $id; $params[] = $current_user_id;
+            $sql = "UPDATE devices SET " . implode(', ', $fields) . " WHERE id = ? AND user_id = ?";
             $stmt = $pdo->prepare($sql); $stmt->execute($params);
-            $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ?"); $stmt->execute([$id]);
+            $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ? AND user_id = ?"); $stmt->execute([$id, $current_user_id]);
             $device = $stmt->fetch(PDO::FETCH_ASSOC); echo json_encode($device);
         }
         break;
@@ -141,7 +142,7 @@ switch ($action) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $input['id'] ?? null;
             if (!$id) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
-            $stmt = $pdo->prepare("DELETE FROM devices WHERE id = ?"); $stmt->execute([$id]);
+            $stmt = $pdo->prepare("DELETE FROM devices WHERE id = ? AND user_id = ?"); $stmt->execute([$id, $current_user_id]);
             echo json_encode(['success' => true, 'message' => 'Device deleted successfully']);
         }
         break;

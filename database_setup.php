@@ -57,16 +57,19 @@ try {
 
         "CREATE TABLE IF NOT EXISTS `maps` (
             `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `user_id` INT(6) UNSIGNED NOT NULL,
             `name` VARCHAR(100) NOT NULL,
             `type` VARCHAR(50) NOT NULL,
             `description` TEXT,
             `is_default` BOOLEAN DEFAULT FALSE,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
         "CREATE TABLE IF NOT EXISTS `devices` (
             `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `user_id` INT(6) UNSIGNED NOT NULL,
             `ip` VARCHAR(15) NULL,
             `name` VARCHAR(100) NOT NULL,
             `status` ENUM('online', 'offline', 'unknown', 'warning', 'critical') DEFAULT 'unknown',
@@ -89,21 +92,22 @@ try {
             `show_live_ping` BOOLEAN DEFAULT FALSE,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY `unique_ip_map` (`ip`, `map_id`),
+            FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
             FOREIGN KEY (`map_id`) REFERENCES `maps`(`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
         "CREATE TABLE IF NOT EXISTS `device_edges` (
             `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `user_id` INT(6) UNSIGNED NOT NULL,
             `source_id` INT(6) UNSIGNED NOT NULL,
             `target_id` INT(6) UNSIGNED NOT NULL,
             `map_id` INT(6) UNSIGNED NOT NULL,
             `connection_type` VARCHAR(50) DEFAULT 'cat5',
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
             FOREIGN KEY (`source_id`) REFERENCES `devices`(`id`) ON DELETE CASCADE,
             FOREIGN KEY (`target_id`) REFERENCES `devices`(`id`) ON DELETE CASCADE,
-            FOREIGN KEY (`map_id`) REFERENCES `maps`(`id`) ON DELETE CASCADE,
-            UNIQUE KEY `unique_edge` (`source_id`, `target_id`, `map_id`)
+            FOREIGN KEY (`map_id`) REFERENCES `maps`(`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
     ];
 
@@ -116,19 +120,24 @@ try {
     }
 
     // Check if admin user exists, if not, create it
-    $stmt = $pdo->query("SELECT COUNT(*) FROM `users` WHERE username = 'admin'");
-    if ($stmt->fetchColumn() == 0) {
-        $admin_user = 'admin';
+    $admin_user = 'admin';
+    $stmt = $pdo->prepare("SELECT id FROM `users` WHERE username = ?");
+    $stmt->execute([$admin_user]);
+    $admin_id = $stmt->fetchColumn();
+
+    if (!$admin_id) {
         $admin_pass = password_hash('password', PASSWORD_DEFAULT);
         $pdo->prepare("INSERT INTO `users` (username, password) VALUES (?, ?)")->execute([$admin_user, $admin_pass]);
+        $admin_id = $pdo->lastInsertId();
         message("Created default user 'admin' with password 'password'.");
     }
 
-    // Check if any maps exist
-    $stmt = $pdo->query("SELECT COUNT(*) FROM `maps`");
+    // Check if the admin user has any maps
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM `maps` WHERE user_id = ?");
+    $stmt->execute([$admin_id]);
     if ($stmt->fetchColumn() == 0) {
-        $pdo->exec("INSERT INTO `maps` (name, type, is_default) VALUES ('Default LAN Map', 'lan', TRUE)");
-        message("Created a default map as no maps were found.");
+        $pdo->prepare("INSERT INTO `maps` (user_id, name, type, is_default) VALUES (?, 'Default LAN Map', 'lan', TRUE)")->execute([$admin_id]);
+        message("Created a default map for the admin user.");
     }
 
     echo "<h2 style='color: #06b6d4; font-family: sans-serif;'>Database setup completed successfully!</h2>";
