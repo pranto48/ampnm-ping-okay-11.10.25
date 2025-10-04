@@ -5,10 +5,13 @@ body {
     background-image: radial-gradient(#334155 1px, transparent 0);
     background-size: 30px 30px;
 }
-.status-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
-.status-online { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
-.status-offline { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; animation: none; }
-.status-unknown { background-color: #64748b; animation: none; }
+.status-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.status-online { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; animation: pulse 2s infinite; }
+.status-warning { background-color: #f59e0b; box-shadow: 0 0 8px #f59e0b; animation: pulse 2s infinite; }
+.status-critical { background-color: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse 2s infinite; }
+.status-offline { background-color: #64748b; }
+.status-unknown { background-color: #94a3b8; }
+
 .loader { border: 4px solid #334155; border-top: 4px solid #22d3ee; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }

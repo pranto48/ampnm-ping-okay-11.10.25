@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelEdgeBtn = document.getElementById('cancelEdgeBtn');
 
     const iconMap = { server: '\uf233', router: '\uf4d7', switch: '\uf796', printer: '\uf02f', nas: '\uf0a0', camera: '\uf030', other: '\uf108', firewall: '\uf3ed', ipphone: '\uf87d', punchdevice: '\uf2c2', 'wifi-router': '\uf1eb', 'radio-tower': '\uf519', rack: '\uf1b3' };
-    const statusColorMap = { online: '#22c55e', offline: '#ef4444', unknown: '#f59e0b' };
+    const statusColorMap = { online: '#22c55e', warning: '#f59e0b', critical: '#ef4444', offline: '#64748b', unknown: '#94a3b8' };
     const edgeColorMap = { cat5: '#a78bfa', fiber: '#f97316', wifi: '#38bdf8', radio: '#84cc16' };
 
     const createMap = async () => {
@@ -85,9 +85,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const toggleDeviceModalFields = (type) => {
         const isAnnotation = type === 'box';
-        document.getElementById('deviceIpWrapper').style.display = isAnnotation ? 'none' : 'block';
-        document.getElementById('pingIntervalWrapper').style.display = isAnnotation ? 'none' : 'block';
-        document.getElementById('deviceIp').required = !isAnnotation;
+        const isPingable = !isAnnotation;
+        document.getElementById('deviceIpWrapper').style.display = isPingable ? 'block' : 'none';
+        document.getElementById('pingIntervalWrapper').style.display = isPingable ? 'block' : 'none';
+        document.getElementById('thresholdsWrapper').style.display = isPingable ? 'block' : 'none';
+        document.getElementById('deviceIp').required = isPingable;
         document.getElementById('iconSizeLabel').textContent = isAnnotation ? 'Width' : 'Icon Size';
         document.getElementById('nameTextSizeLabel').textContent = isAnnotation ? 'Height' : 'Name Text Size';
     };
@@ -105,6 +107,10 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('pingInterval').value = node.deviceData.ping_interval;
             document.getElementById('iconSize').value = node.deviceData.icon_size;
             document.getElementById('nameTextSize').value = node.deviceData.name_text_size;
+            document.getElementById('warning_latency_threshold').value = node.deviceData.warning_latency_threshold;
+            document.getElementById('warning_packetloss_threshold').value = node.deviceData.warning_packetloss_threshold;
+            document.getElementById('critical_latency_threshold').value = node.deviceData.critical_latency_threshold;
+            document.getElementById('critical_packetloss_threshold').value = node.deviceData.critical_packetloss_threshold;
         } else { document.getElementById('modalTitle').textContent = 'Add Item'; }
         toggleDeviceModalFields(document.getElementById('deviceType').value);
         deviceModal.classList.remove('hidden');
@@ -162,7 +168,19 @@ document.addEventListener('DOMContentLoaded', function() {
     deviceForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('deviceId').value;
-        const deviceData = { name: document.getElementById('deviceName').value, ip: document.getElementById('deviceIp').value, type: document.getElementById('deviceType').value, map_id: currentMapId, ping_interval: document.getElementById('pingInterval').value || null, icon_size: document.getElementById('iconSize').value || 50, name_text_size: document.getElementById('nameTextSize').value || 14 };
+        const deviceData = { 
+            name: document.getElementById('deviceName').value, 
+            ip: document.getElementById('deviceIp').value, 
+            type: document.getElementById('deviceType').value, 
+            map_id: currentMapId, 
+            ping_interval: document.getElementById('pingInterval').value, 
+            icon_size: document.getElementById('iconSize').value, 
+            name_text_size: document.getElementById('nameTextSize').value,
+            warning_latency_threshold: document.getElementById('warning_latency_threshold').value,
+            warning_packetloss_threshold: document.getElementById('warning_packetloss_threshold').value,
+            critical_latency_threshold: document.getElementById('critical_latency_threshold').value,
+            critical_packetloss_threshold: document.getElementById('critical_packetloss_threshold').value
+        };
         if (id) { await api.post('update_device', { id, updates: deviceData }); } else { await api.post('create_device', deviceData); }
         deviceModal.classList.add('hidden'); await switchMap(currentMapId);
     });

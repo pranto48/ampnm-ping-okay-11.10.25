@@ -17,15 +17,23 @@ document.addEventListener('DOMContentLoaded', function() {
         post: (action, body = {}) => fetch(`${API_URL}?action=${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(res => res.json())
     };
 
+    const statusClasses = {
+        online: 'bg-green-500/20 text-green-400',
+        warning: 'bg-yellow-500/20 text-yellow-400',
+        critical: 'bg-red-500/20 text-red-400',
+        offline: 'bg-slate-600/50 text-slate-400',
+        unknown: 'bg-slate-600/50 text-slate-400'
+    };
+
     const renderDeviceRow = (device) => {
-        const statusClass = device.status === 'online' ? 'bg-green-500/20 text-green-400' : device.status === 'offline' ? 'bg-red-500/20 text-red-400' : 'bg-slate-600/50 text-slate-400';
+        const statusClass = statusClasses[device.status] || statusClasses.unknown;
         const statusIndicatorClass = `status-indicator status-${device.status}`;
         const lastSeen = device.last_seen ? new Date(device.last_seen).toLocaleString() : 'Never';
 
         return `
             <tr data-id="${device.id}" class="border-b border-slate-700 hover:bg-slate-800/50">
                 <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-white">${device.name}</div><div class="text-sm text-slate-400 capitalize">${device.type}</div></td>
-                <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-slate-400 font-mono">${device.ip}</div></td>
+                <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-slate-400 font-mono">${device.ip || 'N/A'}</div></td>
                 <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex items-center gap-2 text-xs leading-5 font-semibold rounded-full ${statusClass}"><div class="${statusIndicatorClass}"></div>${device.status}</span></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400">${lastSeen}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">

@@ -33,8 +33,10 @@
             <div id="network-map"></div>
             <div id="status-legend">
                 <div class="legend-item"><div class="legend-dot" style="background-color: #22c55e;"></div><span>Online</span></div>
-                <div class="legend-item"><div class="legend-dot" style="background-color: #f59e0b;"></div><span>Unknown</span></div>
-                <div class="legend-item"><div class="legend-dot" style="background-color: #ef4444;"></div><span>Offline</span></div>
+                <div class="legend-item"><div class="legend-dot" style="background-color: #f59e0b;"></div><span>Warning</span></div>
+                <div class="legend-item"><div class="legend-dot" style="background-color: #ef4444;"></div><span>Critical</span></div>
+                <div class="legend-item"><div class="legend-dot" style="background-color: #64748b;"></div><span>Offline</span></div>
+                <div class="legend-item"><div class="legend-dot" style="background-color: #94a3b8;"></div><span>Unknown</span></div>
             </div>
         </div>
     </div>
@@ -72,6 +74,27 @@
                     <label for="pingInterval" class="block text-sm font-medium text-slate-400 mb-1">Ping Interval (seconds)</label>
                     <input type="number" id="pingInterval" name="ping_interval" placeholder="e.g., 60 (optional)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
                 </div>
+                <fieldset id="thresholdsWrapper" class="border border-slate-600 rounded-lg p-4">
+                    <legend class="text-sm font-medium text-slate-400 px-2">Status Thresholds (optional)</legend>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="warning_latency_threshold" class="block text-xs text-slate-400 mb-1">Warn Latency (ms)</label>
+                            <input type="number" id="warning_latency_threshold" name="warning_latency_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label for="warning_packetloss_threshold" class="block text-xs text-slate-400 mb-1">Warn Packet Loss (%)</label>
+                            <input type="number" id="warning_packetloss_threshold" name="warning_packetloss_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label for="critical_latency_threshold" class="block text-xs text-slate-400 mb-1">Critical Latency (ms)</label>
+                            <input type="number" id="critical_latency_threshold" name="critical_latency_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label for="critical_packetloss_threshold" class="block text-xs text-slate-400 mb-1">Critical Packet Loss (%)</label>
+                            <input type="number" id="critical_packetloss_threshold" name="critical_packetloss_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                        </div>
+                    </div>
+                </fieldset>
                 <div>
                     <label id="iconSizeLabel" for="iconSize" class="block text-sm font-medium text-slate-400 mb-1">Icon Size</label>
                     <input type="number" id="iconSize" name="icon_size" placeholder="e.g., 50" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
