@@ -34,15 +34,30 @@ try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // SQL statements for table creation
-    $tables = [
-        "CREATE TABLE IF NOT EXISTS `users` (
-            `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            `username` VARCHAR(50) NOT NULL UNIQUE,
-            `password` VARCHAR(255) NOT NULL,
-            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+    // Step 1: Ensure users table exists first
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `users` (
+        `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        `username` VARCHAR(50) NOT NULL UNIQUE,
+        `password` VARCHAR(255) NOT NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    message("Table 'users' checked/created successfully.");
 
+    // Step 2: Ensure admin user exists and get their ID
+    $admin_user = 'admin';
+    $stmt = $pdo->prepare("SELECT id FROM `users` WHERE username = ?");
+    $stmt->execute([$admin_user]);
+    $admin_id = $stmt->fetchColumn();
+
+    if (!$admin_id) {
+        $admin_pass = password_hash('password', PASSWORD_DEFAULT);
+        $pdo->prepare("INSERT INTO `users` (username, password) VALUES (?, ?)")->execute([$admin_user, $admin_pass]);
+        $admin_id = $pdo->lastInsertId();
+        message("Created default user 'admin' with password 'password'.");
+    }
+
+    // Step 3: Create the rest of the tables
+    $tables = [
         "CREATE TABLE IF NOT EXISTS `ping_results` (
             `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             `host` VARCHAR(100) NOT NULL,
@@ -111,7 +126,6 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
     ];
 
-    // Execute table creation queries
     foreach ($tables as $sql) {
         $pdo->exec($sql);
         preg_match('/CREATE TABLE IF NOT EXISTS `(\w+)`/', $sql, $matches);
@@ -119,7 +133,7 @@ try {
         message("Table '$tableName' checked/created successfully.");
     }
 
-    // --- Schema migration section to handle upgrades ---
+    // Step 4: Schema migration section to handle upgrades
     function columnExists($pdo, $db, $table, $column) {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?");
         $stmt->execute([$db, $table, $column]);
@@ -127,33 +141,31 @@ try {
     }
 
     if (!columnExists($pdo, $dbname, 'maps', 'user_id')) {
-        $pdo->exec("ALTER TABLE `maps` ADD COLUMN `user_id` INT(6) UNSIGNED NOT NULL AFTER `id`, ADD CONSTRAINT `fk_maps_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
-        message("Upgraded 'maps' table with user_id.");
+        $pdo->exec("ALTER TABLE `maps` ADD COLUMN `user_id` INT(6) UNSIGNED;");
+        $updateStmt = $pdo->prepare("UPDATE `maps` SET user_id = ?");
+        $updateStmt->execute([$admin_id]);
+        $pdo->exec("ALTER TABLE `maps` MODIFY COLUMN `user_id` INT(6) UNSIGNED NOT NULL;");
+        $pdo->exec("ALTER TABLE `maps` ADD CONSTRAINT `fk_maps_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
+        message("Upgraded 'maps' table: assigned existing maps to admin.");
     }
     if (!columnExists($pdo, $dbname, 'devices', 'user_id')) {
-        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `user_id` INT(6) UNSIGNED NOT NULL AFTER `id`, ADD CONSTRAINT `fk_devices_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
-        message("Upgraded 'devices' table with user_id.");
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `user_id` INT(6) UNSIGNED;");
+        $updateStmt = $pdo->prepare("UPDATE `devices` SET user_id = ?");
+        $updateStmt->execute([$admin_id]);
+        $pdo->exec("ALTER TABLE `devices` MODIFY COLUMN `user_id` INT(6) UNSIGNED NOT NULL;");
+        $pdo->exec("ALTER TABLE `devices` ADD CONSTRAINT `fk_devices_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
+        message("Upgraded 'devices' table: assigned existing devices to admin.");
     }
     if (!columnExists($pdo, $dbname, 'device_edges', 'user_id')) {
-        $pdo->exec("ALTER TABLE `device_edges` ADD COLUMN `user_id` INT(6) UNSIGNED NOT NULL AFTER `id`, ADD CONSTRAINT `fk_device_edges_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
-        message("Upgraded 'device_edges' table with user_id.");
-    }
-    // --- End schema migration ---
-
-    // Check if admin user exists, if not, create it
-    $admin_user = 'admin';
-    $stmt = $pdo->prepare("SELECT id FROM `users` WHERE username = ?");
-    $stmt->execute([$admin_user]);
-    $admin_id = $stmt->fetchColumn();
-
-    if (!$admin_id) {
-        $admin_pass = password_hash('password', PASSWORD_DEFAULT);
-        $pdo->prepare("INSERT INTO `users` (username, password) VALUES (?, ?)")->execute([$admin_user, $admin_pass]);
-        $admin_id = $pdo->lastInsertId();
-        message("Created default user 'admin' with password 'password'.");
+        $pdo->exec("ALTER TABLE `device_edges` ADD COLUMN `user_id` INT(6) UNSIGNED;");
+        $updateStmt = $pdo->prepare("UPDATE `device_edges` SET user_id = ?");
+        $updateStmt->execute([$admin_id]);
+        $pdo->exec("ALTER TABLE `device_edges` MODIFY COLUMN `user_id` INT(6) UNSIGNED NOT NULL;");
+        $pdo->exec("ALTER TABLE `device_edges` ADD CONSTRAINT `fk_device_edges_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
+        message("Upgraded 'device_edges' table: assigned existing edges to admin.");
     }
 
-    // Check if the admin user has any maps
+    // Step 5: Check if the admin user has any maps
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM `maps` WHERE user_id = ?");
     $stmt->execute([$admin_id]);
     if ($stmt->fetchColumn() == 0) {
