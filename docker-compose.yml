@@ -19,6 +19,8 @@ services:
 
   db:
     image: mysql:8.0
+    # Add command to ensure compatible authentication
+    command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: network_monitor
@@ -27,11 +29,12 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     restart: unless-stopped
+    # Use a more robust healthcheck that runs a query
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "mysql", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}", "-e", "show databases;"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
 volumes:
   db_data:
