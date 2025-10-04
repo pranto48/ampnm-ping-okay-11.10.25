@@ -11,6 +11,7 @@ $input = json_decode(file_get_contents('php://input'), true) ?? [];
 $pingActions = ['manual_ping', 'scan_network', 'ping_device'];
 $deviceActions = ['get_devices', 'create_device', 'update_device', 'delete_device', 'get_device_details', 'check_device', 'check_all_devices', 'ping_all_devices'];
 $mapActions = ['get_maps', 'create_map', 'delete_map', 'get_edges', 'create_edge', 'update_edge', 'delete_edge', 'import_map'];
+$dashboardActions = ['get_dashboard_data'];
 
 if (in_array($action, $pingActions)) {
     require __DIR__ . '/api/handlers/ping_handler.php';
@@ -18,6 +19,8 @@ if (in_array($action, $pingActions)) {
     require __DIR__ . '/api/handlers/device_handler.php';
 } elseif (in_array($action, $mapActions)) {
     require __DIR__ . '/api/handlers/map_handler.php';
+} elseif (in_array($action, $dashboardActions)) {
+    require __DIR__ . '/api/handlers/dashboard_handler.php';
 } elseif ($action === 'health') {
     echo json_encode(['status' => 'ok', 'timestamp' => date('c')]);
 } else {
