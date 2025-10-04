@@ -1,4 +1,7 @@
-<?php include 'header.php'; ?>
+<?php 
+require_once 'includes/auth_check.php';
+include 'header.php'; 
+?>
 <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
 <div class="container mx-auto px-4 py-8">

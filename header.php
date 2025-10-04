@@ -1,4 +1,8 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 function isActive($page) {
     return basename($_SERVER['PHP_SELF']) == $page ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white';
 }
@@ -31,6 +35,7 @@ function isActive($page) {
                         <a href="devices.php" class="px-3 py-2 rounded-md text-sm font-medium <?= isActive('devices.php') ?>">Devices</a>
                         <a href="history.php" class="px-3 py-2 rounded-md text-sm font-medium <?= isActive('history.php') ?>">History</a>
                         <a href="map.php" class="px-3 py-2 rounded-md text-sm font-medium <?= isActive('map.php') ?>">Map</a>
+                        <a href="logout.php" class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white">Logout</a>
                     </div>
                 </div>
             </div>
