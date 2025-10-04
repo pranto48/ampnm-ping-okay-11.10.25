@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Server, Router, Printer, Laptop, Wifi, Database, MoreVertical, Trash2, Edit, Activity } from 'lucide-react';
-import { performServerPing, parsePingOutput } from '@/services/pingService';
+import { performBrowserPing } from '@/services/browserPingService';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess } from '@/utils/toast';
+import { updateDeviceStatusByIp } from '@/services/networkDeviceService';
 
 const iconMap: { [key: string]: React.ReactNode } = {
   server: <Server className="h-6 w-6" />,
@@ -18,27 +19,23 @@ const iconMap: { [key: string]: React.ReactNode } = {
 };
 
 const DeviceNode = ({ data }: { data: any }) => {
-  const [pingResult, setPingResult] = useState<{ time: number; loss: number } | null>(null);
+  const [pingTime, setPingTime] = useState<number | null>(null);
   const [isPinging, setIsPinging] = useState(false);
 
   const handlePing = async () => {
     setIsPinging(true);
-    setPingResult(null);
+    setPingTime(null);
     try {
-      const result = await performServerPing(data.ip_address, 1);
-      const newStatus = result.success ? 'online' : 'offline';
-      data.onStatusChange(data.id, newStatus);
-
-      if (result.success) {
-        const parsed = parsePingOutput(result.output);
-        setPingResult({ time: parsed.avgTime, loss: parsed.packetLoss });
-      } else {
-        setPingResult({ time: -1, loss: 100 });
-      }
+      const responseTime = await performBrowserPing(data.ip_address);
+      setPingTime(responseTime);
+      data.onStatusChange(data.id, 'online');
+      await updateDeviceStatusByIp(data.ip_address, 'online');
+      showSuccess(`Device ${data.ip_address} is online (${responseTime}ms).`);
     } catch (error) {
-      showError(`Ping failed: ${error.message}`);
-      setPingResult({ time: -1, loss: 100 });
+      setPingTime(-1); // Indicate failure
       data.onStatusChange(data.id, 'offline');
+      await updateDeviceStatusByIp(data.ip_address, 'offline');
+      showError(`Device ${data.ip_address} is offline or not responding.`);
     } finally {
       setIsPinging(false);
     }
@@ -70,9 +67,9 @@ const DeviceNode = ({ data }: { data: any }) => {
               <Activity className={`mr-2 h-4 w-4 ${isPinging ? 'animate-spin' : ''}`} />
               Ping
             </Button>
-            {pingResult && (
-              <Badge variant={pingResult.loss > 0 ? 'destructive' : 'default'}>
-                {pingResult.time >= 0 ? `${pingResult.time}ms` : 'Failed'}
+            {pingTime !== null && (
+              <Badge variant={pingTime >= 0 ? 'default' : 'destructive'}>
+                {pingTime >= 0 ? `${pingTime}ms` : 'Failed'}
               </Badge>
             )}
           </div>
