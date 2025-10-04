@@ -1,9 +1,9 @@
 <?php
-// Database configuration
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "network_monitor";
+// Database configuration using environment variables for Docker compatibility
+$servername = getenv('DB_HOST') ?: 'localhost';
+$username = 'root'; // Setup script needs root privileges to create DB and tables
+$password = getenv('MYSQL_ROOT_PASSWORD') ?: ''; // Get root password from Docker env
+$dbname = getenv('DB_NAME') ?: 'network_monitor';
 
 function message($text, $is_error = false) {
     $color = $is_error ? '#ef4444' : '#22c55e';
