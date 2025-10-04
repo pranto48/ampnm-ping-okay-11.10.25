@@ -60,7 +60,7 @@ try {
 
         "CREATE TABLE IF NOT EXISTS `devices` (
             `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            `ip` VARCHAR(15) NOT NULL,
+            `ip` VARCHAR(15) NULL,
             `name` VARCHAR(100) NOT NULL,
             `status` ENUM('online', 'offline', 'unknown') DEFAULT 'unknown',
             `last_seen` TIMESTAMP NULL,

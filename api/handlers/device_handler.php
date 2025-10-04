@@ -4,7 +4,7 @@
 switch ($action) {
     case 'check_all_devices':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $stmt = $pdo->prepare("SELECT id, ip, status, last_seen FROM devices WHERE enabled = TRUE");
+            $stmt = $pdo->prepare("SELECT id, ip, status, last_seen FROM devices WHERE enabled = TRUE AND ip IS NOT NULL");
             $stmt->execute();
             $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
@@ -25,7 +25,7 @@ switch ($action) {
             $map_id = $input['map_id'] ?? null;
             if (!$map_id) { http_response_code(400); echo json_encode(['error' => 'Map ID is required']); exit; }
 
-            $stmt = $pdo->prepare("SELECT id, ip, status, last_seen FROM devices WHERE enabled = TRUE AND map_id = ?");
+            $stmt = $pdo->prepare("SELECT id, ip, status, last_seen FROM devices WHERE enabled = TRUE AND map_id = ? AND ip IS NOT NULL");
             $stmt->execute([$map_id]);
             $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
@@ -51,7 +51,8 @@ switch ($action) {
             $device = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$device) { http_response_code(404); echo json_encode(['error' => 'Device not found']); exit; }
-            
+            if (!$device['ip']) { echo json_encode(['id' => $deviceId, 'status' => 'unknown', 'last_seen' => $device['last_seen']]); exit; }
+
             $pingResult = executePing($device['ip'], 1);
             $parsedResult = parsePingOutput($pingResult['output']);
             $status = ($pingResult['return_code'] === 0 && $parsedResult['packet_loss'] < 100) ? 'online' : 'offline';
@@ -71,9 +72,12 @@ switch ($action) {
         $stmt->execute([$deviceId]);
         $device = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$device) { http_response_code(404); echo json_encode(['error' => 'Device not found']); exit; }
-        $stmt = $pdo->prepare("SELECT * FROM ping_results WHERE host = ? ORDER BY created_at DESC LIMIT 20");
-        $stmt->execute([$device['ip']]);
-        $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $history = [];
+        if ($device['ip']) {
+            $stmt = $pdo->prepare("SELECT * FROM ping_results WHERE host = ? ORDER BY created_at DESC LIMIT 20");
+            $stmt->execute([$device['ip']]);
+            $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         echo json_encode(['device' => $device, 'history' => $history]);
         break;
 
@@ -94,7 +98,7 @@ switch ($action) {
             $sql = "INSERT INTO devices (name, ip, type, description, enabled, x, y, map_id, ping_interval, icon_size, name_text_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $input['name'], $input['ip'], $input['type'], $input['description'] ?? null, $input['enabled'] ?? true,
+                $input['name'], $input['ip'] ?? null, $input['type'], $input['description'] ?? null, $input['enabled'] ?? true,
                 $input['x'] ?? rand(50, 800), $input['y'] ?? rand(50, 500), $input['map_id'],
                 $input['ping_interval'] ?? null, $input['icon_size'] ?? 50, $input['name_text_size'] ?? 14
             ]);

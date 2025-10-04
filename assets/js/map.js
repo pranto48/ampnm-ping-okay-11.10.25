@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const edgeModal = document.getElementById('edgeModal'), edgeForm = document.getElementById('edgeForm'),
         cancelEdgeBtn = document.getElementById('cancelEdgeBtn');
 
-    const iconMap = { server: '\uf233', router: '\uf4d7', switch: '\uf796', printer: '\uf02f', nas: '\uf0a0', camera: '\uf030', other: '\uf108', firewall: '\uf3ed', ipphone: '\uf87d', punchdevice: '\uf2c2' };
+    const iconMap = { server: '\uf233', router: '\uf4d7', switch: '\uf796', printer: '\uf02f', nas: '\uf0a0', camera: '\uf030', other: '\uf108', firewall: '\uf3ed', ipphone: '\uf87d', punchdevice: '\uf2c2', 'wifi-router': '\uf1eb', 'radio-tower': '\uf519', rack: '\uf1b3' };
     const statusColorMap = { online: '#22c55e', offline: '#ef4444', unknown: '#f59e0b' };
     const edgeColorMap = { cat5: '#a78bfa', fiber: '#f97316', wifi: '#38bdf8', radio: '#84cc16' };
 
@@ -47,12 +47,12 @@ document.addEventListener('DOMContentLoaded', function() {
         currentMapId = mapId; currentMapName.textContent = mapSelector.options[mapSelector.selectedIndex].text;
         const [deviceData, edgeData] = await Promise.all([api.get('get_devices', { map_id: mapId }), api.get('get_edges', { map_id: mapId })]);
         
-        const visNodes = deviceData.map(d => ({
-            id: d.id, label: d.name, title: `${d.name}<br>${d.ip}<br>Status: ${d.status}`, x: d.x, y: d.y,
-            shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: iconMap[d.type] || iconMap.other, size: parseInt(d.icon_size) || 50, color: statusColorMap[d.status] || statusColorMap.unknown },
-            font: { color: 'white', size: parseInt(d.name_text_size) || 14 },
-            deviceData: d
-        }));
+        const visNodes = deviceData.map(d => {
+            if (d.type === 'box') {
+                return { id: d.id, label: d.name, title: d.name, x: d.x, y: d.y, shape: 'box', color: { background: 'rgba(49, 65, 85, 0.5)', border: '#475569' }, font: { color: 'white', size: parseInt(d.name_text_size) || 14 }, margin: 20, deviceData: d, level: -1 };
+            }
+            return { id: d.id, label: d.name, title: `${d.name}<br>${d.ip || 'No IP'}<br>Status: ${d.status}`, x: d.x, y: d.y, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: iconMap[d.type] || iconMap.other, size: parseInt(d.icon_size) || 50, color: statusColorMap[d.status] || statusColorMap.unknown }, font: { color: 'white', size: parseInt(d.name_text_size) || 14 }, deviceData: d };
+        });
         nodes.clear(); nodes.add(visNodes);
 
         const visEdges = edgeData.map(e => ({ id: e.id, from: e.source_id, to: e.target_id, connection_type: e.connection_type, label: e.connection_type }));
@@ -69,20 +69,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const options = { 
             physics: false, 
             interaction: { hover: true }, 
-            edges: { 
-                smooth: true, 
-                width: 2,
-                font: { color: '#ffffff', size: 12, align: 'top', strokeWidth: 0 }
-            }, 
+            edges: { smooth: true, width: 2, font: { color: '#ffffff', size: 12, align: 'top', strokeWidth: 0 } }, 
             manipulation: { 
                 enabled: false, 
-                addEdge: async (edgeData, callback) => { 
-                    const newEdge = await api.post('create_edge', { source_id: edgeData.from, target_id: edgeData.to, map_id: currentMapId, connection_type: 'cat5' }); 
-                    edgeData.id = newEdge.id;
-                    edgeData.label = 'cat5';
-                    callback(edgeData); 
-                }, 
-                deleteNode: async (data, callback) => { if (confirm(`Delete ${data.nodes.length} device(s)?`)) { for (const nodeId of data.nodes) { await api.post('delete_device', { id: nodeId }); } callback(data); } }, 
+                addEdge: async (edgeData, callback) => { const newEdge = await api.post('create_edge', { source_id: edgeData.from, target_id: edgeData.to, map_id: currentMapId, connection_type: 'cat5' }); edgeData.id = newEdge.id; edgeData.label = 'cat5'; callback(edgeData); }, 
+                deleteNode: async (data, callback) => { if (confirm(`Delete ${data.nodes.length} item(s)?`)) { for (const nodeId of data.nodes) { await api.post('delete_device', { id: nodeId }); } callback(data); } }, 
                 deleteEdge: async (data, callback) => { if (confirm(`Delete ${data.edges.length} connection(s)?`)) { for (const edgeId of data.edges) { await api.post('delete_edge', { id: edgeId }); } callback(data); } } 
             } 
         };
@@ -92,11 +83,21 @@ document.addEventListener('DOMContentLoaded', function() {
         network.on("click", (params) => { if (params.edges.length > 0) openEdgeModal(params.edges[0]); });
     };
 
+    const toggleDeviceModalFields = (type) => {
+        const isAnnotation = type === 'box';
+        document.getElementById('deviceIpWrapper').style.display = isAnnotation ? 'none' : 'block';
+        document.getElementById('pingIntervalWrapper').style.display = isAnnotation ? 'none' : 'block';
+        document.getElementById('deviceIp').required = !isAnnotation;
+        document.getElementById('iconSizeLabel').textContent = isAnnotation ? 'Width' : 'Icon Size';
+        document.getElementById('nameTextSizeLabel').textContent = isAnnotation ? 'Height' : 'Name Text Size';
+    };
+
     const openDeviceModal = (deviceId = null) => {
         deviceForm.reset();
+        document.getElementById('deviceId').value = '';
         if (deviceId) {
             const node = nodes.get(deviceId);
-            document.getElementById('modalTitle').textContent = 'Edit Device';
+            document.getElementById('modalTitle').textContent = 'Edit Item';
             document.getElementById('deviceId').value = node.id;
             document.getElementById('deviceName').value = node.label;
             document.getElementById('deviceIp').value = node.deviceData.ip;
@@ -104,9 +105,12 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('pingInterval').value = node.deviceData.ping_interval;
             document.getElementById('iconSize').value = node.deviceData.icon_size;
             document.getElementById('nameTextSize').value = node.deviceData.name_text_size;
-        } else { document.getElementById('modalTitle').textContent = 'Add Device'; }
+        } else { document.getElementById('modalTitle').textContent = 'Add Item'; }
+        toggleDeviceModalFields(document.getElementById('deviceType').value);
         deviceModal.classList.remove('hidden');
     };
+
+    document.getElementById('deviceType').addEventListener('change', (e) => toggleDeviceModalFields(e.target.value));
 
     const openEdgeModal = (edgeId) => {
         const edge = edges.get(edgeId);
@@ -117,40 +121,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const updateAndAnimateEdges = () => {
         tick++;
-        const dashLen = 4;
-        const gapLen = 8;
-        const totalPatternLen = dashLen + gapLen;
-        const offset = tick % totalPatternLen;
-        const dash1 = offset;
-        const dash2 = dashLen - offset;
-        const animatedDashes = [dash2, gapLen, dash1];
-
+        const animatedDashes = [4 - (tick % 12), 8, tick % 12];
         const updates = [];
         const allEdges = edges.get();
         if (nodes.length > 0 && allEdges.length > 0) {
             const deviceStatusMap = new Map(nodes.get({ fields: ['id', 'deviceData'] }).map(d => [d.id, d.deviceData.status]));
-
             allEdges.forEach(edge => {
                 const sourceStatus = deviceStatusMap.get(edge.from);
                 const targetStatus = deviceStatusMap.get(edge.to);
-
                 const isOffline = sourceStatus === 'offline' || targetStatus === 'offline';
                 const isActive = sourceStatus === 'online' && targetStatus === 'online';
-                
                 const color = isOffline ? statusColorMap.offline : (edgeColorMap[edge.connection_type] || edgeColorMap.cat5);
-                
                 let dashes = false;
-                if (isActive) {
-                    dashes = animatedDashes;
-                } else {
-                    const isWireless = edge.connection_type === 'wifi' || edge.connection_type === 'radio';
-                    if (isWireless) dashes = [5, 5];
-                }
-                
+                if (isActive) { dashes = animatedDashes; } 
+                else if (edge.connection_type === 'wifi' || edge.connection_type === 'radio') { dashes = [5, 5]; }
                 updates.push({ id: edge.id, color, dashes });
             });
         }
-
         if (updates.length > 0) edges.update(updates);
         animationFrameId = requestAnimationFrame(updateAndAnimateEdges);
     };
@@ -159,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
         Object.values(pingIntervals).forEach(clearInterval);
         pingIntervals = {};
         devices.forEach(device => {
-            if (device.ping_interval > 0) {
+            if (device.ping_interval > 0 && device.ip) {
                 pingIntervals[device.id] = setInterval(() => pingSingleDevice(device.id), device.ping_interval * 1000);
             }
         });

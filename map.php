@@ -54,14 +54,32 @@
         <form id="deviceForm">
             <input type="hidden" id="deviceId" name="id">
             <div class="space-y-4">
-                <input type="text" id="deviceName" name="name" placeholder="Device Name" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
-                <input type="text" id="deviceIp" name="ip" placeholder="IP Address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
-                <select id="deviceType" name="type" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                    <option value="server">Server</option><option value="router">Router</option><option value="switch">Switch</option><option value="firewall">Firewall</option><option value="printer">Printer</option><option value="nas">NAS</option><option value="camera">CC Camera</option><option value="ipphone">IP Phone</option><option value="punchdevice">Punch Device</option><option value="other">Other</option>
-                </select>
-                <input type="number" id="pingInterval" name="ping_interval" placeholder="Ping Interval (seconds, optional)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                <input type="number" id="iconSize" name="icon_size" placeholder="Icon Size (e.g., 50)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                <input type="number" id="nameTextSize" name="name_text_size" placeholder="Name Text Size (e.g., 14)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                <div>
+                    <label for="deviceName" class="block text-sm font-medium text-slate-400 mb-1">Name</label>
+                    <input type="text" id="deviceName" name="name" placeholder="Device Name" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <div id="deviceIpWrapper">
+                    <label for="deviceIp" class="block text-sm font-medium text-slate-400 mb-1">IP Address</label>
+                    <input type="text" id="deviceIp" name="ip" placeholder="IP Address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
+                </div>
+                <div>
+                    <label for="deviceType" class="block text-sm font-medium text-slate-400 mb-1">Type</label>
+                    <select id="deviceType" name="type" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <option value="server">Server</option><option value="router">Router</option><option value="switch">Switch</option><option value="firewall">Firewall</option><option value="printer">Printer</option><option value="nas">NAS</option><option value="camera">CC Camera</option><option value="ipphone">IP Phone</option><option value="punchdevice">Punch Device</option><option value="wifi-router">WiFi Router</option><option value="radio-tower">Radio Tower</option><option value="rack">Networking Rack</option><option value="box">Box (Group)</option><option value="other">Other</option>
+                    </select>
+                </div>
+                <div id="pingIntervalWrapper">
+                    <label for="pingInterval" class="block text-sm font-medium text-slate-400 mb-1">Ping Interval (seconds)</label>
+                    <input type="number" id="pingInterval" name="ping_interval" placeholder="e.g., 60 (optional)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                </div>
+                <div>
+                    <label id="iconSizeLabel" for="iconSize" class="block text-sm font-medium text-slate-400 mb-1">Icon Size</label>
+                    <input type="number" id="iconSize" name="icon_size" placeholder="e.g., 50" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                </div>
+                <div>
+                    <label id="nameTextSizeLabel" for="nameTextSize" class="block text-sm font-medium text-slate-400 mb-1">Name Text Size</label>
+                    <input type="number" id="nameTextSize" name="name_text_size" placeholder="e.g., 14" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                </div>
             </div>
             <div class="flex justify-end gap-4 mt-6">
                 <button type="button" id="cancelBtn" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600">Cancel</button>
