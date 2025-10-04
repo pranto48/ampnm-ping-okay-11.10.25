@@ -91,9 +91,13 @@ switch ($action) {
 
     case 'create_device':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $sql = "INSERT INTO devices (name, ip, type, description, enabled, x, y, map_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO devices (name, ip, type, description, enabled, x, y, map_id, ping_interval, icon_size, name_text_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([ $input['name'], $input['ip'], $input['type'], $input['description'] ?? null, $input['enabled'] ?? true, $input['x'] ?? rand(50, 800), $input['y'] ?? rand(50, 500), $input['map_id'] ]);
+            $stmt->execute([
+                $input['name'], $input['ip'], $input['type'], $input['description'] ?? null, $input['enabled'] ?? true,
+                $input['x'] ?? rand(50, 800), $input['y'] ?? rand(50, 500), $input['map_id'],
+                $input['ping_interval'] ?? null, $input['icon_size'] ?? 50, $input['name_text_size'] ?? 14
+            ]);
             $lastId = $pdo->lastInsertId();
             $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ?");
             $stmt->execute([$lastId]);
@@ -107,7 +111,7 @@ switch ($action) {
             $id = $input['id'] ?? null;
             $updates = $input['updates'] ?? [];
             if (!$id || empty($updates)) { http_response_code(400); echo json_encode(['error' => 'Device ID and updates are required']); exit; }
-            $allowed_fields = ['name', 'ip', 'type', 'description', 'enabled', 'x', 'y'];
+            $allowed_fields = ['name', 'ip', 'type', 'description', 'enabled', 'x', 'y', 'ping_interval', 'icon_size', 'name_text_size'];
             $fields = []; $params = [];
             foreach ($updates as $key => $value) { if (in_array($key, $allowed_fields)) { $fields[] = "$key = ?"; $params[] = $value; } }
             if (empty($fields)) { http_response_code(400); echo json_encode(['error' => 'No valid fields to update']); exit; }

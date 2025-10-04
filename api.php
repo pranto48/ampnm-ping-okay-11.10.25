@@ -10,7 +10,7 @@ $input = json_decode(file_get_contents('php://input'), true) ?? [];
 // Group actions by handler
 $pingActions = ['manual_ping', 'scan_network', 'ping_device'];
 $deviceActions = ['get_devices', 'create_device', 'update_device', 'delete_device', 'get_device_details', 'check_device', 'check_all_devices', 'ping_all_devices'];
-$mapActions = ['get_maps', 'create_map', 'delete_map', 'get_edges', 'create_edge', 'delete_edge'];
+$mapActions = ['get_maps', 'create_map', 'delete_map', 'get_edges', 'create_edge', 'update_edge', 'delete_edge', 'import_map'];
 
 if (in_array($action, $pingActions)) {
     require __DIR__ . '/api/handlers/ping_handler.php';

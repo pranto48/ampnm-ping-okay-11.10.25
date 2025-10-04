@@ -22,6 +22,9 @@
                     <button id="addDeviceBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Add Device"><i class="fas fa-plus"></i></button>
                     <button id="addEdgeBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Add Connection"><i class="fas fa-project-diagram"></i></button>
                     <button id="deleteModeBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Delete Selected"><i class="fas fa-trash-alt"></i></button>
+                    <button id="exportBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Export Map"><i class="fas fa-download"></i></button>
+                    <button id="importBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Import Map"><i class="fas fa-upload"></i></button>
+                    <input type="file" id="importFile" class="hidden" accept=".json">
                     <button id="fullscreenBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
                 </div>
             </div>
@@ -54,21 +57,32 @@
                 <input type="text" id="deviceName" name="name" placeholder="Device Name" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
                 <input type="text" id="deviceIp" name="ip" placeholder="IP Address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
                 <select id="deviceType" name="type" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                    <option value="server">Server</option>
-                    <option value="router">Router</option>
-                    <option value="switch">Switch</option>
-                    <option value="firewall">Firewall</option>
-                    <option value="printer">Printer</option>
-                    <option value="nas">NAS</option>
-                    <option value="camera">CC Camera</option>
-                    <option value="ipphone">IP Phone</option>
-                    <option value="punchdevice">Punch Device</option>
-                    <option value="other">Other</option>
+                    <option value="server">Server</option><option value="router">Router</option><option value="switch">Switch</option><option value="firewall">Firewall</option><option value="printer">Printer</option><option value="nas">NAS</option><option value="camera">CC Camera</option><option value="ipphone">IP Phone</option><option value="punchdevice">Punch Device</option><option value="other">Other</option>
                 </select>
+                <input type="number" id="pingInterval" name="ping_interval" placeholder="Ping Interval (seconds, optional)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                <input type="number" id="iconSize" name="icon_size" placeholder="Icon Size (e.g., 50)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                <input type="number" id="nameTextSize" name="name_text_size" placeholder="Name Text Size (e.g., 14)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
             </div>
             <div class="flex justify-end gap-4 mt-6">
                 <button type="button" id="cancelBtn" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600">Cancel</button>
                 <button type="submit" id="saveBtn" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edge Editor Modal -->
+<div id="edgeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
+        <h2 class="text-xl font-semibold text-white mb-4">Edit Connection</h2>
+        <form id="edgeForm">
+            <input type="hidden" id="edgeId">
+            <select id="connectionType" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                <option value="cat5">CAT5 Cable</option><option value="fiber">Fiber Optic</option><option value="wifi">WiFi</option><option value="radio">Radio</option>
+            </select>
+            <div class="flex justify-end gap-4 mt-6">
+                <button type="button" id="cancelEdgeBtn" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">Save</button>
             </div>
         </form>
     </div>
