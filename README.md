@@ -1,29 +1,60 @@
-# Local Network Monitor
+# Local Network Monitor - PHP/MySQL Version
 
-This is a React-based web application designed to monitor devices on your local network directly from your browser.
+## Requirements
+- XAMPP installed on your computer
+- PHP 7.4 or higher
+- MySQL/MariaDB
 
-## How It Works
+## Installation Steps
 
-This application runs entirely in your web browser. It uses browser-based techniques (like WebSocket and HTTP requests) to "ping" other devices on your local network. Because the requests originate from your machine, it can see and report the status of local IPs (e.g., `192.168.x.x`).
+1. **Start XAMPP**
+   - Open XAMPP Control Panel
+   - Start Apache and MySQL services
 
-- **Browser Ping:** Checks for open web or WebSocket ports to determine if a device is responsive. This is used for all local network monitoring.
-- **Server Ping:** Uses a Supabase Edge Function to ping public hosts from the internet. This is useful for checking public websites but **cannot** be used for local IP addresses.
-- **Network Map:** Provides a visual layout of your devices, with live status updates based on browser pings.
-- **Database:** Uses Supabase to store your device configurations and ping history.
+2. **Place Files in htdocs**
+   - Create a new folder in `C:\xampp\htdocs\network-monitor\`
+   - Copy all files to this folder:
+     - `index.php` (main dashboard)
+     - `devices.php` (device management)
+     - `history.php` (ping history with filtering)
+     - `api.php` (AJAX API endpoints)
+     - `export.php` (CSV export functionality)
+     - `config.php` (configuration file)
+     - `database_setup.php` (database setup script)
+     - `README.md` (this file)
 
-## Running Locally
+3. **Setup Database**
+   - Open your browser and go to: `http://localhost/network-monitor/database_setup.php`
+   - This will automatically create the database and tables
 
-To ensure the application can access your local network, you should run it on your own machine.
+4. **Access Application**
+   - Open your browser and go to: `http://localhost/network-monitor/`
+   - The network monitor application will load
 
-1.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+## Features
+- Ping any host or IP address
+- View ping history stored in MySQL database
+- Monitor local network devices
+- Real-time network status monitoring
+- Device management (add, remove, check status)
+- Historical data with filtering and pagination
+- Export data to CSV
+- Responsive design with Tailwind CSS
+- AJAX-powered interface for smooth interactions
 
-2.  **Start the development server:**
-    ```bash
-    npm run dev
-    ```
+## Usage
+1. **Dashboard**: Main overview of network status and recent activity
+2. **Device Management**: Add/remove devices and check their status
+3. **Ping History**: View historical ping results with filtering and export options
+4. **Real-time Updates**: AJAX-powered updates without page refresh
 
-3.  **Access the app:**
-    Open your browser and navigate to the local URL provided by the development server (usually `http://localhost:8080`).
+## Security Notes
+- This is designed for local network use only
+- The database uses default XAMPP credentials (root with no password)
+- For production use, change database credentials and add authentication
+
+## Troubleshooting
+1. If ping doesn't work, ensure PHP can execute shell commands
+2. Check that Apache and MySQL are running in XAMPP
+3. Verify database connection in config.php if needed
+4. Make sure your firewall allows ping requests
