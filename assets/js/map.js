@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     let network = null, nodes = new vis.DataSet([]), edges = new vis.DataSet([]), currentMapId = null, pingIntervals = {};
+    let animationFrameId = null, tick = 0;
 
     const mapWrapper = document.getElementById('network-map-wrapper'), mapSelector = document.getElementById('mapSelector'),
         newMapBtn = document.getElementById('newMapBtn'), deleteMapBtn = document.getElementById('deleteMapBtn'),
@@ -40,7 +41,9 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     const switchMap = async (mapId) => {
+        if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
         if (!mapId) { if (network) network.destroy(); network = null; nodes.clear(); edges.clear(); mapContainer.classList.add('hidden'); noMapsContainer.classList.remove('hidden'); return; }
+        
         currentMapId = mapId; currentMapName.textContent = mapSelector.options[mapSelector.selectedIndex].text;
         const [deviceData, edgeData] = await Promise.all([api.get('get_devices', { map_id: mapId }), api.get('get_edges', { map_id: mapId })]);
         
@@ -54,9 +57,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const visEdges = edgeData.map(e => ({ id: e.id, from: e.source_id, to: e.target_id, connection_type: e.connection_type, label: e.connection_type }));
         edges.clear(); edges.add(visEdges);
-        updateEdgeStyles();
+        
         setupAutoPing(deviceData);
         if (!network) initializeMap();
+        if (!animationFrameId) updateAndAnimateEdges();
     };
 
     const initializeMap = () => {
@@ -77,7 +81,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     edgeData.id = newEdge.id;
                     edgeData.label = 'cat5';
                     callback(edgeData); 
-                    updateEdgeStyles(); 
                 }, 
                 deleteNode: async (data, callback) => { if (confirm(`Delete ${data.nodes.length} device(s)?`)) { for (const nodeId of data.nodes) { await api.post('delete_device', { id: nodeId }); } callback(data); } }, 
                 deleteEdge: async (data, callback) => { if (confirm(`Delete ${data.edges.length} connection(s)?`)) { for (const edgeId of data.edges) { await api.post('delete_edge', { id: edgeId }); } callback(data); } } 
@@ -112,17 +115,44 @@ document.addEventListener('DOMContentLoaded', function() {
         edgeModal.classList.remove('hidden');
     };
 
-    const updateEdgeStyles = () => {
-        const deviceStatusMap = new Map(nodes.get().map(d => [d.id, d.deviceData.status]));
-        const edgeUpdates = edges.get().map(edge => {
-            const sourceStatus = deviceStatusMap.get(edge.from);
-            const targetStatus = deviceStatusMap.get(edge.to);
-            const isOffline = sourceStatus === 'offline' || targetStatus === 'offline';
-            const color = isOffline ? statusColorMap.offline : (edgeColorMap[edge.connection_type] || edgeColorMap.cat5);
-            const dashes = edge.connection_type === 'wifi' || edge.connection_type === 'radio';
-            return { id: edge.id, color, dashes };
-        });
-        edges.update(edgeUpdates);
+    const updateAndAnimateEdges = () => {
+        tick++;
+        const dashLen = 4;
+        const gapLen = 8;
+        const totalPatternLen = dashLen + gapLen;
+        const offset = tick % totalPatternLen;
+        const dash1 = offset;
+        const dash2 = dashLen - offset;
+        const animatedDashes = [dash2, gapLen, dash1];
+
+        const updates = [];
+        const allEdges = edges.get();
+        if (nodes.length > 0 && allEdges.length > 0) {
+            const deviceStatusMap = new Map(nodes.get({ fields: ['id', 'deviceData'] }).map(d => [d.id, d.deviceData.status]));
+
+            allEdges.forEach(edge => {
+                const sourceStatus = deviceStatusMap.get(edge.from);
+                const targetStatus = deviceStatusMap.get(edge.to);
+
+                const isOffline = sourceStatus === 'offline' || targetStatus === 'offline';
+                const isActive = sourceStatus === 'online' && targetStatus === 'online';
+                
+                const color = isOffline ? statusColorMap.offline : (edgeColorMap[edge.connection_type] || edgeColorMap.cat5);
+                
+                let dashes = false;
+                if (isActive) {
+                    dashes = animatedDashes;
+                } else {
+                    const isWireless = edge.connection_type === 'wifi' || edge.connection_type === 'radio';
+                    if (isWireless) dashes = [5, 5];
+                }
+                
+                updates.push({ id: edge.id, color, dashes });
+            });
+        }
+
+        if (updates.length > 0) edges.update(updates);
+        animationFrameId = requestAnimationFrame(updateAndAnimateEdges);
     };
 
     const setupAutoPing = (devices) => {
@@ -140,7 +170,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!node) return;
         const result = await api.post('check_device', { id: deviceId });
         nodes.update({ id: deviceId, deviceData: { ...node.deviceData, status: result.status }, icon: { color: statusColorMap[result.status] }, title: `${node.label}<br>${node.deviceData.ip}<br>Status: ${result.status}` });
-        updateEdgeStyles();
     };
 
     deviceForm.addEventListener('submit', async (e) => {
@@ -158,7 +187,6 @@ document.addEventListener('DOMContentLoaded', function() {
         await api.post('update_edge', { id, connection_type });
         edgeModal.classList.add('hidden');
         edges.update({ id, connection_type, label: connection_type });
-        updateEdgeStyles();
     });
 
     refreshStatusBtn.addEventListener('click', async () => {
