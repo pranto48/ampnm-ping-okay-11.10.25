@@ -1,36 +1,27 @@
-# Use the official PHP 8.2 image with Apache
-FROM php:8.2-apache
+# Stage 1: Build the React application
+FROM node:20-alpine AS builder
+WORKDIR /app
 
-# Set working directory
-WORKDIR /var/www/html
+# Copy package files and install dependencies
+COPY package.json package-lock.json ./
+RUN npm install
 
-# Install system dependencies
-# - pdo_mysql for database connection
-# - curl for http checks
-# - iputils-ping for the ping command
-# - nmap for network scanning
-# - libcap2-bin to grant network capabilities
-RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    zip \
-    unzip \
-    curl \
-    iputils-ping \
-    nmap \
-    libcap2-bin \
-    && docker-php-ext-install pdo_mysql zip
+# Copy the rest of the application source code
+COPY . .
 
-# Grant ping the necessary capabilities to run without root
-RUN setcap cap_net_raw+ep /bin/ping
+# Build the application
+RUN npm run build
 
-# Copy application source
-COPY . /var/www/html
+# Stage 2: Serve the application with Nginx
+FROM nginx:stable-alpine
+WORKDIR /usr/share/nginx/html
 
-# Copy custom entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Remove default Nginx public folder
+RUN rm -rf ./*
 
-# Expose port 80 and start apache
+# Copy built assets from the builder stage
+COPY --from=builder /app/dist .
+
+# Expose port 80 and start Nginx
 EXPOSE 80
-ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["apache2-foreground"]
+CMD ["nginx", "-g", "daemon off;"]
