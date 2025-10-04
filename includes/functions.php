@@ -68,6 +68,24 @@ function parsePingOutput($output) {
     ];
 }
 
+// Function to save a ping result to the database
+function savePingResult($pdo, $host, $pingOutput, $returnCode) {
+    $parsed = parsePingOutput($pingOutput);
+    $success = ($returnCode === 0 && $parsed['packet_loss'] < 100);
+
+    $sql = "INSERT INTO ping_results (host, packet_loss, avg_time, min_time, max_time, success, output) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        $host,
+        $parsed['packet_loss'],
+        $parsed['avg_time'],
+        $parsed['min_time'],
+        $parsed['max_time'],
+        $success,
+        $pingOutput
+    ]);
+}
+
 // Function to ping a single device and return structured data
 function pingDevice($ip) {
     $pingResult = executePing($ip, 1); // Ping once for speed
@@ -147,4 +165,3 @@ function checkHttpConnectivity($host) {
         'error' => $error
     ];
 }
-?>

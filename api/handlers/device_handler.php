@@ -32,6 +32,7 @@ switch ($action) {
             
             foreach ($devices as $device) {
                 $pingResult = executePing($device['ip'], 1);
+                savePingResult($pdo, $device['ip'], $pingResult['output'], $pingResult['return_code']);
                 $parsedResult = parsePingOutput($pingResult['output']);
                 $status = getStatusFromPingResult($device, $pingResult, $parsedResult);
                 
@@ -56,6 +57,7 @@ switch ($action) {
             if (!$device['ip']) { echo json_encode(['id' => $deviceId, 'status' => 'unknown', 'last_seen' => $device['last_seen']]); exit; }
 
             $pingResult = executePing($device['ip'], 1);
+            savePingResult($pdo, $device['ip'], $pingResult['output'], $pingResult['return_code']);
             $parsedResult = parsePingOutput($pingResult['output']);
             $status = getStatusFromPingResult($device, $pingResult, $parsedResult);
             $last_seen = ($status !== 'offline') ? date('Y-m-d H:i:s') : $device['last_seen'];

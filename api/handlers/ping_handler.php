@@ -11,6 +11,7 @@ switch ($action) {
                 exit;
             }
             $result = executePing($host);
+            savePingResult($pdo, $host, $result['output'], $result['return_code']);
             echo json_encode($result);
         }
         break;
