@@ -12,15 +12,19 @@ document.addEventListener('DOMContentLoaded', function() {
         newMapBtn = document.getElementById('newMapBtn'), deleteMapBtn = document.getElementById('deleteMapBtn'),
         mapContainer = document.getElementById('map-container'), noMapsContainer = document.getElementById('no-maps'),
         createFirstMapBtn = document.getElementById('createFirstMapBtn'), currentMapName = document.getElementById('currentMapName'),
-        refreshStatusBtn = document.getElementById('refreshStatusBtn'), addDeviceBtn = document.getElementById('addDeviceBtn'),
-        addEdgeBtn = document.getElementById('addEdgeBtn'), deleteModeBtn = document.getElementById('deleteModeBtn'),
-        fullscreenBtn = document.getElementById('fullscreenBtn'), exportBtn = document.getElementById('exportBtn'),
-        importBtn = document.getElementById('importBtn'), importFile = document.getElementById('importFile');
+        scanNetworkBtn = document.getElementById('scanNetworkBtn'), refreshStatusBtn = document.getElementById('refreshStatusBtn'),
+        addDeviceBtn = document.getElementById('addDeviceBtn'), addEdgeBtn = document.getElementById('addEdgeBtn'),
+        deleteModeBtn = document.getElementById('deleteModeBtn'), fullscreenBtn = document.getElementById('fullscreenBtn'),
+        exportBtn = document.getElementById('exportBtn'), importBtn = document.getElementById('importBtn'),
+        importFile = document.getElementById('importFile');
 
     const deviceModal = document.getElementById('deviceModal'), deviceForm = document.getElementById('deviceForm'),
         cancelBtn = document.getElementById('cancelBtn');
     const edgeModal = document.getElementById('edgeModal'), edgeForm = document.getElementById('edgeForm'),
         cancelEdgeBtn = document.getElementById('cancelEdgeBtn');
+    const scanModal = document.getElementById('scanModal'), closeScanModal = document.getElementById('closeScanModal'),
+        scanForm = document.getElementById('scanForm'), scanLoader = document.getElementById('scanLoader'),
+        scanResults = document.getElementById('scanResults'), scanInitialMessage = document.getElementById('scanInitialMessage');
 
     const iconMap = { server: '\uf233', router: '\uf4d7', switch: '\uf796', printer: '\uf02f', nas: '\uf0a0', camera: '\uf030', other: '\uf108', firewall: '\uf3ed', ipphone: '\uf87d', punchdevice: '\uf2c2', 'wifi-router': '\uf1eb', 'radio-tower': '\uf519', rack: '\uf1b3' };
     const statusColorMap = { online: '#22c55e', warning: '#f59e0b', critical: '#ef4444', offline: '#64748b', unknown: '#94a3b8' };
@@ -94,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('nameTextSizeLabel').textContent = isAnnotation ? 'Height' : 'Name Text Size';
     };
 
-    const openDeviceModal = (deviceId = null) => {
+    const openDeviceModal = (deviceId = null, prefill = {}) => {
         deviceForm.reset();
         document.getElementById('deviceId').value = '';
         if (deviceId) {
@@ -111,7 +115,11 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('warning_packetloss_threshold').value = node.deviceData.warning_packetloss_threshold;
             document.getElementById('critical_latency_threshold').value = node.deviceData.critical_latency_threshold;
             document.getElementById('critical_packetloss_threshold').value = node.deviceData.critical_packetloss_threshold;
-        } else { document.getElementById('modalTitle').textContent = 'Add Item'; }
+        } else {
+            document.getElementById('modalTitle').textContent = 'Add Item';
+            document.getElementById('deviceName').value = prefill.name || '';
+            document.getElementById('deviceIp').value = prefill.ip || '';
+        }
         toggleDeviceModalFields(document.getElementById('deviceType').value);
         deviceModal.classList.remove('hidden');
     };
@@ -194,6 +202,41 @@ document.addEventListener('DOMContentLoaded', function() {
         edges.update({ id, connection_type, label: connection_type });
     });
 
+    scanForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const subnet = document.getElementById('subnetInput').value;
+        if (!subnet) return;
+        scanInitialMessage.classList.add('hidden');
+        scanResults.innerHTML = '';
+        scanLoader.classList.remove('hidden');
+        try {
+            const result = await api.post('scan_network', { subnet });
+            scanResults.innerHTML = result.devices.map(device => `
+                <div class="flex items-center justify-between p-2 border-b border-slate-700">
+                    <div>
+                        <div class="font-mono text-white">${device.ip}</div>
+                        <div class="text-sm text-slate-400">${device.hostname || 'N/A'}</div>
+                    </div>
+                    <button class="add-scanned-device-btn px-3 py-1 bg-cyan-600/50 text-cyan-300 rounded-lg hover:bg-cyan-600/80 text-sm" data-ip="${device.ip}" data-name="${device.hostname || device.ip}">Add</button>
+                </div>
+            `).join('') || '<p class="text-center text-slate-500 py-4">No devices found on this subnet.</p>';
+        } catch (error) {
+            scanResults.innerHTML = '<p class="text-center text-red-400 py-4">Scan failed. Ensure nmap is installed and the web server has permission to run it.</p>';
+        } finally {
+            scanLoader.classList.add('hidden');
+        }
+    });
+
+    scanResults.addEventListener('click', (e) => {
+        if (e.target.classList.contains('add-scanned-device-btn')) {
+            const { ip, name } = e.target.dataset;
+            scanModal.classList.add('hidden');
+            openDeviceModal(null, { ip, name });
+            e.target.textContent = 'Added';
+            e.target.disabled = true;
+        }
+    });
+
     refreshStatusBtn.addEventListener('click', async () => {
         const icon = refreshStatusBtn.querySelector('i'); icon.classList.add('fa-spin');
         await api.post('ping_all_devices', { map_id: currentMapId });
@@ -236,6 +279,8 @@ document.addEventListener('DOMContentLoaded', function() {
     addDeviceBtn.addEventListener('click', () => openDeviceModal()); cancelBtn.addEventListener('click', () => deviceModal.classList.add('hidden'));
     addEdgeBtn.addEventListener('click', () => { network.addEdgeMode(); }); deleteModeBtn.addEventListener('click', () => { network.deleteSelected(); });
     cancelEdgeBtn.addEventListener('click', () => edgeModal.classList.add('hidden'));
+    scanNetworkBtn.addEventListener('click', () => scanModal.classList.remove('hidden'));
+    closeScanModal.addEventListener('click', () => scanModal.classList.add('hidden'));
 
     (async () => { const firstMapId = await loadMaps(); if (firstMapId) { await switchMap(firstMapId); } })();
 });

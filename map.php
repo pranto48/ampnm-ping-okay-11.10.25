@@ -18,6 +18,7 @@
             <div class="flex items-center justify-between">
                 <h2 id="currentMapName" class="text-xl font-semibold text-white"></h2>
                 <div class="flex items-center gap-2">
+                    <button id="scanNetworkBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Scan Network"><i class="fas fa-search"></i></button>
                     <button id="refreshStatusBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Refresh Device Statuses"><i class="fas fa-sync-alt"></i></button>
                     <button id="addDeviceBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Add Device"><i class="fas fa-plus"></i></button>
                     <button id="addEdgeBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Add Connection"><i class="fas fa-project-diagram"></i></button>
@@ -49,7 +50,7 @@
     </div>
 </div>
 
-<!-- Device Editor Modal -->
+<!-- Modals -->
 <div id="deviceModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
     <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
         <h2 id="modalTitle" class="text-xl font-semibold text-white mb-4">Add Device</h2>
@@ -112,7 +113,6 @@
     </div>
 </div>
 
-<!-- Edge Editor Modal -->
 <div id="edgeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
     <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
         <h2 class="text-xl font-semibold text-white mb-4">Edit Connection</h2>
@@ -126,6 +126,32 @@
                 <button type="submit" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">Save</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="scanModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-2xl border border-slate-700">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold text-white">Scan Network for Devices</h2>
+            <button id="closeScanModal" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700 mb-4">
+            <form id="scanForm" class="flex flex-col sm:flex-row gap-4">
+                <input type="text" id="subnetInput" placeholder="e.g., 192.168.1.0/24" value="192.168.1.0/24" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                <button type="submit" id="startScanBtn" class="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">
+                    <i class="fas fa-search mr-2"></i>Start Scan
+                </button>
+            </form>
+        </div>
+        <div id="scanResultWrapper" class="max-h-96 overflow-y-auto">
+            <div id="scanLoader" class="text-center py-8 hidden"><div class="loader mx-auto"></div><p class="mt-2 text-slate-400">Scanning... this may take a moment.</p></div>
+            <div id="scanResults"></div>
+            <div id="scanInitialMessage" class="text-center py-8 text-slate-500">
+                <i class="fas fa-network-wired text-4xl mb-4"></i>
+                <p>Enter a subnet and start the scan to discover devices.</p>
+                <p class="text-sm mt-2">(Requires <a href="https://nmap.org/" target="_blank" class="text-cyan-400 hover:underline">nmap</a> to be installed on the server)</p>
+            </div>
+        </div>
     </div>
 </div>
 
