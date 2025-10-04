@@ -11,13 +11,11 @@ const LOCAL_API_URL = 'http://localhost/network-monitor/api.php';
 
 export const performServerPing = async (host: string, count: number = 4): Promise<PingResult> => {
   try {
-    // This now calls your local PHP script instead of a Supabase function.
     const response = await fetch(`${LOCAL_API_URL}?action=manual_ping`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      // The body sends the host to the PHP script.
       body: JSON.stringify({ host, count }),
     });
 
@@ -45,7 +43,6 @@ export const performServerPing = async (host: string, count: number = 4): Promis
     console.error('Local ping service error:', error);
     const errorMessage = `Failed to connect to local ping service. Please ensure your XAMPP server is running and the PHP files are in the 'htdocs/network-monitor' directory. Error: ${error.message}`;
     
-    // Return a structured error that the UI can display.
     return {
       host,
       timestamp: new Date().toISOString(),
@@ -57,14 +54,31 @@ export const performServerPing = async (host: string, count: number = 4): Promis
   }
 };
 
+export const pingAllDevices = async (): Promise<{ success: boolean; message: string; count: number }> => {
+  try {
+    const response = await fetch(`${LOCAL_API_URL}?action=check_all_devices`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Network response was not ok: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error: any) {
+    console.error('Failed to ping all devices:', error);
+    throw new Error(`Failed to connect to local ping service to check all devices. Error: ${error.message}`);
+  }
+};
+
+
 export const parsePingOutput = (output: string): { packetLoss: number; avgTime: number; minTime: number; maxTime: number } => {
-  // This function works for both Windows and Linux/macOS ping output.
   let packetLoss = 100;
   let avgTime = 0;
   let minTime = 0;
   let maxTime = 0;
 
-  // Regex for Windows
   const windowsLossMatch = output.match(/Lost = \d+ \((\d+)% loss\)/);
   const windowsTimeMatch = output.match(/Minimum = (\d+)ms, Maximum = (\d+)ms, Average = (\d+)ms/);
 
@@ -77,7 +91,6 @@ export const parsePingOutput = (output: string): { packetLoss: number; avgTime: 
     avgTime = parseFloat(windowsTimeMatch[3]);
   }
 
-  // Regex for Linux/macOS
   const unixLossMatch = output.match(/(\d+)% packet loss/);
   const unixTimeMatch = output.match(/rtt min\/avg\/max\/mdev = ([\d.]+)\/([\d.]+)\/([\d.]+)\/([\d.]+) ms/);
 

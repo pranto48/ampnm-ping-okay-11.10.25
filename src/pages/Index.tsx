@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Wifi, Server, Clock, RefreshCw, Monitor, Network, WifiOff, History } from "lucide-react";
-import { showSuccess, showError } from "@/utils/toast";
+import { Activity, Wifi, Server, Clock, RefreshCw, Monitor, Network, WifiOff } from "lucide-react";
+import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
 import NetworkScanner from "@/components/NetworkScanner";
@@ -12,21 +12,48 @@ import ServerPingTest from "@/components/ServerPingTest";
 import PingHistory from "@/components/PingHistory";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import NetworkMap from "@/components/NetworkMap";
+import { getDevices, NetworkDevice } from "@/services/networkDeviceService";
+import { pingAllDevices } from "@/services/pingService";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [networkStatus, setNetworkStatus] = useState<boolean>(true);
   const [lastChecked, setLastChecked] = useState<Date>(new Date());
-  const [localDevices, setLocalDevices] = useState([
-    { ip: "192.168.9.1", name: "Router", status: "unknown", lastSeen: null },
-    { ip: "192.168.9.3", name: "Desktop PC", status: "unknown", lastSeen: null },
-    { ip: "192.168.9.10", name: "NAS", status: "unknown", lastSeen: null },
-    { ip: "192.168.9.20", name: "Printer", status: "unknown", lastSeen: null },
-  ]);
+  const [devices, setDevices] = useState<NetworkDevice[]>([]);
+  const [isCheckingDevices, setIsCheckingDevices] = useState(false);
+
+  const fetchDevices = useCallback(async () => {
+    try {
+      const dbDevices = await getDevices();
+      setDevices(dbDevices as NetworkDevice[]);
+    } catch (error) {
+      showError("Failed to load devices from database.");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDevices();
+
+    const channel = supabase
+      .channel('network-devices-changes-index')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'network_devices' },
+        (payload) => {
+          console.log('Change received!', payload);
+          fetchDevices(); // Refetch all devices on any change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchDevices]);
 
   const checkNetworkStatus = async () => {
     try {
-      // Simple network check by trying to fetch a small resource
-      await fetch("https://www.google.com/favicon.ico", { mode: 'no-cors' });
+      await fetch("https://www.google.com/favicon.ico", { mode: 'no-cors', cache: 'no-cache' });
       setNetworkStatus(true);
       showSuccess("Internet connection is online");
     } catch (error) {
@@ -36,71 +63,34 @@ const Index = () => {
     setLastChecked(new Date());
   };
 
-  const checkLocalDevices = async () => {
-    const updatedDevices = [...localDevices];
-    
-    for (let i = 0; i < updatedDevices.length; i++) {
-      const device = updatedDevices[i];
-      try {
-        // Try WebSocket connection first
-        const ws = new WebSocket(`ws://${device.ip}:80`);
-        
-        await new Promise((resolve, reject) => {
-          ws.onopen = resolve;
-          ws.onerror = reject;
-          setTimeout(reject, 2000);
-        });
-        
-        ws.close();
-        updatedDevices[i] = {
-          ...device,
-          status: "online",
-          lastSeen: new Date()
-        };
-        showSuccess(`${device.name} (${device.ip}) is online`);
-      } catch (error) {
-        // Fallback to HTTP ping
-        try {
-          const img = new Image();
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = `http://${device.ip}/?ping=${Date.now()}`;
-            setTimeout(reject, 2000);
-          });
-          
-          updatedDevices[i] = {
-            ...device,
-            status: "online",
-            lastSeen: new Date()
-          };
-          showSuccess(`${device.name} (${device.ip}) is online`);
-        } catch (httpError) {
-          updatedDevices[i] = {
-            ...device,
-            status: "offline",
-            lastSeen: device.lastSeen
-          };
-          showError(`${device.name} (${device.ip}) is offline`);
-        }
+  const handleCheckAllDevices = async () => {
+    setIsCheckingDevices(true);
+    const toastId = showLoading("Pinging all devices...");
+    try {
+      const result = await pingAllDevices();
+      dismissToast(toastId);
+      if (result.success) {
+        showSuccess(result.message || `Checked ${result.count} devices.`);
+      } else {
+        showError("Failed to check all devices.");
       }
+      // The real-time listener will handle updating the UI, but we can refetch just in case.
+      await fetchDevices();
+    } catch (error: any) {
+      dismissToast(toastId);
+      showError(error.message || "An error occurred while checking devices.");
+    } finally {
+      setIsCheckingDevices(false);
     }
-    
-    setLocalDevices(updatedDevices);
   };
 
   useEffect(() => {
     checkNetworkStatus();
-    checkLocalDevices();
-    
-    const networkInterval = setInterval(checkNetworkStatus, 30000);
-    const deviceInterval = setInterval(checkLocalDevices, 60000);
-    
-    return () => {
-      clearInterval(networkInterval);
-      clearInterval(deviceInterval);
-    };
+    const networkInterval = setInterval(checkNetworkStatus, 60000);
+    return () => clearInterval(networkInterval);
   }, []);
+
+  const onlineDevicesCount = devices.filter(d => d.status === "online").length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,7 +156,7 @@ const Index = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {localDevices.filter(d => d.status === "online").length}/{localDevices.length}
+                    {onlineDevicesCount}/{devices.length}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Devices online
@@ -187,9 +177,9 @@ const Index = () => {
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Check Internet
                 </Button>
-                <Button onClick={checkLocalDevices}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Check Local Devices
+                <Button onClick={handleCheckAllDevices} disabled={isCheckingDevices}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isCheckingDevices ? 'animate-spin' : ''}`} />
+                  {isCheckingDevices ? 'Checking...' : 'Check Local Devices'}
                 </Button>
               </CardContent>
             </Card>
@@ -205,8 +195,8 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {localDevices.map((device, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                  {devices.map((device) => (
+                    <div key={device.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center gap-3">
                         {device.status === "online" ? (
                           <Wifi className="h-5 w-5 text-green-500" />
@@ -217,7 +207,7 @@ const Index = () => {
                         )}
                         <div>
                           <span className="font-medium">{device.name}</span>
-                          <p className="text-sm text-muted-foreground">{device.ip}</p>
+                          <p className="text-sm text-muted-foreground">{device.ip_address}</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -225,14 +215,8 @@ const Index = () => {
                           device.status === "online" ? "default" :
                           device.status === "offline" ? "destructive" : "secondary"
                         }>
-                          {device.status === "online" ? "Online" :
-                           device.status === "offline" ? "Offline" : "Unknown"}
+                          {device.status || 'unknown'}
                         </Badge>
-                        {device.lastSeen && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Last seen: {device.lastSeen.toLocaleTimeString()}
-                          </p>
-                        )}
                       </div>
                     </div>
                   ))}
