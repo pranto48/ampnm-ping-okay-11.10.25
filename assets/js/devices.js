@@ -97,6 +97,22 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
+        const annotations = {};
+        if (device.warning_latency_threshold) {
+            annotations.warningLine = {
+                type: 'line', yMin: device.warning_latency_threshold, yMax: device.warning_latency_threshold,
+                borderColor: '#f59e0b', borderWidth: 2, borderDash: [6, 6],
+                label: { content: 'Warning', enabled: true, position: 'end', backgroundColor: 'rgba(245, 158, 11, 0.8)' }
+            };
+        }
+        if (device.critical_latency_threshold) {
+            annotations.criticalLine = {
+                type: 'line', yMin: device.critical_latency_threshold, yMax: device.critical_latency_threshold,
+                borderColor: '#ef4444', borderWidth: 2, borderDash: [6, 6],
+                label: { content: 'Critical', enabled: true, position: 'end', backgroundColor: 'rgba(239, 68, 68, 0.8)' }
+            };
+        }
+
         const chartCtx = document.getElementById('latencyChart').getContext('2d');
         latencyChart = new Chart(chartCtx, {
             type: 'line',
@@ -118,7 +134,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
                     x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
                 },
-                plugins: { legend: { labels: { color: '#cbd5e1' } } }
+                plugins: { 
+                    legend: { labels: { color: '#cbd5e1' } },
+                    annotation: { annotations: annotations }
+                }
             }
         });
 
