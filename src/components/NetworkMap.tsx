@@ -32,6 +32,7 @@ import { DeviceEditorDialog } from './DeviceEditorDialog';
 import { EdgeEditorDialog } from './EdgeEditorDialog';
 import DeviceNode from './DeviceNode';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
+import { performServerPing } from '@/services/pingService';
 import { supabase } from '@/integrations/supabase/client';
 
 const NetworkMap = () => {
@@ -124,6 +125,26 @@ const NetworkMap = () => {
       supabase.removeChannel(channel);
     };
   }, [loadNetworkData]);
+
+  useEffect(() => {
+    const intervals: NodeJS.Timeout[] = [];
+    nodes.forEach((node) => {
+      if (node.data.ping_interval && node.data.ping_interval > 0) {
+        const intervalId = setInterval(async () => {
+          try {
+            const result = await performServerPing(node.data.ip_address, 1);
+            handleStatusChange(node.id, result.success ? 'online' : 'offline');
+          } catch (error) {
+            handleStatusChange(node.id, 'offline');
+          }
+        }, node.data.ping_interval * 1000);
+        intervals.push(intervalId);
+      }
+    });
+    return () => {
+      intervals.forEach(clearInterval);
+    };
+  }, [nodes, handleStatusChange]);
 
   const styledEdges = useMemo(() => {
     return edges.map((edge) => {
