@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     default-mysql-client \
     curl \
+    sed \
     && docker-php-ext-install pdo_mysql zip
 
 # Copy application source code to the web server's root directory
@@ -18,6 +19,8 @@ RUN chown -R www-data:www-data /var/www/html
 # Copy and set permissions for the custom entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Fix Windows line endings that can cause script execution errors
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh
 
 # Set the entrypoint
 ENTRYPOINT ["docker-entrypoint.sh"]
