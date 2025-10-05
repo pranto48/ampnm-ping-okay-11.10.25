@@ -1,8 +1,9 @@
 # Use the official PHP Apache image as the base
 FROM php:8.2-apache
 
-# Install system dependencies and MySQL client
+# Install system dependencies, including ping utility
 RUN apt-get update && apt-get install -y \
+    iputils-ping \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
