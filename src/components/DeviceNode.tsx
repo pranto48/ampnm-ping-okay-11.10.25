@@ -15,7 +15,8 @@ import {
   Edit, 
   Activity,
   WifiOff,
-  Clock
+  Clock,
+  BarChart3
 } from 'lucide-react';
 import { performServerPing, parsePingOutput } from '@/services/pingService';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -135,6 +136,10 @@ const DeviceNode = ({ data }: { data: any }) => {
               <DropdownMenuItem onClick={() => data.onEdit(data.id)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => data.onViewDetails(data.id)}>
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Details
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => data.onDelete(data.id)} className="text-red-500">
                 <Trash2 className="mr-2 h-4 w-4" />
