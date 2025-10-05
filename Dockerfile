@@ -1,36 +1,22 @@
-# Use the official PHP 8.2 image with Apache
+# Use the official PHP image with Apache
 FROM php:8.2-apache
 
-# Set working directory
-WORKDIR /var/www/html
-
 # Install system dependencies
-# - pdo_mysql for database connection
-# - curl for http checks
-# - iputils-ping for the ping command
-# - nmap for network scanning
-# - libcap2-bin to grant network capabilities
 RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    zip \
-    unzip \
-    curl \
+    libpq-dev \
     iputils-ping \
     nmap \
-    libcap2-bin \
-    && docker-php-ext-install pdo_mysql zip
+    && rm -rf /var/lib/apt/lists/*
 
-# Grant ping the necessary capabilities to run without root
-RUN setcap cap_net_raw+ep /bin/ping
+# Install PHP extensions for PostgreSQL
+RUN docker-php-ext-install pdo pdo_pgsql
 
 # Copy application source
-COPY . /var/www/html
+COPY . /var/www/html/
 
-# Copy custom entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Set permissions for Apache
+RUN chown -R www-data:www-data /var/www/html
+RUN a2enmod rewrite
 
-# Expose port 80 and start apache
+# Expose port 80
 EXPOSE 80
-ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["apache2-foreground"]
