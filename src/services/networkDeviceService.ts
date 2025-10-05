@@ -12,6 +12,8 @@ export interface NetworkDevice {
   ping_interval?: number;
   icon_size?: number;
   name_text_size?: number;
+  last_ping?: string | null;
+  last_ping_result?: boolean | null;
 }
 
 export interface MapData {
@@ -20,7 +22,7 @@ export interface MapData {
 }
 
 export const getDevices = async () => {
-  const { data, error } = await supabase.from('network_devices').select('*');
+  const { data, error } = await supabase.from('network_devices').select('*').order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
   return data;
 };
@@ -42,11 +44,23 @@ export const updateDevice = async (id: string, updates: Partial<NetworkDevice>) 
 };
 
 export const updateDeviceStatusByIp = async (ip_address: string, status: 'online' | 'offline') => {
-  const { error } = await supabase.rpc('update_device_status_by_ip', {
-    ip_address_in: ip_address,
-    status_in: status,
-  });
-  if (error) throw new Error(error.message);
+  const { data, error } = await supabase
+    .from('network_devices')
+    .update({ 
+      status, 
+      last_ping: new Date().toISOString(),
+      last_ping_result: status === 'online'
+    })
+    .eq('ip_address', ip_address)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating device status:', error);
+    throw new Error(error.message);
+  }
+  
+  return data;
 };
 
 export const deleteDevice = async (id: string) => {
@@ -86,4 +100,18 @@ export const importMap = async (mapData: MapData) => {
     edges_data: mapData.edges,
   });
   if (error) throw new Error(`Import failed: ${error.message}`);
+};
+
+// Real-time subscription for device changes
+export const subscribeToDeviceChanges = (callback: (payload: any) => void) => {
+  const channel = supabase
+    .channel('network-devices-changes')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'network_devices' },
+      callback
+    )
+    .subscribe();
+
+  return channel;
 };

@@ -3,7 +3,20 @@ import { Handle, Position } from 'reactflow';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Server, Router, Printer, Laptop, Wifi, Database, MoreVertical, Trash2, Edit, Activity } from 'lucide-react';
+import { 
+  Server, 
+  Router, 
+  Printer, 
+  Laptop, 
+  Wifi, 
+  Database, 
+  MoreVertical, 
+  Trash2, 
+  Edit, 
+  Activity,
+  WifiOff,
+  Clock
+} from 'lucide-react';
 import { performServerPing, parsePingOutput } from '@/services/pingService';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { showError } from '@/utils/toast';
@@ -22,6 +35,8 @@ const DeviceNode = ({ data }: { data: any }) => {
   const [isPinging, setIsPinging] = useState(false);
 
   const handlePing = async () => {
+    if (!data.ip_address) return;
+    
     setIsPinging(true);
     setPingResult(null);
     try {
@@ -36,6 +51,7 @@ const DeviceNode = ({ data }: { data: any }) => {
         setPingResult({ time: -1, loss: 100 });
       }
     } catch (error: any) {
+      console.error(`Ping failed for ${data.ip_address}:`, error);
       showError(`Ping failed: ${error.message}`);
       setPingResult({ time: -1, loss: 100 });
       data.onStatusChange(data.id, 'offline');
@@ -55,6 +71,11 @@ const DeviceNode = ({ data }: { data: any }) => {
       ? 'border-red-500'
       : 'border-yellow-500';
 
+  const statusIcon = 
+    data.status === 'online' ? <Wifi className="h-3 w-3" /> :
+    data.status === 'offline' ? <WifiOff className="h-3 w-3" /> :
+    <Clock className="h-3 w-3" />;
+
   return (
     <>
       <Handle type="source" position={Position.Top} />
@@ -62,19 +83,42 @@ const DeviceNode = ({ data }: { data: any }) => {
       <Handle type="source" position={Position.Bottom} />
       <Handle type="source" position={Position.Left} />
       <Card className={`w-64 shadow-lg bg-gray-800 border-gray-700 text-white border-2 ${statusBorderColor}`}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle style={{ fontSize: `${nameTextSize}px` }} className="font-medium text-white truncate">{data.name}</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3">
+          <CardTitle style={{ fontSize: `${nameTextSize}px` }} className="font-medium text-white truncate">
+            {data.name}
+          </CardTitle>
           <IconComponent style={{ height: `${iconSize}px`, width: `${iconSize}px` }} />
         </CardHeader>
-        <CardContent>
-          <div className="font-mono text-xs text-gray-400">{data.ip_address}</div>
-          <div className="mt-2 flex items-center justify-between">
-            <Button size="sm" onClick={handlePing} disabled={isPinging}>
-              <Activity className={`mr-2 h-4 w-4 ${isPinging ? 'animate-spin' : ''}`} />
+        <CardContent className="p-3">
+          <div className="font-mono text-xs text-gray-400 mb-2">{data.ip_address || 'No IP'}</div>
+          
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1">
+              {statusIcon}
+              <span className="text-xs capitalize">{data.status || 'unknown'}</span>
+            </div>
+            {data.last_ping && (
+              <div className="text-xs text-gray-500">
+                {new Date(data.last_ping).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <Button 
+              size="sm" 
+              onClick={handlePing} 
+              disabled={isPinging || !data.ip_address}
+              className="h-7 text-xs"
+            >
+              <Activity className={`mr-1 h-3 w-3 ${isPinging ? 'animate-spin' : ''}`} />
               Ping
             </Button>
             {pingResult && (
-              <Badge variant={pingResult.loss > 0 ? 'destructive' : 'default'}>
+              <Badge 
+                variant={pingResult.loss > 0 ? 'destructive' : 'default'}
+                className="h-5 text-xs"
+              >
                 {pingResult.time >= 0 ? `${pingResult.time}ms` : 'Failed'}
               </Badge>
             )}

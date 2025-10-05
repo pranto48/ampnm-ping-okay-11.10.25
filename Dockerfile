@@ -1,36 +1,35 @@
-# Use the official PHP 8.2 image with Apache
+# Use the official PHP Apache image as the base
 FROM php:8.2-apache
+
+# Install system dependencies and MySQL client
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    curl \
+    wget \
+    git \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies
-# - pdo_mysql for database connection
-# - curl for http checks
-# - iputils-ping for the ping command
-# - nmap for network scanning
-# - libcap2-bin to grant network capabilities
-RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    zip \
-    unzip \
-    curl \
-    iputils-ping \
-    nmap \
-    libcap2-bin \
-    && docker-php-ext-install pdo_mysql zip
+# Copy application files
+COPY . /var/www/html/
 
-# Grant ping the necessary capabilities to run without root
-RUN setcap cap_net_raw+ep /bin/ping
+# Set permissions for web server
+RUN chown -R www-data:www-data /var/www/html
 
-# Copy application source
-COPY . /var/www/html
-
-# Copy custom entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-# Expose port 80 and start apache
+# Expose port 80
 EXPOSE 80
-ENTRYPOINT ["docker-entrypoint.sh"]
+
+# Start Apache in foreground
 CMD ["apache2-foreground"]
