@@ -5,12 +5,13 @@ import ReactFlow, {
   Background,
   useNodesState,
   useEdgesState,
-  addEdge,
   Node,
   Edge,
   Connection,
   NodeDragHandler,
   OnEdgesChange,
+  applyNodeChanges,
+  applyEdgeChanges,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button } from '@/components/ui/button';
@@ -36,8 +37,8 @@ import { performServerPing } from '@/services/pingService';
 import { supabase } from '@/integrations/supabase/client';
 
 const NetworkMap = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes] = useNodesState([]);
+  const [edges, setEdges] = useEdgesState([]);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Partial<NetworkDevice> | undefined>(undefined);
   const [isEdgeEditorOpen, setIsEdgeEditorOpen] = useState(false);
@@ -48,88 +49,104 @@ const NetworkMap = () => {
 
   const handleStatusChange = useCallback(
     async (nodeId: string, status: 'online' | 'offline') => {
+      // Optimistically update UI
       setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id === nodeId) {
-            return { ...node, data: { ...node.data, status } };
-          }
-          return node;
-        })
+        nds.map((node) => (node.id === nodeId ? { ...node, data: { ...node.data, status } } : node))
       );
       try {
         await updateDevice(nodeId, { status });
       } catch (error) {
         showError('Failed to update device status in DB.');
+        // Revert on failure if necessary, though status will be corrected by next ping/subscription
       }
     },
     [setNodes]
   );
 
+  const mapDeviceToNode = useCallback(
+    (device: NetworkDevice): Node => ({
+      id: device.id!,
+      type: 'device',
+      position: { x: device.position_x, y: device.position_y },
+      data: {
+        id: device.id,
+        name: device.name,
+        ip_address: device.ip_address,
+        icon: device.icon,
+        status: device.status || 'unknown',
+        ping_interval: device.ping_interval,
+        icon_size: device.icon_size,
+        name_text_size: device.name_text_size,
+        onEdit: (id: string) => handleEdit(id),
+        onDelete: (id: string) => handleDelete(id),
+        onStatusChange: handleStatusChange,
+      },
+    }),
+    [handleStatusChange]
+  );
+
   const loadNetworkData = useCallback(async () => {
     try {
       const [devices, edgesData] = await Promise.all([getDevices(), getEdges()]);
-      const mappedNodes: Node[] = devices.map((device) => ({
-        id: device.id,
-        type: 'device',
-        position: { x: device.position_x, y: device.position_y },
-        data: {
-          id: device.id,
-          name: device.name,
-          ip_address: device.ip_address,
-          icon: device.icon,
-          status: device.status || 'unknown',
-          ping_interval: device.ping_interval,
-          icon_size: device.icon_size,
-          name_text_size: device.name_text_size,
-          onEdit: handleEdit,
-          onDelete: handleDelete,
-          onStatusChange: handleStatusChange,
-        },
-      }));
-      setNodes(mappedNodes);
-
-      const mappedEdges: Edge[] = edgesData.map((edge: any) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        data: {
-          connection_type: edge.connection_type || 'cat5',
-        },
-      }));
-      setEdges(mappedEdges);
+      setNodes(devices.map(mapDeviceToNode));
+      setEdges(
+        edgesData.map((edge: any) => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          data: { connection_type: edge.connection_type || 'cat5' },
+        }))
+      );
     } catch (error) {
       showError('Failed to load network data.');
     }
-  }, [setNodes, setEdges, handleStatusChange]);
+  }, [setNodes, setEdges, mapDeviceToNode]);
 
   useEffect(() => {
     loadNetworkData();
   }, [loadNetworkData]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel('network-devices-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'network_devices' },
-        () => loadNetworkData()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'network_edges' },
-        () => loadNetworkData()
-      )
+    const handleDeviceInsert = (payload: any) => {
+      const newNode = mapDeviceToNode(payload.new);
+      setNodes((nds) => [...nds, newNode]);
+    };
+    const handleDeviceUpdate = (payload: any) => {
+      setNodes((nds) => applyNodeChanges([{ type: 'reset' }], nds.map(n => n.id === payload.new.id ? mapDeviceToNode(payload.new) : n)));
+    };
+    const handleDeviceDelete = (payload: any) => {
+      setNodes((nds) => nds.filter((n) => n.id !== payload.old.id));
+    };
+    const handleEdgeInsert = (payload: any) => {
+      const newEdge = { id: payload.new.id, source: payload.new.source_id, target: payload.new.target_id, data: { connection_type: payload.new.connection_type } };
+      setEdges((eds) => applyEdgeChanges([{ type: 'add', item: newEdge }], eds));
+    };
+    const handleEdgeUpdate = (payload: any) => {
+      setEdges((eds) => eds.map(e => e.id === payload.new.id ? { ...e, data: { connection_type: payload.new.connection_type } } : e));
+    };
+    const handleEdgeDelete = (payload: any) => {
+      setEdges((eds) => eds.filter((e) => e.id !== payload.old.id));
+    };
+
+    const channel = supabase.channel('network-map-changes');
+    channel
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'network_devices' }, handleDeviceInsert)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'network_devices' }, handleDeviceUpdate)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'network_devices' }, handleDeviceDelete)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'network_edges' }, handleEdgeInsert)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'network_edges' }, handleEdgeUpdate)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'network_edges' }, handleEdgeDelete)
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [loadNetworkData]);
+  }, [mapDeviceToNode, setNodes, setEdges]);
 
   useEffect(() => {
-    const intervals: NodeJS.Timeout[] = [];
+    const intervals = new Map<string, NodeJS.Timeout>();
     nodes.forEach((node) => {
-      if (node.data.ping_interval && node.data.ping_interval > 0) {
+      if (node.data.ping_interval > 0 && !intervals.has(node.id)) {
         const intervalId = setInterval(async () => {
           try {
             const result = await performServerPing(node.data.ip_address, 1);
@@ -138,7 +155,7 @@ const NetworkMap = () => {
             handleStatusChange(node.id, 'offline');
           }
         }, node.data.ping_interval * 1000);
-        intervals.push(intervalId);
+        intervals.set(node.id, intervalId);
       }
     });
     return () => {
@@ -166,27 +183,23 @@ const NetworkMap = () => {
         }
       }
 
-      return {
-        ...edge,
-        animated: !isConnectionBroken,
-        style: style,
-        label: type,
-      };
+      return { ...edge, animated: !isConnectionBroken, style, label: type };
     });
   }, [nodes, edges]);
 
   const onConnect = useCallback(
     async (params: Connection) => {
+      const newEdge = { id: `reactflow__edge-${params.source}${params.target}`, source: params.source!, target: params.target!, data: { connection_type: 'cat5' } };
+      setEdges((eds) => applyEdgeChanges([{ type: 'add', item: newEdge }], eds));
       try {
         await addEdgeToDB({ source: params.source!, target: params.target! });
         showSuccess('Connection saved.');
-        await loadNetworkData();
       } catch (error) {
         showError('Failed to save connection.');
-        await loadNetworkData();
+        setEdges((eds) => eds.filter(e => e.id !== newEdge.id));
       }
     },
-    [loadNetworkData]
+    [setEdges]
   );
 
   const handleAddDevice = () => {
@@ -197,27 +210,21 @@ const NetworkMap = () => {
   const handleEdit = (deviceId: string) => {
     const nodeToEdit = nodes.find((n) => n.id === deviceId);
     if (nodeToEdit) {
-      setEditingDevice({
-        id: nodeToEdit.id,
-        name: nodeToEdit.data.name,
-        ip_address: nodeToEdit.data.ip_address,
-        icon: nodeToEdit.data.icon,
-        ping_interval: nodeToEdit.data.ping_interval,
-        icon_size: nodeToEdit.data.icon_size,
-        name_text_size: nodeToEdit.data.name_text_size,
-      });
+      setEditingDevice({ id: nodeToEdit.id, ...nodeToEdit.data });
       setIsEditorOpen(true);
     }
   };
 
   const handleDelete = async (deviceId: string) => {
     if (window.confirm('Are you sure you want to delete this device?')) {
+      const originalNodes = nodes;
+      setNodes((nds) => nds.filter((node) => node.id !== deviceId));
       try {
         await deleteDevice(deviceId);
-        setNodes((nds) => nds.filter((node) => node.id !== deviceId));
         showSuccess('Device deleted successfully.');
       } catch (error) {
         showError('Failed to delete device.');
+        setNodes(originalNodes);
       }
     }
   };
@@ -231,7 +238,6 @@ const NetworkMap = () => {
         await addDevice({ ...deviceData, position_x: 100, position_y: 100, status: 'unknown' });
         showSuccess('Device added successfully.');
       }
-      await loadNetworkData();
     } catch (error) {
       showError('Failed to save device.');
     }
@@ -251,7 +257,7 @@ const NetworkMap = () => {
 
   const onEdgesChangeHandler: OnEdgesChange = useCallback(
     (changes) => {
-      onEdgesChange(changes);
+      setEdges((eds) => applyEdgeChanges(changes, eds));
       changes.forEach(async (change) => {
         if (change.type === 'remove') {
           try {
@@ -264,7 +270,7 @@ const NetworkMap = () => {
         }
       });
     },
-    [onEdgesChange, loadNetworkData]
+    [setEdges, loadNetworkData]
   );
 
   const onEdgeClick = (_event: React.MouseEvent, edge: Edge) => {
@@ -273,28 +279,24 @@ const NetworkMap = () => {
   };
 
   const handleSaveEdge = async (edgeId: string, connectionType: string) => {
+    const originalEdges = edges;
+    setEdges((eds) => eds.map(e => e.id === edgeId ? { ...e, data: { connection_type } } : e));
     try {
       await updateEdgeInDB(edgeId, { connection_type: connectionType });
       showSuccess('Connection updated.');
-      await loadNetworkData();
     } catch (error) {
       showError('Failed to update connection.');
+      setEdges(originalEdges);
     }
   };
 
   const handleExport = async () => {
     const devices = await getDevices();
     const edgesData = await getEdges();
-
     const exportData: MapData = {
       devices: devices.map(({ user_id, status, ...rest }) => rest),
-      edges: edgesData.map(({ id, ...rest }: any) => ({
-        source: rest.source,
-        target: rest.target,
-        connection_type: rest.connection_type || 'cat5',
-      })),
+      edges: edgesData.map(({ id, ...rest }: any) => ({ source: rest.source, target: rest.target, connection_type: rest.connection_type || 'cat5' })),
     };
-
     const jsonString = JSON.stringify(exportData, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -308,40 +310,27 @@ const NetworkMap = () => {
     showSuccess('Map exported successfully!');
   };
 
-  const handleImportClick = () => {
-    importInputRef.current?.click();
-  };
+  const handleImportClick = () => importInputRef.current?.click();
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    if (!window.confirm('Are you sure you want to import this map? This will overwrite your current map.')) {
-      return;
-    }
+    if (!window.confirm('Are you sure you want to import this map? This will overwrite your current map.')) return;
 
     const reader = new FileReader();
     reader.onload = async (e) => {
       const toastId = showLoading('Importing map...');
       try {
-        const text = e.target?.result;
-        const mapData = JSON.parse(text as string) as MapData;
-
-        if (!mapData.devices || !mapData.edges) {
-          throw new Error('Invalid map file format.');
-        }
-
+        const mapData = JSON.parse(e.target?.result as string) as MapData;
+        if (!mapData.devices || !mapData.edges) throw new Error('Invalid map file format.');
         await importMap(mapData);
         dismissToast(toastId);
         showSuccess('Map imported successfully!');
-        await loadNetworkData();
       } catch (error: any) {
         dismissToast(toastId);
         showError(error.message || 'Failed to import map.');
       } finally {
-        if (importInputRef.current) {
-          importInputRef.current.value = '';
-        }
+        if (importInputRef.current) importInputRef.current.value = '';
       }
     };
     reader.readAsText(file);
@@ -352,7 +341,7 @@ const NetworkMap = () => {
       <ReactFlow
         nodes={nodes}
         edges={styledEdges}
-        onNodesChange={onNodesChange}
+        onNodesChange={(c) => setNodes(applyNodeChanges(c, nodes))}
         onEdgesChange={onEdgesChangeHandler}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
@@ -365,42 +354,13 @@ const NetworkMap = () => {
         <Background gap={16} size={1} color="#444" />
       </ReactFlow>
       <div className="absolute top-4 left-4 flex gap-2">
-        <Button onClick={handleAddDevice}>
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Add Device
-        </Button>
-        <Button onClick={handleExport} variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          Export
-        </Button>
-        <Button onClick={handleImportClick} variant="outline">
-          <Upload className="h-4 w-4 mr-2" />
-          Import
-        </Button>
-        <input
-          type="file"
-          ref={importInputRef}
-          onChange={handleFileChange}
-          accept="application/json"
-          className="hidden"
-        />
+        <Button onClick={handleAddDevice}><PlusCircle className="h-4 w-4 mr-2" />Add Device</Button>
+        <Button onClick={handleExport} variant="outline"><Download className="h-4 w-4 mr-2" />Export</Button>
+        <Button onClick={handleImportClick} variant="outline"><Upload className="h-4 w-4 mr-2" />Import</Button>
+        <input type="file" ref={importInputRef} onChange={handleFileChange} accept="application/json" className="hidden" />
       </div>
-      {isEditorOpen && (
-        <DeviceEditorDialog
-          isOpen={isEditorOpen}
-          onClose={() => setIsEditorOpen(false)}
-          onSave={handleSaveDevice}
-          device={editingDevice}
-        />
-      )}
-      {isEdgeEditorOpen && (
-        <EdgeEditorDialog
-          isOpen={isEdgeEditorOpen}
-          onClose={() => setIsEdgeEditorOpen(false)}
-          onSave={handleSaveEdge}
-          edge={editingEdge}
-        />
-      )}
+      {isEditorOpen && <DeviceEditorDialog isOpen={isEditorOpen} onClose={() => setIsEditorOpen(false)} onSave={handleSaveDevice} device={editingDevice} />}
+      {isEdgeEditorOpen && <EdgeEditorDialog isOpen={isEdgeEditorOpen} onClose={() => setIsEdgeEditorOpen(false)} onSave={handleSaveEdge} edge={editingEdge} />}
     </div>
   );
 };

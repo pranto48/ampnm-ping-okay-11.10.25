@@ -7,7 +7,7 @@ export interface PingResult {
   statusCode: number;
 }
 
-const LOCAL_API_URL = 'http://localhost/network-monitor/api.php';
+const LOCAL_API_URL = 'http://localhost:2266/api.php';
 
 export const performServerPing = async (host: string, count: number = 4): Promise<PingResult> => {
   try {
@@ -41,7 +41,7 @@ export const performServerPing = async (host: string, count: number = 4): Promis
     };
   } catch (error: any) {
     console.error('Local ping service error:', error);
-    const errorMessage = `Failed to connect to local ping service. Please ensure your XAMPP server is running and the PHP files are in the 'htdocs/network-monitor' directory. Error: ${error.message}`;
+    const errorMessage = `Failed to connect to local ping service. Please ensure your Docker container is running and port 2266 is mapped. Error: ${error.message}`;
     
     return {
       host,

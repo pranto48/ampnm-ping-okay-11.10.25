@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ const DeviceNode = ({ data }: { data: any }) => {
       } else {
         setPingResult({ time: -1, loss: 100 });
       }
-    } catch (error) {
+    } catch (error: any) {
       showError(`Ping failed: ${error.message}`);
       setPingResult({ time: -1, loss: 100 });
       data.onStatusChange(data.id, 'offline');
@@ -104,4 +104,4 @@ const DeviceNode = ({ data }: { data: any }) => {
   );
 };
 
-export default DeviceNode;
+export default memo(DeviceNode);
