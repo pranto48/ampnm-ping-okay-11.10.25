@@ -86,7 +86,7 @@ const ServerPingTest = () => {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="glass-effect">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Server className="h-5 w-5" />
@@ -132,7 +132,7 @@ const ServerPingTest = () => {
               <div className="space-y-3">
                 <h3 className="text-sm font-medium">Recent Server Pings</h3>
                 {pingResults.map((result, index) => (
-                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                  <div key={index} className="p-4 border border-slate-700/50 rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {result.success && result.parsedStats?.packetLoss !== 100 ? (

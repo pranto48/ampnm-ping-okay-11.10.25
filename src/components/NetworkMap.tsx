@@ -173,11 +173,10 @@ const NetworkMap = ({ devices, onMapUpdate, onViewDetails }: { devices: NetworkD
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; if (!window.confirm('Are you sure you want to import this map? This will overwrite your current map.')) return; const reader = new FileReader(); reader.onload = async (e) => { const toastId = showLoading('Importing map...'); try { const mapData = JSON.parse(e.target?.result as string) as MapData; if (!mapData.devices || !mapData.edges) throw new Error('Invalid map file format.'); await importMap(mapData); dismissToast(toastId); showSuccess('Map imported successfully!'); onMapUpdate(); } catch (error: any) { dismissToast(toastId); console.error('Failed to import map:', error); showError(error.message || 'Failed to import map.'); } finally { if (importInputRef.current) importInputRef.current.value = ''; } }; reader.readAsText(file); };
 
   return (
-    <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg bg-gray-900">
+    <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg glass-effect">
       <ReactFlow nodes={nodes} edges={styledEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChangeHandler} onConnect={onConnect} nodeTypes={nodeTypes} onNodeDragStop={onNodeDragStop} onEdgeClick={onEdgeClick} fitView fitViewOptions={{ padding: 0.1 }}>
         <Controls />
-        <MiniMap nodeColor={(n) => { switch (n.data.status) { case 'online': return '#22c55e'; case 'offline': return '#ef4444'; default: return '#94a3b8'; } }} nodeStrokeWidth={3} maskColor="rgba(15, 23, 42, 0.8)" />
-        <Background gap={16} size={1} color="#444" />
+        <MiniMap nodeColor={(n) => { switch (n.data.status) { case 'online': return '#22c55e'; case 'offline': return '#ef4444'; default: return '#94a3b8'; } }} nodeStrokeWidth={3} className="glass-effect" />
       </ReactFlow>
       <div className="absolute top-4 left-4 flex flex-wrap gap-2">
         <Button onClick={handleAddDevice} size="sm"><PlusCircle className="h-4 w-4 mr-2" />Add Device</Button>

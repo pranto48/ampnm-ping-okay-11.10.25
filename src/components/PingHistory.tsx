@@ -58,7 +58,7 @@ const PingHistory = () => {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="glass-effect">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
@@ -100,7 +100,7 @@ const PingHistory = () => {
               <p className="text-sm text-muted-foreground">Loading history...</p>
             </div>
           ) : history.length === 0 ? (
-            <div className="text-center p-8 border rounded-lg bg-muted">
+            <div className="text-center p-8 border border-slate-700/50 rounded-lg bg-muted/50">
               <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-sm text-muted-foreground">
                 No ping history found. Perform some pings first to see results here.
@@ -116,7 +116,7 @@ const PingHistory = () => {
               </div>
 
               {history.map((item, index) => (
-                <div key={index} className="p-4 border rounded-lg space-y-3">
+                <div key={index} className="p-4 border border-slate-700/50 rounded-lg space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <BarChart3 className="h-5 w-5 text-blue-500" />

@@ -67,10 +67,10 @@ const DeviceNode = ({ data }: { data: any }) => {
 
   const statusBorderColor =
     data.status === 'online'
-      ? 'border-green-500'
+      ? 'border-green-500/80'
       : data.status === 'offline'
-      ? 'border-red-500'
-      : 'border-yellow-500';
+      ? 'border-red-500/80'
+      : 'border-yellow-500/80';
 
   const statusIcon = 
     data.status === 'online' ? <Wifi className="h-3 w-3" /> :
@@ -83,7 +83,7 @@ const DeviceNode = ({ data }: { data: any }) => {
       <Handle type="source" position={Position.Right} />
       <Handle type="source" position={Position.Bottom} />
       <Handle type="source" position={Position.Left} />
-      <Card className={`w-64 shadow-lg bg-gray-800 border-gray-700 text-white border-2 ${statusBorderColor}`}>
+      <Card className={`w-64 shadow-lg text-white border-2 ${statusBorderColor} glass-effect transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/50`}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3">
           <CardTitle style={{ fontSize: `${nameTextSize}px` }} className="font-medium text-white truncate">
             {data.name}
