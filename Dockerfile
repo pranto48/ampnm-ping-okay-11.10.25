@@ -1,32 +1,36 @@
-FROM node:18-alpine AS builder
+# Use the official PHP Apache image as the base
+FROM php:8.2-apache
 
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+# Install system dependencies, including ping utility
+RUN apt-get update && apt-get install -y \
+    iputils-ping \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    curl \
+    wget \
+    git \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-COPY . .
-RUN npm run build
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-FROM node:18-alpine AS runtime
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
 
-WORKDIR /app
+# Set working directory
+WORKDIR /var/www/html
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Copy application files
+COPY . /var/www/html/
 
-# Copy built files
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/server.js ./
+# Set permissions for web server
+RUN chown -R www-data:www-data /var/www/html
 
-# Install production dependencies
-RUN npm ci --only=production
+# Expose port 80
+EXPOSE 80
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-USER nextjs
-
-EXPOSE 3000
-
-CMD ["node", "server.js"]
+# Start Apache in foreground
+CMD ["apache2-foreground"]
