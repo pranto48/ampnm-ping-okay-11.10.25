@@ -121,7 +121,7 @@ const NetworkScanner = () => {
 
   return (
     <div className="space-y-4">
-      <Card className="glass-effect">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Scan className="h-5 w-5" />
@@ -155,7 +155,7 @@ const NetworkScanner = () => {
               <div className="space-y-3">
                 <h3 className="text-sm font-medium">Found Devices ({devices.length})</h3>
                 {devices.map((device, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border border-slate-700/50 rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <Server className="h-5 w-5 text-green-500" />
                       <div>
@@ -174,7 +174,7 @@ const NetworkScanner = () => {
             )}
 
             {!isScanning && devices.length === 0 && (
-              <div className="text-center p-6 border border-slate-700/50 rounded-lg bg-muted/50">
+              <div className="text-center p-6 border rounded-lg bg-muted">
                 <WifiOff className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-sm text-muted-foreground">
                   No devices scanned yet. Click "Scan Network" to discover devices on your local network.

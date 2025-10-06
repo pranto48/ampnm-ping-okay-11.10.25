@@ -97,42 +97,5 @@
 
   body {
     @apply bg-background text-foreground;
-    background-color: #0a0a0a;
-    background-image: 
-      radial-gradient(circle at 15% 25%, rgba(0, 128, 255, 0.25) 0%, transparent 40%),
-      radial-gradient(circle at 85% 75%, rgba(0, 255, 128, 0.25) 0%, transparent 40%);
-    background-size: 200% 200%;
-    animation: move-gradient 20s ease-in-out infinite;
-  }
-}
-
-@keyframes move-gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(15px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.6s ease-out forwards;
-}
-
-/* Glassmorphism Effect */
-@layer components {
-  .glass-effect {
-    @apply bg-slate-800/50 border border-slate-700/50 shadow-lg backdrop-blur-xl;
-  }
-  .dark .glass-effect {
-    @apply bg-black/50 border border-slate-800/50 shadow-lg backdrop-blur-xl;
   }
 }

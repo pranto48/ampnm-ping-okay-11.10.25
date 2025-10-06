@@ -171,7 +171,7 @@ const PingTest = () => {
 
   return (
     <div className="space-y-4">
-      <Card className="glass-effect">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Network className="h-5 w-5" />
@@ -194,7 +194,7 @@ const PingTest = () => {
             </Button>
           </div>
 
-          <div className="text-sm text-muted-foreground mb-4 p-3 bg-muted/50 rounded-lg">
+          <div className="text-sm text-muted-foreground mb-4 p-3 bg-muted rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <Info className="h-4 w-4" />
               <span className="font-medium">Browser Limitations:</span>
@@ -211,7 +211,7 @@ const PingTest = () => {
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Recent Pings</h3>
               {pingResults.map((result, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border border-slate-700/50 rounded-lg">
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
                     {result.status === "success" ? (
                       <Wifi className="h-5 w-5 text-green-500" />

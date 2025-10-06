@@ -143,20 +143,20 @@ const Index = () => {
   }, [devices]);
 
   return (
-    <div className="min-h-screen bg-transparent">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Monitor className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold">Local Network Monitor</h1>
           </div>
-          <Badge variant={networkStatus ? "default" : "destructive"} className="text-sm glass-effect">
+          <Badge variant={networkStatus ? "default" : "destructive"} className="text-sm">
             {networkStatus ? "Internet Online" : "Internet Offline"}
           </Badge>
         </div>
 
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="mb-4 glass-effect">
+          <TabsList className="mb-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="map">Network Map</TabsTrigger>
             <TabsTrigger value="devices">Devices</TabsTrigger>
@@ -168,23 +168,23 @@ const Index = () => {
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {[...Array(4)].map((_, i) => (
-                  <Card key={i} className="glass-effect"><CardHeader><Skeleton className="h-4 w-3/4" /></CardHeader><CardContent><Skeleton className="h-8 w-1/2" /></CardContent></Card>
+                  <Card key={i}><CardHeader><Skeleton className="h-4 w-3/4" /></CardHeader><CardContent><Skeleton className="h-8 w-1/2" /></CardContent></Card>
                 ))}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <Card className="glass-effect animate-fade-in-up"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Internet Status</CardTitle><Activity className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{networkStatus ? "Online" : "Offline"}</div><p className="text-xs text-muted-foreground">Internet connectivity</p></CardContent></Card>
-                <Card className="glass-effect animate-fade-in-up" style={{ animationDelay: '100ms' }}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Last Check</CardTitle><Clock className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{lastChecked.toLocaleTimeString()}</div><p className="text-xs text-muted-foreground">Last status check</p></CardContent></Card>
-                <Card className="glass-effect animate-fade-in-up" style={{ animationDelay: '200ms' }}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Devices Online</CardTitle><Wifi className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{onlineDevicesCount}/{devices.length}</div><p className="text-xs text-muted-foreground">Devices online</p></CardContent></Card>
-                <Card className="glass-effect animate-fade-in-up" style={{ animationDelay: '300ms' }}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Device Status</CardTitle><Server className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="flex gap-2"><Badge variant="default" className="text-xs">Online {deviceStatusCounts.online || 0}</Badge><Badge variant="destructive" className="text-xs">Offline {deviceStatusCounts.offline || 0}</Badge></div></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Internet Status</CardTitle><Activity className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{networkStatus ? "Online" : "Offline"}</div><p className="text-xs text-muted-foreground">Internet connectivity</p></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Last Check</CardTitle><Clock className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{lastChecked.toLocaleTimeString()}</div><p className="text-xs text-muted-foreground">Last status check</p></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Devices Online</CardTitle><Wifi className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{onlineDevicesCount}/{devices.length}</div><p className="text-xs text-muted-foreground">Devices online</p></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Device Status</CardTitle><Server className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="flex gap-2"><Badge variant="default" className="text-xs">Online {deviceStatusCounts.online || 0}</Badge><Badge variant="destructive" className="text-xs">Offline {deviceStatusCounts.offline || 0}</Badge></div></CardContent></Card>
               </div>
             )}
-            <Card className="mb-6 glass-effect"><CardHeader><CardTitle className="flex items-center gap-2"><Network className="h-5 w-5" />Quick Actions</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-4"><Button onClick={checkNetworkStatus} variant="outline"><RefreshCw className="h-4 w-4 mr-2" />Check Internet</Button><Button onClick={handleCheckAllDevices} disabled={isCheckingDevices || isLoading} variant="outline"><RefreshCw className={`h-4 w-4 mr-2 ${isCheckingDevices ? 'animate-spin' : ''}`} />{isCheckingDevices ? 'Checking...' : 'Check All Devices'}</Button></CardContent></Card>
+            <Card className="mb-6"><CardHeader><CardTitle className="flex items-center gap-2"><Network className="h-5 w-5" />Quick Actions</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-4"><Button onClick={checkNetworkStatus} variant="outline"><RefreshCw className="h-4 w-4 mr-2" />Check Internet</Button><Button onClick={handleCheckAllDevices} disabled={isCheckingDevices || isLoading} variant="outline"><RefreshCw className={`h-4 w-4 mr-2 ${isCheckingDevices ? 'animate-spin' : ''}`} />{isCheckingDevices ? 'Checking...' : 'Check All Devices'}</Button></CardContent></Card>
             <ServerPingTest />
           </TabsContent>
 
           <TabsContent value="devices">
-            <Card className="glass-effect">
+            <Card>
               <CardHeader><CardTitle>Local Network Devices</CardTitle><CardDescription>Monitor the status of devices on your local network</CardDescription></CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -194,7 +194,7 @@ const Index = () => {
                 ) : (
                   <div className="space-y-4">
                     {devices.map((device) => (
-                      <div key={device.id} className="flex items-center justify-between p-4 border border-transparent rounded-lg transition-colors hover:bg-slate-700/50 hover:border-slate-600">
+                      <div key={device.id} className="flex items-center justify-between p-4 border rounded-lg transition-colors hover:bg-muted">
                         <div className="flex items-center gap-3">
                           {device.status === "online" ? <Wifi className="h-5 w-5 text-green-500" /> : device.status === "offline" ? <WifiOff className="h-5 w-5 text-red-500" /> : <Wifi className="h-5 w-5 text-gray-500" />}
                           <div><span className="font-medium">{device.name}</span><p className="text-sm text-muted-foreground">{device.ip_address}</p></div>
