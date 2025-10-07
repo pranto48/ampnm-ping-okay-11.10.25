@@ -25,10 +25,51 @@ function initHistory() {
             const historyData = await api.get('get_ping_history', { host: host, limit: 100 });
             
             const reversedData = [...historyData].reverse();
-            historyTableBody.innerHTML = reversedData.map(item => `...`).join(''); // Assuming correct
+            historyTableBody.innerHTML = reversedData.map(item => {
+                const statusClass = item.success ? 'text-green-400' : 'text-red-400';
+                const statusText = item.success ? 'Success' : 'Failed';
+                return `
+                    <tr class="border-b border-slate-700">
+                        <td class="px-6 py-4 whitespace-nowrap font-mono text-white">${item.host}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-slate-400">${new Date(item.created_at).toLocaleString()}</td>
+                        <td class="px-6 py-4 whitespace-nowrap ${statusClass}">${statusText}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-slate-300">${item.packet_loss}%</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-slate-300">${item.avg_time} ms</td>
+                    </tr>
+                `;
+            }).join('');
 
             if (historyChart) historyChart.destroy();
-            // ... Chart creation logic ...
+            
+            historyChart = new Chart(historyChartCanvas, {
+                type: 'line',
+                data: {
+                    labels: historyData.map(h => new Date(h.created_at).toLocaleTimeString()),
+                    datasets: [
+                        {
+                            label: 'Avg Time (ms)',
+                            data: historyData.map(h => h.avg_time),
+                            borderColor: '#22d3ee',
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Packet Loss (%)',
+                            data: historyData.map(h => h.packet_loss),
+                            borderColor: '#f43f5e',
+                            yAxisID: 'y1',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Avg Time (ms)', color: '#22d3ee' }, ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                        y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Packet Loss (%)', color: '#f43f5e' }, ticks: { color: '#94a3b8' }, grid: { drawOnChartArea: false } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+                    },
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } }
+                }
+            });
 
             chartContainer.classList.remove('hidden');
 

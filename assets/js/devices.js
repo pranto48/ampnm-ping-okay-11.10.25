@@ -71,9 +71,68 @@ function initDevices() {
 
         const { device, history } = await api.get('get_device_details', { id: deviceId });
         
-        detailsModalTitle.textContent = `${device.name} (${device.ip})`;
+        detailsModalTitle.textContent = `${device.name} (${device.ip || 'No IP'})`;
         
-        detailsModalContent.innerHTML = `...`; // Content is complex, assuming it's correct
+        const renderThreshold = (label, value, unit) => value ? `<strong>${label}:</strong> <span>${value}${unit}</span>` : '';
+
+        detailsModalContent.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div class="md:col-span-2 space-y-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-white mb-2 border-b border-slate-700 pb-1">Configuration</h3>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                            <strong class="text-slate-400">Type:</strong> <span class="text-white capitalize">${device.type}</span>
+                            <strong class="text-slate-400">Map:</strong> <span class="text-white">${device.map_name}</span>
+                            <strong class="text-slate-400">Ping Interval:</strong> <span class="text-white">${device.ping_interval ? `${device.ping_interval}s` : 'Disabled'}</span>
+                            <strong class="text-slate-400">Live Ping:</strong> <span class="text-white">${device.show_live_ping ? 'Enabled' : 'Disabled'}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-white mb-2 border-b border-slate-700 pb-1">Status Thresholds</h3>
+                        <div class="grid grid-cols-1 gap-x-4 gap-y-1 text-sm">
+                            <div class="text-yellow-400">${renderThreshold('Warning Latency', device.warning_latency_threshold, 'ms')}</div>
+                            <div class="text-yellow-400">${renderThreshold('Warning Packet Loss', device.warning_packetloss_threshold, '%')}</div>
+                            <div class="text-red-400">${renderThreshold('Critical Latency', device.critical_latency_threshold, 'ms')}</div>
+                            <div class="text-red-400">${renderThreshold('Critical Packet Loss', device.critical_packetloss_threshold, '%')}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="md:col-span-3">
+                    <h3 class="text-lg font-semibold text-white mb-2 border-b border-slate-700 pb-1">Recent Latency (ms)</h3>
+                    <div class="h-48 bg-slate-900/50 p-2 rounded-lg">
+                        ${history.length > 0 ? '<canvas id="latencyChart"></canvas>' : '<div class="flex items-center justify-center h-full text-slate-500">No ping history available.</div>'}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        if (history.length > 0) {
+            const chartCtx = document.getElementById('latencyChart').getContext('2d');
+            const chartData = history.slice().reverse(); // oldest to newest
+            latencyChart = new Chart(chartCtx, {
+                type: 'line',
+                data: {
+                    labels: chartData.map(h => new Date(h.created_at).toLocaleTimeString()),
+                    datasets: [{
+                        label: 'Avg Time (ms)',
+                        data: chartData.map(h => h.avg_time),
+                        borderColor: '#22d3ee',
+                        backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { 
+                        y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
 
         detailsModalLoader.classList.add('hidden');
         detailsModalContent.classList.remove('hidden');
