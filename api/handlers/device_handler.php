@@ -128,7 +128,16 @@ switch ($action) {
             if (!$id || empty($updates)) { http_response_code(400); echo json_encode(['error' => 'Device ID and updates are required']); exit; }
             $allowed_fields = ['name', 'ip', 'type', 'x', 'y', 'ping_interval', 'icon_size', 'name_text_size', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold', 'show_live_ping'];
             $fields = []; $params = [];
-            foreach ($updates as $key => $value) { if (in_array($key, $allowed_fields)) { $fields[] = "$key = ?"; $params[] = empty($value) ? null : $value; } }
+            foreach ($updates as $key => $value) {
+                if (in_array($key, $allowed_fields)) {
+                    $fields[] = "$key = ?";
+                    if ($key === 'show_live_ping') {
+                        $params[] = $value ? 1 : 0;
+                    } else {
+                        $params[] = ($value === '' || is_null($value)) ? null : $value;
+                    }
+                }
+            }
             if (empty($fields)) { http_response_code(400); echo json_encode(['error' => 'No valid fields to update']); exit; }
             $params[] = $id; $params[] = $current_user_id;
             $sql = "UPDATE devices SET " . implode(', ', $fields) . " WHERE id = ? AND user_id = ?";

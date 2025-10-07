@@ -215,7 +215,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const pingSingleDevice = async (deviceId) => {
         const node = nodes.get(deviceId);
-        if (!node) return;
+        if (!node || node.deviceData.type === 'box') return;
+
+        // Visual feedback: temporarily change color to indicate pinging
+        nodes.update({ id: deviceId, icon: { ...node.icon, color: '#06b6d4' } });
+        
         const result = await api.post('check_device', { id: deviceId });
         
         const updatedDeviceData = { ...node.deviceData, status: result.status, last_avg_time: result.last_avg_time, last_ttl: result.last_ttl };
@@ -228,8 +232,8 @@ document.addEventListener('DOMContentLoaded', function() {
         nodes.update({ 
             id: deviceId, 
             deviceData: updatedDeviceData, 
-            icon: { color: statusColorMap[result.status] }, 
-            title: `${updatedDeviceData.name}<br>${updatedDeviceData.ip}<br>Status: ${result.status}`,
+            icon: { ...node.icon, color: statusColorMap[result.status] || statusColorMap.unknown }, 
+            title: `${updatedDeviceData.name}<br>${updatedDeviceData.ip || 'No IP'}<br>Status: ${result.status}`,
             label: label
         });
     };
