@@ -4,16 +4,14 @@ set -e
 
 # Use environment variables passed from docker-compose
 DB_HOST_VAR="$DB_HOST"
-ROOT_PASSWORD_VAR="$MYSQL_ROOT_PASSWORD"
 TIMEOUT=60 # seconds
 ELAPSED=0
 
 echo "--- Docker Entrypoint Script Started ---"
-echo "Database Host: $DB_HOST_VAR"
-echo "Waiting for database to become available (timeout: ${TIMEOUT}s)..."
+echo "Waiting for database service at $DB_HOST_VAR (timeout: ${TIMEOUT}s)..."
 
-# Loop until the mysqladmin ping command is successful or timeout is reached
-while ! mysqladmin ping -h"$DB_HOST_VAR" -u"root" -p"$ROOT_PASSWORD_VAR" --silent; do
+# Loop until our custom PHP db_check script is successful or timeout is reached
+until php /var/www/html/includes/db_check.php; do
     if [ $ELAPSED -ge $TIMEOUT ]; then
         echo "❌ Database connection timeout after $TIMEOUT seconds."
         echo "Please check the database container logs for errors."
