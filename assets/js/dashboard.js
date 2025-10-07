@@ -4,11 +4,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const dashboardLoader = document.getElementById('dashboardLoader');
     const dashboardWidgets = document.getElementById('dashboard-widgets');
 
-    const networkStatusEl = document.getElementById('networkStatus');
-    const devicesOnlineEl = document.getElementById('devicesOnline');
-    const lastCheckEl = document.getElementById('lastCheck');
+    const statusChartCanvas = document.getElementById('statusChart');
+    const totalDevicesText = document.getElementById('totalDevicesText');
+    const onlineCountEl = document.getElementById('onlineCount');
+    const warningCountEl = document.getElementById('warningCount');
+    const criticalCountEl = document.getElementById('criticalCount');
+    const offlineCountEl = document.getElementById('offlineCount');
     const deviceListEl = document.getElementById('deviceList');
     const manageDevicesLink = document.getElementById('manageDevicesLink');
+    let statusChart = null;
 
     const pingForm = document.getElementById('pingForm');
     const pingHostInput = document.getElementById('pingHostInput');
@@ -33,12 +37,38 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const data = await api.get('get_dashboard_data', { map_id: mapId });
             
-            // Update stats
-            const isOnline = data.stats.online > 0;
-            networkStatusEl.textContent = isOnline ? 'Systems Operational' : 'Systems Offline';
-            networkStatusEl.className = `text-2xl font-bold mt-2 ${isOnline ? 'text-green-400' : 'text-red-400'}`;
-            devicesOnlineEl.textContent = `${data.stats.online}/${data.stats.total}`;
-            lastCheckEl.textContent = new Date().toLocaleTimeString();
+            // Update new counters
+            totalDevicesText.querySelector('span:first-child').textContent = data.stats.total;
+            onlineCountEl.textContent = data.stats.online;
+            warningCountEl.textContent = data.stats.warning;
+            criticalCountEl.textContent = data.stats.critical;
+            offlineCountEl.textContent = data.stats.offline;
+
+            // Update chart
+            if (statusChart) {
+                statusChart.destroy();
+            }
+            const chartData = {
+                labels: ['Online', 'Warning', 'Critical', 'Offline'],
+                datasets: [{
+                    data: [data.stats.online, data.stats.warning, data.stats.critical, data.stats.offline],
+                    backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#64748b'],
+                    borderColor: '#1e293b',
+                    borderWidth: 4,
+                }]
+            };
+            statusChart = new Chart(statusChartCanvas, {
+                type: 'doughnut',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: true }
+                    }
+                }
+            });
 
             // Update device list
             deviceListEl.innerHTML = data.devices.map(device => `
@@ -55,7 +85,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             console.error("Failed to load dashboard data:", error);
-            // You could show an error message here
         } finally {
             dashboardLoader.classList.add('hidden');
             dashboardWidgets.classList.remove('hidden');

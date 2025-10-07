@@ -10,11 +10,24 @@ if ($action === 'get_dashboard_data') {
         exit;
     }
 
-    // Get stats
-    $stmt = $pdo->prepare("SELECT COUNT(*) as total, SUM(CASE WHEN status = 'online' THEN 1 ELSE 0 END) as online FROM devices WHERE map_id = ? AND user_id = ?");
+    // Get detailed stats for each status
+    $stmt = $pdo->prepare("
+        SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'online' THEN 1 ELSE 0 END) as online,
+            SUM(CASE WHEN status = 'warning' THEN 1 ELSE 0 END) as warning,
+            SUM(CASE WHEN status = 'critical' THEN 1 ELSE 0 END) as critical,
+            SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) as offline
+        FROM devices WHERE map_id = ? AND user_id = ?
+    ");
     $stmt->execute([$map_id, $current_user_id]);
     $stats = $stmt->fetch(PDO::FETCH_ASSOC);
-    $stats['online'] = $stats['online'] ?? 0; // Handle case with no online devices
+
+    // Ensure counts are integers, not null
+    $stats['online'] = $stats['online'] ?? 0;
+    $stats['warning'] = $stats['warning'] ?? 0;
+    $stats['critical'] = $stats['critical'] ?? 0;
+    $stats['offline'] = $stats['offline'] ?? 0;
 
     // Get devices
     $stmt = $pdo->prepare("SELECT name, ip, status FROM devices WHERE map_id = ? AND user_id = ? ORDER BY name ASC LIMIT 10");
