@@ -18,7 +18,6 @@ services:
       - DB_USER=user
       - DB_PASSWORD=password
       - MYSQL_ROOT_PASSWORD=rootpassword
-      # IMPORTANT: Change this default password for production security!
       - ADMIN_PASSWORD=password
     restart: unless-stopped
     deploy:
@@ -40,11 +39,11 @@ services:
       - db_data:/var/lib/mysql
     restart: unless-stopped
     healthcheck:
-      # Using mysqladmin ping is the standard and most reliable way to check health.
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      # Use CMD-SHELL to ensure the $MYSQL_ROOT_PASSWORD variable is correctly interpreted inside the container
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
     deploy:
       resources:
         limits:
