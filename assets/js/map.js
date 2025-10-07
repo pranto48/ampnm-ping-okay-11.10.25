@@ -45,6 +45,18 @@ function initMap() {
         icon.classList.add('fa-spin');
         try {
             const result = await api.post('ping_all_devices', { map_id: currentMapId });
+            
+            if (result.status_changes && result.status_changes.length > 0) {
+                result.status_changes.forEach(change => {
+                    const { name, old_status, new_status } = change;
+                    if (new_status === 'critical' || new_status === 'offline') {
+                        window.notyf.error({ message: `Device '${name}' is now ${new_status}.`, duration: 0, dismissible: true });
+                    } else if (new_status === 'online' && (old_status === 'critical' || old_status === 'offline')) {
+                        window.notyf.success({ message: `Device '${name}' is back online.`, duration: 5000 });
+                    }
+                });
+            }
+
             await switchMap(currentMapId);
             return result.count;
         } catch (error) {
@@ -250,14 +262,26 @@ function initMap() {
     const pingSingleDevice = async (deviceId) => {
         const node = nodes.get(deviceId);
         if (!node || node.deviceData.type === 'box') return;
+        
+        const oldStatus = node.deviceData.status;
         nodes.update({ id: deviceId, icon: { ...node.icon, color: '#06b6d4' } });
         const result = await api.post('check_device', { id: deviceId });
-        const updatedDeviceData = { ...node.deviceData, status: result.status, last_avg_time: result.last_avg_time, last_ttl: result.last_ttl };
+        const newStatus = result.status;
+
+        if (newStatus !== oldStatus) {
+            if (newStatus === 'critical' || newStatus === 'offline') {
+                window.notyf.error({ message: `Device '${node.deviceData.name}' is now ${newStatus}.`, duration: 0, dismissible: true });
+            } else if (newStatus === 'online' && (oldStatus === 'critical' || oldStatus === 'offline')) {
+                window.notyf.success({ message: `Device '${node.deviceData.name}' is back online.`, duration: 5000 });
+            }
+        }
+
+        const updatedDeviceData = { ...node.deviceData, status: newStatus, last_avg_time: result.last_avg_time, last_ttl: result.last_ttl };
         let label = updatedDeviceData.name;
         if (updatedDeviceData.show_live_ping && updatedDeviceData.status === 'online' && updatedDeviceData.last_avg_time !== null) {
             label += `\n${updatedDeviceData.last_avg_time}ms | TTL:${updatedDeviceData.last_ttl || 'N/A'}`;
         }
-        nodes.update({ id: deviceId, deviceData: updatedDeviceData, icon: { ...node.icon, color: statusColorMap[result.status] || statusColorMap.unknown }, title: `${updatedDeviceData.name}<br>${updatedDeviceData.ip || 'No IP'}<br>Status: ${result.status}`, label: label });
+        nodes.update({ id: deviceId, deviceData: updatedDeviceData, icon: { ...node.icon, color: statusColorMap[newStatus] || statusColorMap.unknown }, title: `${updatedDeviceData.name}<br>${updatedDeviceData.ip || 'No IP'}<br>Status: ${newStatus}`, label: label });
     };
 
     deviceForm.addEventListener('submit', async (e) => {

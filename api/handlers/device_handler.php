@@ -31,19 +31,36 @@ switch ($action) {
             $stmt->execute([$map_id, $current_user_id]);
             $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
+            $status_changes = [];
+
             foreach ($devices as $device) {
+                $old_status = $device['status'];
                 $pingResult = executePing($device['ip'], 1);
                 savePingResult($pdo, $device['ip'], $pingResult['output'], $pingResult['return_code']);
                 $parsedResult = parsePingOutput($pingResult['output']);
-                $status = getStatusFromPingResult($device, $pingResult, $parsedResult);
+                $new_status = getStatusFromPingResult($device, $pingResult, $parsedResult);
+                
+                if ($new_status !== $old_status) {
+                    $status_changes[] = [
+                        'name' => $device['name'],
+                        'old_status' => $old_status,
+                        'new_status' => $new_status
+                    ];
+                }
+
                 $last_avg_time = $parsedResult['avg_time'] ?? null;
                 $last_ttl = $parsedResult['ttl'] ?? null;
                 
                 $updateStmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
-                $updateStmt->execute([$status, ($status !== 'offline') ? date('Y-m-d H:i:s') : $device['last_seen'], $last_avg_time, $last_ttl, $device['id'], $current_user_id]);
+                $updateStmt->execute([$new_status, ($new_status !== 'offline') ? date('Y-m-d H:i:s') : $device['last_seen'], $last_avg_time, $last_ttl, $device['id'], $current_user_id]);
             }
             
-            echo json_encode(['success' => true, 'message' => 'All enabled devices have been pinged.', 'count' => count($devices)]);
+            echo json_encode([
+                'success' => true, 
+                'message' => 'All enabled devices have been pinged.', 
+                'count' => count($devices),
+                'status_changes' => $status_changes
+            ]);
         }
         break;
 
