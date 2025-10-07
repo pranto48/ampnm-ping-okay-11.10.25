@@ -47,13 +47,14 @@ function initUsers() {
         try {
             const result = await api.post('create_user', { username, password });
             if (result.success) {
+                window.notyf.success('User created successfully.');
                 createUserForm.reset();
                 await loadUsers();
             } else {
-                alert(`Error: ${result.error}`);
+                window.notyf.error(`Error: ${result.error}`);
             }
         } catch (error) {
-            alert('An unexpected error occurred.');
+            window.notyf.error('An unexpected error occurred.');
             console.error(error);
         } finally {
             button.disabled = false;
@@ -68,9 +69,10 @@ function initUsers() {
             if (confirm(`Are you sure you want to delete user "${username}"?`)) {
                 const result = await api.post('delete_user', { id });
                 if (result.success) {
+                    window.notyf.success(`User "${username}" deleted.`);
                     await loadUsers();
                 } else {
-                    alert(`Error: ${result.error}`);
+                    window.notyf.error(`Error: ${result.error}`);
                 }
             }
         }

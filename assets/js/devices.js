@@ -163,6 +163,7 @@ function initDevices() {
         if (button.classList.contains('delete-device-btn')) {
             if (confirm('Are you sure you want to delete this device?')) {
                 await api.post('delete_device', { id: deviceId });
+                window.notyf.success('Device deleted successfully.');
                 row.remove();
                 if (devicesTableBody.children.length === 0) noDevicesMessage.classList.remove('hidden');
             }
@@ -176,10 +177,11 @@ function initDevices() {
         try {
             const mapId = document.getElementById('mapSelector')?.value;
             if (mapId) {
-                await api.post('ping_all_devices', { map_id: mapId });
+                const result = await api.post('ping_all_devices', { map_id: mapId });
+                window.notyf.info(`Pinged ${result.count} devices.`);
                 await loadDevices(mapId);
             } else {
-                alert("Please select a map first.");
+                window.notyf.error("Please select a map first.");
             }
         } catch (error) {
             console.error('Failed to check all devices:', error);

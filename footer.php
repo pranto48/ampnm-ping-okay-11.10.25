@@ -3,6 +3,7 @@
         <p>Dyad Network Security Dashboard</p>
     </footer>
     <script src="https://unpkg.com/navigo@8.11.1/lib/navigo.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
     <script src="assets/js/shared.js"></script>
     <script src="assets/js/dashboard.js"></script>
     <script src="assets/js/devices.js"></script>

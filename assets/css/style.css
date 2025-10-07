@@ -58,3 +58,9 @@ body {
     background-color: #334155; /* slate-700 */
     color: #ffffff;
 }
+
+/* Notyf custom icon support */
+.notyf__icon i {
+    font-size: 1.3em;
+    margin: 0 auto;
+}
