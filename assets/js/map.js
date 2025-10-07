@@ -286,11 +286,33 @@ function initMap() {
 
     deviceForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const id = document.getElementById('deviceId').value;
-        const deviceData = { name: document.getElementById('deviceName').value, ip: document.getElementById('deviceIp').value, type: document.getElementById('deviceType').value, map_id: currentMapId, ping_interval: document.getElementById('pingInterval').value, icon_size: document.getElementById('iconSize').value, name_text_size: document.getElementById('nameTextSize').value, warning_latency_threshold: document.getElementById('warning_latency_threshold').value, warning_packetloss_threshold: document.getElementById('warning_packetloss_threshold').value, critical_latency_threshold: document.getElementById('critical_latency_threshold').value, critical_packetloss_threshold: document.getElementById('critical_packetloss_threshold').value, show_live_ping: document.getElementById('showLivePing').checked };
-        if (id) { await api.post('update_device', { id, updates: deviceData }); window.notyf.success('Item updated.'); } 
-        else { await api.post('create_device', deviceData); window.notyf.success('Item created.'); }
-        deviceModal.classList.add('hidden'); await switchMap(currentMapId);
+        
+        const formData = new FormData(deviceForm);
+        const updates = Object.fromEntries(formData.entries());
+        const id = updates.id;
+        delete updates.id;
+
+        // FormData returns 'on' for checked boxes, and nothing for unchecked.
+        // We need a consistent boolean value for the API.
+        updates.show_live_ping = document.getElementById('showLivePing').checked;
+
+        try {
+            if (id) { 
+                // For updates, we send the ID and the updates object
+                await api.post('update_device', { id, updates }); 
+                window.notyf.success('Item updated.'); 
+            } else { 
+                // For creation, we need to add the map_id
+                const createData = { ...updates, map_id: currentMapId };
+                await api.post('create_device', createData); 
+                window.notyf.success('Item created.'); 
+            }
+            deviceModal.classList.add('hidden'); 
+            await switchMap(currentMapId);
+        } catch (error) {
+            console.error("Failed to save device:", error);
+            window.notyf.error("An error occurred while saving. Please try again.");
+        }
     });
 
     edgeForm.addEventListener('submit', async (e) => {
