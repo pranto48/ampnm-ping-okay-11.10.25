@@ -1,6 +1,5 @@
-document.addEventListener('DOMContentLoaded', function() {
+function initDashboard() {
     const API_URL = 'api.php';
-    const mapSelector = document.getElementById('mapSelector');
     const dashboardLoader = document.getElementById('dashboardLoader');
     const dashboardWidgets = document.getElementById('dashboard-widgets');
 
@@ -25,26 +24,26 @@ document.addEventListener('DOMContentLoaded', function() {
         post: (action, body) => fetch(`${API_URL}?action=${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(res => res.json())
     };
 
-    const loadDashboard = async (mapId) => {
+    const loadDashboardData = async (mapId) => {
         if (!mapId) {
             dashboardLoader.classList.add('hidden');
             return;
         }
         dashboardLoader.classList.remove('hidden');
         dashboardWidgets.classList.add('hidden');
-        manageDevicesLink.href = `devices.php?map_id=${mapId}`;
+        manageDevicesLink.href = `/devices?map_id=${mapId}`;
+        manageDevicesLink.setAttribute('data-navigo', true);
+        window.router.updatePageLinks();
 
         try {
             const data = await api.get('get_dashboard_data', { map_id: mapId });
             
-            // Update new counters
             totalDevicesText.querySelector('span:first-child').textContent = data.stats.total;
             onlineCountEl.textContent = data.stats.online;
             warningCountEl.textContent = data.stats.warning;
             criticalCountEl.textContent = data.stats.critical;
             offlineCountEl.textContent = data.stats.offline;
 
-            // Update chart
             if (statusChart) {
                 statusChart.destroy();
             }
@@ -63,14 +62,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 options: {
                     responsive: true,
                     cutout: '75%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: true }
-                    }
+                    plugins: { legend: { display: false }, tooltip: { enabled: true } }
                 }
             });
 
-            // Update device list
             deviceListEl.innerHTML = data.devices.map(device => `
                 <div class="border border-slate-700 rounded-lg p-3 flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -91,17 +86,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    if (mapSelector) {
-        mapSelector.addEventListener('change', () => {
-            loadDashboard(mapSelector.value);
-        });
-        // Initial load
-        loadDashboard(mapSelector.value);
-    } else {
-        dashboardLoader.classList.add('hidden');
-    }
+    createMapSelector('map-selector-container', loadDashboardData).then(selector => {
+        if (selector) {
+            loadDashboardData(selector.value);
+        } else {
+            dashboardLoader.classList.add('hidden');
+        }
+    });
 
-    // Manual Ping Logic
     pingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const host = pingHostInput.value.trim();
@@ -122,4 +114,4 @@ document.addEventListener('DOMContentLoaded', function() {
             pingButton.innerHTML = '<i class="fas fa-bolt mr-2"></i>Ping';
         }
     });
-});
+}

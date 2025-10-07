@@ -1,16 +1,3 @@
-<?php
-require_once 'includes/auth_check.php';
-require_once 'includes/functions.php';
-include 'header.php';
-
-$pdo = getDbConnection();
-// We still need the list of hosts for the dropdown
-$stmt = $pdo->prepare("SELECT DISTINCT host FROM ping_results ORDER BY host");
-$stmt->execute();
-$hosts = $stmt->fetchAll(PDO::FETCH_COLUMN);
-$currentHost = $_GET['host'] ?? '';
-?>
-
 <div class="container mx-auto px-4 py-8">
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-3xl font-bold text-white">Ping History</h1>
@@ -20,12 +7,9 @@ $currentHost = $_GET['host'] ?? '';
         <form id="historyFilterForm" class="flex flex-col sm:flex-row gap-4">
             <select name="host" id="hostSelector" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
                 <option value="">All Hosts</option>
-                <?php foreach ($hosts as $h): ?>
-                    <option value="<?= htmlspecialchars($h) ?>" <?= $currentHost === $h ? 'selected' : '' ?>><?= htmlspecialchars($h) ?></option>
-                <?php endforeach; ?>
             </select>
             <button type="submit" class="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">Filter</button>
-            <a id="exportLink" href="export.php?host=<?= urlencode($currentHost) ?>" class="px-6 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-center">Export CSV</a>
+            <a id="exportLink" href="export.php" class="px-6 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-center">Export CSV</a>
         </form>
     </div>
 
@@ -59,7 +43,3 @@ $currentHost = $_GET['host'] ?? '';
         </div>
     </div>
 </div>
-
-<script src="assets/js/history.js" defer></script>
-
-<?php include 'footer.php'; ?>

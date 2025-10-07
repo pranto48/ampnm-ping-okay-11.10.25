@@ -1,37 +1,16 @@
-<?php 
-require_once 'includes/auth_check.php';
-require_once 'includes/functions.php';
-include 'header.php'; 
-
-$pdo = getDbConnection();
-$stmt = $pdo->prepare("SELECT id, name FROM maps ORDER BY name ASC");
-$stmt->execute();
-$maps = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$currentMapId = $_GET['map_id'] ?? ($maps[0]['id'] ?? null);
-?>
-
 <div class="container mx-auto px-4 py-8">
     <div class="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
         <h1 class="text-3xl font-bold text-white">Device Management</h1>
-        <?php if (!empty($maps)): ?>
-        <div class="flex items-center gap-2">
-            <label for="mapSelector" class="text-slate-400">Map:</label>
-            <select id="mapSelector" class="bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                <?php foreach ($maps as $map): ?>
-                    <option value="<?= $map['id'] ?>" <?= $currentMapId == $map['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($map['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+        <div id="map-selector-container" class="flex items-center gap-2">
+            <!-- Populated by JS -->
         </div>
-        <?php endif; ?>
     </div>
 
     <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold text-white">Device List</h2>
             <div class="flex items-center gap-4">
-                <a href="map.php" class="px-4 py-2 bg-cyan-600/50 text-cyan-300 rounded-lg hover:bg-cyan-600/80 text-sm">
+                <a href="/map" data-navigo class="px-4 py-2 bg-cyan-600/50 text-cyan-300 rounded-lg hover:bg-cyan-600/80 text-sm">
                     <i class="fas fa-map-marked-alt mr-2"></i>View on Map
                 </a>
                 <button id="bulkCheckBtn" class="px-4 py-2 bg-green-600/50 text-green-300 rounded-lg hover:bg-green-600/80">
@@ -73,17 +52,3 @@ $currentMapId = $_GET['map_id'] ?? ($maps[0]['id'] ?? null);
         <div id="detailsModalLoader" class="text-center py-16"><div class="loader mx-auto"></div></div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const mapSelector = document.getElementById('mapSelector');
-    if (mapSelector) {
-        mapSelector.addEventListener('change', function() {
-            window.location.href = 'devices.php?map_id=' + this.value;
-        });
-    }
-});
-</script>
-<script src="assets/js/devices.js" defer></script>
-
-<?php include 'footer.php'; ?>
