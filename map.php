@@ -35,6 +35,7 @@ include 'header.php';
         </div>
         <div id="network-map-wrapper">
             <div id="network-map"></div>
+            <div id="context-menu" class="context-menu"></div>
             <div id="status-legend">
                 <div class="legend-item"><div class="legend-dot" style="background-color: #22c55e;"></div><span>Online</span></div>
                 <div class="legend-item"><div class="legend-dot" style="background-color: #f59e0b;"></div><span>Warning</span></div>

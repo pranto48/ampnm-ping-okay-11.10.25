@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const initializeMap = () => {
         const container = document.getElementById('network-map');
+        const contextMenu = document.getElementById('context-menu');
         const data = { nodes, edges };
         const options = { 
             physics: false, 
@@ -90,6 +91,46 @@ document.addEventListener('DOMContentLoaded', function() {
         network.on("dragEnd", async (params) => { if (params.nodes.length > 0) { const nodeId = params.nodes[0]; const position = network.getPositions([nodeId])[nodeId]; await api.post('update_device', { id: nodeId, updates: { x: position.x, y: position.y } }); } });
         network.on("doubleClick", (params) => { if (params.nodes.length > 0) openDeviceModal(params.nodes[0]); });
         network.on("click", (params) => { if (params.edges.length > 0) openEdgeModal(params.edges[0]); });
+
+        const closeContextMenu = () => {
+            contextMenu.style.display = 'none';
+        };
+
+        network.on("oncontext", (params) => {
+            params.event.preventDefault();
+            const nodeId = network.getNodeAt(params.pointer.DOM);
+            
+            if (nodeId) {
+                const node = nodes.get(nodeId);
+                contextMenu.innerHTML = `
+                    <div class="context-menu-item" data-action="edit" data-id="${nodeId}"><i class="fas fa-edit fa-fw mr-2"></i>Edit ${node.deviceData.type}</div>
+                    ${node.deviceData.ip ? `<div class="context-menu-item" data-action="ping" data-id="${nodeId}"><i class="fas fa-sync fa-fw mr-2"></i>Check Status</div>` : ''}
+                `;
+                contextMenu.style.left = `${params.event.pageX}px`;
+                contextMenu.style.top = `${params.event.pageY}px`;
+                contextMenu.style.display = 'block';
+                
+                document.addEventListener('click', closeContextMenu, { once: true });
+            } else {
+                closeContextMenu();
+            }
+        });
+
+        contextMenu.addEventListener('click', (e) => {
+            const target = e.target.closest('.context-menu-item');
+            if (target) {
+                const { action, id } = target.dataset;
+                if (action === 'edit') {
+                    openDeviceModal(id);
+                } else if (action === 'ping') {
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-spinner fa-spin';
+                    target.prepend(icon);
+                    pingSingleDevice(id).finally(() => icon.remove());
+                }
+                closeContextMenu();
+            }
+        });
     };
 
     const toggleDeviceModalFields = (type) => {
@@ -303,5 +344,23 @@ document.addEventListener('DOMContentLoaded', function() {
     scanNetworkBtn.addEventListener('click', () => scanModal.classList.remove('hidden'));
     closeScanModal.addEventListener('click', () => scanModal.classList.add('hidden'));
 
-    (async () => { const firstMapId = await loadMaps(); if (firstMapId) { await switchMap(firstMapId); } })();
+    (async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const mapToLoad = urlParams.get('map_id');
+        
+        const firstMapId = await loadMaps();
+        const initialMapId = mapToLoad || firstMapId;
+
+        if (initialMapId) {
+            mapSelector.value = initialMapId;
+            await switchMap(initialMapId);
+
+            const deviceToEdit = urlParams.get('edit_device_id');
+            if (deviceToEdit && nodes.get(deviceToEdit)) {
+                openDeviceModal(deviceToEdit);
+                const newUrl = window.location.pathname + `?map_id=${initialMapId}`;
+                history.replaceState(null, '', newUrl);
+            }
+        }
+    })();
 });
