@@ -19,7 +19,6 @@ services:
       - DB_PASSWORD=password
       - MYSQL_ROOT_PASSWORD=rootpassword
     restart: unless-stopped
-    # Add resource limits for better stability
     deploy:
       resources:
         limits:
@@ -38,13 +37,12 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     restart: unless-stopped
-    # Use a more robust healthcheck that runs a query
     healthcheck:
-      test: ["CMD", "mysql", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}", "-e", "SELECT 1"]
+      # Using mysqladmin ping is the standard and most reliable way to check health.
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
       retries: 5
-    # Add resource limits for better stability
     deploy:
       resources:
         limits:
