@@ -43,17 +43,34 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     message("Table 'users' checked/created successfully.");
 
-    // Step 2: Ensure admin user exists and get their ID
+    // Step 2: Ensure admin user exists and set password from environment variable
     $admin_user = 'admin';
-    $stmt = $pdo->prepare("SELECT id FROM `users` WHERE username = ?");
-    $stmt->execute([$admin_user]);
-    $admin_id = $stmt->fetchColumn();
+    $admin_password = getenv('ADMIN_PASSWORD') ?: 'password';
+    $is_default_password = ($admin_password === 'password');
 
-    if (!$admin_id) {
-        $admin_pass = password_hash('password', PASSWORD_DEFAULT);
-        $pdo->prepare("INSERT INTO `users` (username, password) VALUES (?, ?)")->execute([$admin_user, $admin_pass]);
+    $stmt = $pdo->prepare("SELECT id, password FROM `users` WHERE username = ?");
+    $stmt->execute([$admin_user]);
+    $admin_data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$admin_data) {
+        $admin_pass_hash = password_hash($admin_password, PASSWORD_DEFAULT);
+        $pdo->prepare("INSERT INTO `users` (username, password) VALUES (?, ?)")->execute([$admin_user, $admin_pass_hash]);
         $admin_id = $pdo->lastInsertId();
-        message("Created default user 'admin' with password 'password'.");
+        message("Created default user 'admin'.");
+        if ($is_default_password) {
+            message("WARNING: Admin password is set to the default 'password'. Please change the ADMIN_PASSWORD in docker-compose.yml for security.", true);
+        } else {
+            message("Admin password set securely from environment variable.");
+        }
+    } else {
+        $admin_id = $admin_data['id'];
+        // Update password if it's changed in the env var and doesn't match the current one
+        if (!password_verify($admin_password, $admin_data['password'])) {
+            $new_hash = password_hash($admin_password, PASSWORD_DEFAULT);
+            $updateStmt = $pdo->prepare("UPDATE `users` SET password = ? WHERE id = ?");
+            $updateStmt->execute([$new_hash, $admin_id]);
+            message("Updated admin password from environment variable.");
+        }
     }
 
     // Step 3: Create the rest of the tables

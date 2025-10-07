@@ -18,6 +18,8 @@ services:
       - DB_USER=user
       - DB_PASSWORD=password
       - MYSQL_ROOT_PASSWORD=rootpassword
+      # IMPORTANT: Change this default password for production security!
+      - ADMIN_PASSWORD=password
     restart: unless-stopped
     deploy:
       resources:
