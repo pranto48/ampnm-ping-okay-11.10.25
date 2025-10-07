@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
         scanForm = document.getElementById('scanForm'), scanLoader = document.getElementById('scanLoader'),
         scanResults = document.getElementById('scanResults'), scanInitialMessage = document.getElementById('scanInitialMessage');
 
-    const iconMap = { server: '\uf233', router: '\uf4d7', switch: '\uf796', printer: '\uf02f', nas: '\uf0a0', camera: '\uf030', other: '\uf108', firewall: '\uf3ed', ipphone: '\uf87d', punchdevice: '\uf2c2', 'wifi-router': '\uf1eb', 'radio-tower': '\uf519', rack: '\uf1b3' };
+    const iconMap = { server: '\uf233', router: '\uf4d7', switch: '\uf796', printer: '\uf02f', nas: '\uf0a0', camera: '\uf030', other: '\uf108', firewall: '\uf3ed', ipphone: '\uf87d', punchdevice: '\uf2c2', 'wifi-router': '\uf1eb', 'radio-tower': '\uf519', rack: '\uf1b3', laptop: '\uf109', tablet: '\uf3fa', mobile: '\uf3cd', cloud: '\uf0c2', database: '\uf1c0' };
     const statusColorMap = { online: '#22c55e', warning: '#f59e0b', critical: '#ef4444', offline: '#64748b', unknown: '#94a3b8' };
     const edgeColorMap = { cat5: '#a78bfa', fiber: '#f97316', wifi: '#38bdf8', radio: '#84cc16' };
 
@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     await switchMap(currentMapId);
                 } catch (err) { alert('Failed to import map: ' + err.message); }
             };
-            reader.readAsText(file);
+            reader.readText(file);
         }
         importFile.value = '';
     });

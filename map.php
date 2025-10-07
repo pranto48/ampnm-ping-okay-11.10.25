@@ -71,7 +71,25 @@ include 'header.php';
                 <div>
                     <label for="deviceType" class="block text-sm font-medium text-slate-400 mb-1">Type</label>
                     <select id="deviceType" name="type" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                        <option value="server">Server</option><option value="router">Router</option><option value="switch">Switch</option><option value="firewall">Firewall</option><option value="printer">Printer</option><option value="nas">NAS</option><option value="camera">CC Camera</option><option value="ipphone">IP Phone</option><option value="punchdevice">Punch Device</option><option value="wifi-router">WiFi Router</option><option value="radio-tower">Radio Tower</option><option value="rack">Networking Rack</option><option value="box">Box (Group)</option><option value="other">Other</option>
+                        <option value="box">Box (Group)</option>
+                        <option value="camera">CC Camera</option>
+                        <option value="cloud">Cloud</option>
+                        <option value="database">Database</option>
+                        <option value="firewall">Firewall</option>
+                        <option value="ipphone">IP Phone</option>
+                        <option value="laptop">Laptop/PC</option>
+                        <option value="mobile">Mobile Phone</option>
+                        <option value="nas">NAS</option>
+                        <option value="rack">Networking Rack</option>
+                        <option value="printer">Printer</option>
+                        <option value="punchdevice">Punch Device</option>
+                        <option value="radio-tower">Radio Tower</option>
+                        <option value="router">Router</option>
+                        <option value="server">Server</option>
+                        <option value="switch">Switch</option>
+                        <option value="tablet">Tablet</option>
+                        <option value="wifi-router">WiFi Router</option>
+                        <option value="other">Other</option>
                     </select>
                 </div>
                 <div id="pingIntervalWrapper">
