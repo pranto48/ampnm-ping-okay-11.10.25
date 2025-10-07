@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Notyf for toast notifications
     window.notyf = new Notyf({
-        duration: 4000,
+        duration: 3000,
         position: { x: 'right', y: 'top' },
         types: [
             { type: 'success', backgroundColor: '#22c55e', icon: { className: 'fas fa-check-circle', tagName: 'i', color: 'white' } },

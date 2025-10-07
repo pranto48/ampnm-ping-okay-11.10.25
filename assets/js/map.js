@@ -52,7 +52,7 @@ function initMap() {
                     if (new_status === 'critical' || new_status === 'offline') {
                         window.notyf.error({ message: `Device '${name}' is now ${new_status}.`, duration: 0, dismissible: true });
                     } else if (new_status === 'online' && (old_status === 'critical' || old_status === 'offline')) {
-                        window.notyf.success({ message: `Device '${name}' is back online.`, duration: 5000 });
+                        window.notyf.success({ message: `Device '${name}' is back online.`, duration: 3000 });
                     }
                 });
             }
@@ -272,7 +272,7 @@ function initMap() {
             if (newStatus === 'critical' || newStatus === 'offline') {
                 window.notyf.error({ message: `Device '${node.deviceData.name}' is now ${newStatus}.`, duration: 0, dismissible: true });
             } else if (newStatus === 'online' && (oldStatus === 'critical' || oldStatus === 'offline')) {
-                window.notyf.success({ message: `Device '${node.deviceData.name}' is back online.`, duration: 5000 });
+                window.notyf.success({ message: `Device '${node.deviceData.name}' is back online.`, duration: 3000 });
             }
         }
 
