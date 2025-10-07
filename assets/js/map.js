@@ -6,13 +6,15 @@ function initMap() {
     };
 
     let network = null, nodes = new vis.DataSet([]), edges = new vis.DataSet([]), currentMapId = null, pingIntervals = {};
-    let animationFrameId = null, tick = 0;
+    let animationFrameId = null, tick = 0, globalRefreshIntervalId = null;
+    const REFRESH_INTERVAL_SECONDS = 30;
 
     const mapWrapper = document.getElementById('network-map-wrapper'), mapSelector = document.getElementById('mapSelector'),
         newMapBtn = document.getElementById('newMapBtn'), deleteMapBtn = document.getElementById('deleteMapBtn'),
         mapContainer = document.getElementById('map-container'), noMapsContainer = document.getElementById('no-maps'),
         createFirstMapBtn = document.getElementById('createFirstMapBtn'), currentMapName = document.getElementById('currentMapName'),
         scanNetworkBtn = document.getElementById('scanNetworkBtn'), refreshStatusBtn = document.getElementById('refreshStatusBtn'),
+        liveRefreshToggle = document.getElementById('liveRefreshToggle'),
         addDeviceBtn = document.getElementById('addDeviceBtn'), addEdgeBtn = document.getElementById('addEdgeBtn'),
         deleteModeBtn = document.getElementById('deleteModeBtn'), fullscreenBtn = document.getElementById('fullscreenBtn'),
         exportBtn = document.getElementById('exportBtn'), importBtn = document.getElementById('importBtn'),
@@ -33,8 +35,25 @@ function initMap() {
     window.cleanup = () => {
         if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
         Object.values(pingIntervals).forEach(clearInterval); pingIntervals = {};
+        if (globalRefreshIntervalId) { clearInterval(globalRefreshIntervalId); globalRefreshIntervalId = null; }
         if (network) { network.destroy(); network = null; }
         window.cleanup = null;
+    };
+
+    const performBulkRefresh = async () => {
+        const icon = refreshStatusBtn.querySelector('i');
+        icon.classList.add('fa-spin');
+        try {
+            const result = await api.post('ping_all_devices', { map_id: currentMapId });
+            await switchMap(currentMapId);
+            return result.count;
+        } catch (error) {
+            console.error("Bulk refresh failed:", error);
+            window.notyf.error("Failed to refresh device statuses.");
+        } finally {
+            icon.classList.remove('fa-spin');
+        }
+        return 0;
     };
 
     const createMap = async () => {
@@ -281,20 +300,30 @@ function initMap() {
     });
 
     refreshStatusBtn.addEventListener('click', async () => {
-        const icon = refreshStatusBtn.querySelector('i'); icon.classList.add('fa-spin');
-        const result = await api.post('ping_all_devices', { map_id: currentMapId });
-        await switchMap(currentMapId);
-        window.notyf.info(`Refreshed status for ${result.count} devices.`);
-        icon.classList.remove('fa-spin');
+        refreshStatusBtn.disabled = true;
+        const count = await performBulkRefresh();
+        if (count > 0) {
+            window.notyf.info(`Refreshed status for ${count} devices.`);
+        }
+        if (!liveRefreshToggle.checked) {
+            refreshStatusBtn.disabled = false;
+        }
     });
 
-    exportBtn.addEventListener('click', async () => {
-        const devices = nodes.get({ fields: ['id', 'label', 'x', 'y', 'deviceData'] }).map(n => ({ id: n.id, name: n.label, ip: n.deviceData.ip, type: n.deviceData.type, x: n.x, y: n.y, ping_interval: n.deviceData.ping_interval, icon_size: n.deviceData.icon_size, name_text_size: n.deviceData.name_text_size }));
-        const edgesToExport = edges.get({ fields: ['from', 'to', 'connection_type'] });
-        const data = JSON.stringify({ devices, edges: edgesToExport }, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `${currentMapName.textContent.replace(/\s/g, '_')}.json`; a.click(); URL.revokeObjectURL(url);
+    liveRefreshToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            window.notyf.info(`Live status enabled. Updating every ${REFRESH_INTERVAL_SECONDS} seconds.`);
+            refreshStatusBtn.disabled = true;
+            performBulkRefresh();
+            globalRefreshIntervalId = setInterval(performBulkRefresh, REFRESH_INTERVAL_SECONDS * 1000);
+        } else {
+            if (globalRefreshIntervalId) {
+                clearInterval(globalRefreshIntervalId);
+                globalRefreshIntervalId = null;
+            }
+            refreshStatusBtn.disabled = false;
+            window.notyf.info('Live status disabled.');
+        }
     });
 
     importBtn.addEventListener('click', () => importFile.click());
@@ -328,6 +357,7 @@ function initMap() {
     closeScanModal.addEventListener('click', () => scanModal.classList.add('hidden'));
 
     (async () => {
+        liveRefreshToggle.checked = false;
         const urlParams = new URLSearchParams(window.location.search);
         const mapToLoad = urlParams.get('map_id');
         const firstMapId = await loadMaps();
