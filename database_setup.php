@@ -190,6 +190,34 @@ try {
         message("Created a default map for the admin user.");
     }
 
+    // Step 6: Indexing for Performance
+    function indexExists($pdo, $db, $table, $index) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?");
+        $stmt->execute([$db, $table, $index]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    message("Applying database indexes for performance...");
+    $indexes = [
+        'ping_results' => ['idx_host_created_at' => '(`host`, `created_at` DESC)'],
+        'devices' => [
+            'idx_ip' => '(`ip`)',
+            'idx_map_id' => '(`map_id`)',
+            'idx_user_id' => '(`user_id`)'
+        ]
+    ];
+
+    foreach ($indexes as $table => $indexList) {
+        foreach ($indexList as $indexName => $columns) {
+            if (!indexExists($pdo, $dbname, $table, $indexName)) {
+                $pdo->exec("CREATE INDEX `$indexName` ON `$table` $columns;");
+                message("Created index '$indexName' on table '$table'.");
+            } else {
+                message("Index '$indexName' on table '$table' already exists.");
+            }
+        }
+    }
+
     echo "<h2 style='color: #06b6d4; font-family: sans-serif;'>Database setup completed successfully!</h2>";
 
 } catch (PDOException $e) {
