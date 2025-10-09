@@ -5,8 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "2266:80"
     volumes:
       - ./:/var/www/html/
     depends_on:
@@ -20,6 +18,7 @@ services:
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
     restart: unless-stopped
+    network_mode: "host"
     deploy:
       resources:
         limits:
@@ -37,6 +36,9 @@ services:
       MYSQL_PASSWORD: password
     volumes:
       - db_data:/var/lib/mysql
+    ports:
+      # Expose the database port to the host for external tools if needed
+      - "3306:3306"
     restart: unless-stopped
     healthcheck:
       # Use CMD-SHELL to ensure the $MYSQL_ROOT_PASSWORD variable is correctly interpreted inside the container
