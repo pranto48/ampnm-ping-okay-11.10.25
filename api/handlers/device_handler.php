@@ -121,10 +121,11 @@ switch ($action) {
 
     case 'create_device':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $sql = "INSERT INTO devices (user_id, name, ip, type, map_id, ping_interval, icon_size, name_text_size, warning_latency_threshold, warning_packetloss_threshold, critical_latency_threshold, critical_packetloss_threshold, show_live_ping) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO devices (user_id, name, ip, type, map_id, x, y, ping_interval, icon_size, name_text_size, warning_latency_threshold, warning_packetloss_threshold, critical_latency_threshold, critical_packetloss_threshold, show_live_ping) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 $current_user_id, $input['name'], $input['ip'] ?? null, $input['type'], $input['map_id'],
+                $input['x'] ?? null, $input['y'] ?? null,
                 $input['ping_interval'] ?? null, $input['icon_size'] ?? 50, $input['name_text_size'] ?? 14,
                 $input['warning_latency_threshold'] ?? null, $input['warning_packetloss_threshold'] ?? null,
                 $input['critical_latency_threshold'] ?? null, $input['critical_packetloss_threshold'] ?? null,

@@ -116,6 +116,60 @@ function initMap() {
         if (!animationFrameId) updateAndAnimateEdges();
     };
 
+    const copyDevice = async (deviceId) => {
+        const nodeToCopy = nodes.get(deviceId);
+        if (!nodeToCopy) return;
+
+        const originalDevice = nodeToCopy.deviceData;
+        const position = network.getPositions([deviceId])[deviceId];
+
+        const newDeviceData = {
+            ...originalDevice,
+            name: `Copy of ${originalDevice.name}`,
+            ip: '', // Clear IP to avoid duplicates
+            x: position.x + 50, // Offset the new device
+            y: position.y + 50,
+            map_id: currentMapId,
+            status: 'unknown', // New device status is unknown
+            last_seen: null,
+            last_avg_time: null,
+            last_ttl: null,
+        };
+        
+        delete newDeviceData.id;
+        delete newDeviceData.created_at;
+        delete newDeviceData.updated_at;
+
+        try {
+            const createdDevice = await api.post('create_device', newDeviceData);
+            window.notyf.success(`Device "${originalDevice.name}" copied.`);
+            
+            const visNode = {
+                id: createdDevice.id,
+                label: createdDevice.name,
+                title: `${createdDevice.name}<br>${createdDevice.ip || 'No IP'}<br>Status: ${createdDevice.status}`,
+                x: createdDevice.x,
+                y: createdDevice.y,
+                shape: 'icon',
+                icon: { face: "'Font Awesome 6 Free'", weight: "900", code: iconMap[createdDevice.type] || iconMap.other, size: parseInt(createdDevice.icon_size) || 50, color: statusColorMap[createdDevice.status] || statusColorMap.unknown },
+                font: { color: 'white', size: parseInt(createdDevice.name_text_size) || 14, multi: true },
+                deviceData: createdDevice
+            };
+            if (createdDevice.type === 'box') {
+                Object.assign(visNode, {
+                    shape: 'box',
+                    color: { background: 'rgba(49, 65, 85, 0.5)', border: '#475569' },
+                    margin: 20,
+                    level: -1
+                });
+            }
+            nodes.add(visNode);
+        } catch (error) {
+            console.error("Failed to copy device:", error);
+            window.notyf.error("Could not copy the device.");
+        }
+    };
+
     const initializeMap = () => {
         const container = document.getElementById('network-map');
         const contextMenu = document.getElementById('context-menu');
@@ -130,21 +184,7 @@ function initMap() {
                     const newEdge = await api.post('create_edge', { source_id: edgeData.from, target_id: edgeData.to, map_id: currentMapId, connection_type: 'cat5' }); 
                     edgeData.id = newEdge.id; edgeData.label = 'cat5'; callback(edgeData); 
                     window.notyf.success('Connection added.');
-                }, 
-                deleteNode: async (data, callback) => { 
-                    if (confirm(`Delete ${data.nodes.length} item(s)?`)) { 
-                        for (const nodeId of data.nodes) { await api.post('delete_device', { id: nodeId }); } 
-                        callback(data); 
-                        window.notyf.success(`${data.nodes.length} item(s) deleted.`);
-                    } 
-                }, 
-                deleteEdge: async (data, callback) => { 
-                    if (confirm(`Delete ${data.edges.length} connection(s)?`)) { 
-                        for (const edgeId of data.edges) { await api.post('delete_edge', { id: edgeId }); } 
-                        callback(data); 
-                        window.notyf.success(`${data.edges.length} connection(s) deleted.`);
-                    } 
-                } 
+                }
             } 
         };
         network = new vis.Network(container, data, options);
@@ -159,8 +199,10 @@ function initMap() {
             if (nodeId) {
                 const node = nodes.get(nodeId);
                 contextMenu.innerHTML = `
-                    <div class="context-menu-item" data-action="edit" data-id="${nodeId}"><i class="fas fa-edit fa-fw mr-2"></i>Edit ${node.deviceData.type}</div>
+                    <div class="context-menu-item" data-action="edit" data-id="${nodeId}"><i class="fas fa-edit fa-fw mr-2"></i>Edit</div>
+                    <div class="context-menu-item" data-action="copy" data-id="${nodeId}"><i class="fas fa-copy fa-fw mr-2"></i>Copy</div>
                     ${node.deviceData.ip ? `<div class="context-menu-item" data-action="ping" data-id="${nodeId}"><i class="fas fa-sync fa-fw mr-2"></i>Check Status</div>` : ''}
+                    <div class="context-menu-item" data-action="delete" data-id="${nodeId}" style="color: #ef4444;"><i class="fas fa-trash-alt fa-fw mr-2"></i>Delete</div>
                 `;
                 contextMenu.style.left = `${params.event.pageX}px`;
                 contextMenu.style.top = `${params.event.pageY}px`;
@@ -168,13 +210,28 @@ function initMap() {
                 document.addEventListener('click', closeContextMenu, { once: true });
             } else { closeContextMenu(); }
         });
-        contextMenu.addEventListener('click', (e) => {
+        contextMenu.addEventListener('click', async (e) => {
             const target = e.target.closest('.context-menu-item');
             if (target) {
                 const { action, id } = target.dataset;
-                if (action === 'edit') { openDeviceModal(id); } 
-                else if (action === 'ping') { const icon = document.createElement('i'); icon.className = 'fas fa-spinner fa-spin'; target.prepend(icon); pingSingleDevice(id).finally(() => icon.remove()); }
                 closeContextMenu();
+
+                if (action === 'edit') {
+                    openDeviceModal(id);
+                } else if (action === 'ping') {
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-spinner fa-spin';
+                    target.prepend(icon);
+                    pingSingleDevice(id).finally(() => icon.remove());
+                } else if (action === 'copy') {
+                    await copyDevice(id);
+                } else if (action === 'delete') {
+                    if (confirm('Are you sure you want to delete this device?')) {
+                        await api.post('delete_device', { id });
+                        window.notyf.success('Device deleted.');
+                        nodes.remove(id);
+                    }
+                }
             }
         });
     };
@@ -292,17 +349,13 @@ function initMap() {
         const id = updates.id;
         delete updates.id;
 
-        // FormData returns 'on' for checked boxes, and nothing for unchecked.
-        // We need a consistent boolean value for the API.
         updates.show_live_ping = document.getElementById('showLivePing').checked;
 
         try {
             if (id) { 
-                // For updates, we send the ID and the updates object
                 await api.post('update_device', { id, updates }); 
                 window.notyf.success('Item updated.'); 
             } else { 
-                // For creation, we need to add the map_id
                 const createData = { ...updates, map_id: currentMapId };
                 await api.post('create_device', createData); 
                 window.notyf.success('Item created.'); 
@@ -397,7 +450,15 @@ function initMap() {
     deleteMapBtn.addEventListener('click', async () => { if (confirm(`Delete map "${mapSelector.options[mapSelector.selectedIndex].text}"?`)) { await api.post('delete_map', { id: currentMapId }); const firstMapId = await loadMaps(); await switchMap(firstMapId); window.notyf.success('Map deleted.'); } });
     mapSelector.addEventListener('change', (e) => switchMap(e.target.value));
     addDeviceBtn.addEventListener('click', () => openDeviceModal()); cancelBtn.addEventListener('click', () => deviceModal.classList.add('hidden'));
-    addEdgeBtn.addEventListener('click', () => { network.addEdgeMode(); window.notyf.info('Click on a node to start a connection.'); }); deleteModeBtn.addEventListener('click', () => { network.deleteSelected(); });
+    addEdgeBtn.addEventListener('click', () => { network.addEdgeMode(); window.notyf.info('Click on a node to start a connection.'); });
+    deleteModeBtn.addEventListener('click', () => {
+        const selection = network.getSelection();
+        if (selection.nodes.length > 0 || selection.edges.length > 0) {
+            network.deleteSelected();
+        } else {
+            window.notyf.error('Select an item to delete first.');
+        }
+    });
     cancelEdgeBtn.addEventListener('click', () => edgeModal.classList.add('hidden'));
     scanNetworkBtn.addEventListener('click', () => scanModal.classList.remove('hidden'));
     closeScanModal.addEventListener('click', () => scanModal.classList.add('hidden'));
