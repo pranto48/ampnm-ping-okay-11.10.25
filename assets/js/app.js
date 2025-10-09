@@ -41,10 +41,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Define routes
     router.on({
         '/': () => loadPage('dashboard', initDashboard),
-        '/devices': () => loadPage('devices', initDevices),
-        '/history': () => loadPage('history', initHistory),
-        '/map': () => loadPage('map', initMap),
-        '/users': () => loadPage('users', initUsers),
+        '/index.php': () => loadPage('dashboard', initDashboard),
+        '/devices.php': () => loadPage('devices', initDevices),
+        '/history.php': () => loadPage('history', initHistory),
+        '/map.php': () => loadPage('map', initMap),
+        '/users.php': () => loadPage('users', initUsers),
     }).resolve();
 
     // Handle active nav link styling
@@ -52,7 +53,11 @@ document.addEventListener('DOMContentLoaded', function() {
         after: (match) => {
             navLinks.forEach(link => {
                 const linkPath = new URL(link.href).pathname;
-                if (linkPath === match.route.path) {
+                // Normalize paths for comparison (e.g., treat '/' as '/index.php')
+                const cleanLinkPath = linkPath === '/' ? '/index.php' : linkPath;
+                const cleanMatchPath = match.route.path === '/' ? '/index.php' : match.route.path;
+
+                if (cleanLinkPath === cleanMatchPath) {
                     link.classList.add('bg-slate-700', 'text-white');
                 } else {
                     link.classList.remove('bg-slate-700', 'text-white');

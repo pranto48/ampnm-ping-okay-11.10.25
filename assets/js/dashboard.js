@@ -31,7 +31,7 @@ function initDashboard() {
         }
         dashboardLoader.classList.remove('hidden');
         dashboardWidgets.classList.add('hidden');
-        manageDevicesLink.href = `/devices?map_id=${mapId}`;
+        manageDevicesLink.href = `/devices.php?map_id=${mapId}`;
         manageDevicesLink.setAttribute('data-navigo', true);
         window.router.updatePageLinks();
 

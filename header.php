@@ -22,19 +22,19 @@ if (session_status() === PHP_SESSION_NONE) {
         <div class="container mx-auto px-4">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
-                    <a href="/" data-navigo class="flex items-center gap-2 text-white font-bold">
+                    <a href="/index.php" data-navigo class="flex items-center gap-2 text-white font-bold">
                         <i class="fas fa-shield-halved text-cyan-400 text-2xl"></i>
                         <span>Network Security</span>
                     </a>
                 </div>
                 <div class="hidden md:block">
                     <div id="main-nav" class="ml-10 flex items-baseline space-x-4">
-                        <a href="/" data-navigo class="px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
-                        <a href="/devices" data-navigo class="px-3 py-2 rounded-md text-sm font-medium">Devices</a>
-                        <a href="/history" data-navigo class="px-3 py-2 rounded-md text-sm font-medium">History</a>
-                        <a href="/map" data-navigo class="px-3 py-2 rounded-md text-sm font-medium">Map</a>
+                        <a href="/index.php" data-navigo class="px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                        <a href="/devices.php" data-navigo class="px-3 py-2 rounded-md text-sm font-medium">Devices</a>
+                        <a href="/history.php" data-navigo class="px-3 py-2 rounded-md text-sm font-medium">History</a>
+                        <a href="/map.php" data-navigo class="px-3 py-2 rounded-md text-sm font-medium">Map</a>
                         <?php if (isset($_SESSION['username']) && $_SESSION['username'] === 'admin'): ?>
-                            <a href="/users" data-navigo class="px-3 py-2 rounded-md text-sm font-medium">Users</a>
+                            <a href="/users.php" data-navigo class="px-3 py-2 rounded-md text-sm font-medium">Users</a>
                         <?php endif; ?>
                         <a href="logout.php" class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white">Logout</a>
                     </div>

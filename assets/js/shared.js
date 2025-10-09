@@ -25,7 +25,7 @@ async function createMapSelector(containerId, onChangeCallback) {
             selector.addEventListener('change', () => onChangeCallback(selector.value));
             return selector;
         } else {
-            container.innerHTML = `<a href="/map" data-navigo class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">Create a Map</a>`;
+            container.innerHTML = `<a href="/map.php" data-navigo class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">Create a Map</a>`;
             // Re-resolve navigo links if new ones are added
             window.router.updatePageLinks();
             return null;
