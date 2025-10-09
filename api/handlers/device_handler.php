@@ -94,7 +94,7 @@ switch ($action) {
     case 'get_device_details':
         $deviceId = $_GET['id'] ?? 0;
         if (!$deviceId) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
-        $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ? AND user_id = ?");
+        $stmt = $pdo->prepare("SELECT d.*, m.name as map_name FROM devices d JOIN maps m ON d.map_id = m.id WHERE d.id = ? AND d.user_id = ?");
         $stmt->execute([$deviceId, $current_user_id]);
         $device = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$device) { http_response_code(404); echo json_encode(['error' => 'Device not found']); exit; }
@@ -129,7 +129,7 @@ switch ($action) {
                 $input['ping_interval'] ?? null, $input['icon_size'] ?? 50, $input['name_text_size'] ?? 14,
                 $input['warning_latency_threshold'] ?? null, $input['warning_packetloss_threshold'] ?? null,
                 $input['critical_latency_threshold'] ?? null, $input['critical_packetloss_threshold'] ?? null,
-                $input['show_live_ping'] ?? false
+                ($input['show_live_ping'] ?? false) ? 1 : 0
             ]);
             $lastId = $pdo->lastInsertId();
             $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ? AND user_id = ?");
