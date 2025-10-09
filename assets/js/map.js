@@ -65,6 +65,23 @@ function initMap() {
         }).join('');
     };
 
+    const buildNodeTitle = (deviceData) => {
+        let title = `${deviceData.name}<br>${deviceData.ip || 'No IP'}<br>Status: ${deviceData.status}`;
+        if (deviceData.status === 'offline' && deviceData.last_ping_output) {
+            const lines = deviceData.last_ping_output.split('\n');
+            let reason = 'No response';
+            for (const line of lines) {
+                if (line.toLowerCase().includes('unreachable') || line.toLowerCase().includes('timed out') || line.toLowerCase().includes('could not find host')) {
+                    reason = line.trim();
+                    break;
+                }
+            }
+            const sanitizedReason = reason.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            title += `<br><small style="color: #fca5a5; font-family: monospace;">${sanitizedReason}</small>`;
+        }
+        return title;
+    };
+
     const performBulkRefresh = async () => {
         const icon = refreshStatusBtn.querySelector('i');
         icon.classList.add('fa-spin');
@@ -97,7 +114,7 @@ function initMap() {
                     id: d.id,
                     deviceData: d,
                     icon: { ...node.icon, color: statusColorMap[d.status] || statusColorMap.unknown },
-                    title: `${d.name}<br>${d.ip || 'No IP'}<br>Status: ${d.status}`,
+                    title: buildNodeTitle(d),
                     label: label
                 };
             }).filter(Boolean);
@@ -152,7 +169,7 @@ function initMap() {
             if (d.type === 'box') {
                 return { id: d.id, label: d.name, title: d.name, x: d.x, y: d.y, shape: 'box', color: { background: 'rgba(49, 65, 85, 0.5)', border: '#475569' }, font: { color: 'white', size: parseInt(d.name_text_size) || 14 }, margin: 20, deviceData: d, level: -1 };
             }
-            return { id: d.id, label: label, title: `${d.name}<br>${d.ip || 'No IP'}<br>Status: ${d.status}`, x: d.x, y: d.y, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: iconMap[d.type] || iconMap.other, size: parseInt(d.icon_size) || 50, color: statusColorMap[d.status] || statusColorMap.unknown }, font: { color: 'white', size: parseInt(d.name_text_size) || 14, multi: true }, deviceData: d };
+            return { id: d.id, label: label, title: buildNodeTitle(d), x: d.x, y: d.y, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: iconMap[d.type] || iconMap.other, size: parseInt(d.icon_size) || 50, color: statusColorMap[d.status] || statusColorMap.unknown }, font: { color: 'white', size: parseInt(d.name_text_size) || 14, multi: true }, deviceData: d };
         });
         nodes.clear(); nodes.add(visNodes);
 
@@ -195,7 +212,7 @@ function initMap() {
             const visNode = {
                 id: createdDevice.id,
                 label: createdDevice.name,
-                title: `${createdDevice.name}<br>${createdDevice.ip || 'No IP'}<br>Status: ${createdDevice.status}`,
+                title: buildNodeTitle(createdDevice),
                 x: createdDevice.x,
                 y: createdDevice.y,
                 shape: 'icon',
@@ -382,12 +399,12 @@ function initMap() {
             }
         }
 
-        const updatedDeviceData = { ...node.deviceData, status: newStatus, last_avg_time: result.last_avg_time, last_ttl: result.last_ttl };
+        const updatedDeviceData = { ...node.deviceData, status: newStatus, last_avg_time: result.last_avg_time, last_ttl: result.last_ttl, last_ping_output: result.last_ping_output };
         let label = updatedDeviceData.name;
         if (updatedDeviceData.show_live_ping && updatedDeviceData.status === 'online' && updatedDeviceData.last_avg_time !== null) {
             label += `\n${updatedDeviceData.last_avg_time}ms | TTL:${updatedDeviceData.last_ttl || 'N/A'}`;
         }
-        nodes.update({ id: deviceId, deviceData: updatedDeviceData, icon: { ...node.icon, color: statusColorMap[newStatus] || statusColorMap.unknown }, title: `${updatedDeviceData.name}<br>${updatedDeviceData.ip || 'No IP'}<br>Status: ${newStatus}`, label: label });
+        nodes.update({ id: deviceId, deviceData: updatedDeviceData, icon: { ...node.icon, color: statusColorMap[newStatus] || statusColorMap.unknown }, title: buildNodeTitle(updatedDeviceData), label: label });
     };
 
     deviceForm.addEventListener('submit', async (e) => {
@@ -402,11 +419,9 @@ function initMap() {
 
         try {
             if (id) {
-                // For updates, we can send the whole data object. The backend handler is robust.
                 await api.post('update_device', { id, updates: data });
                 window.notyf.success('Item updated.');
             } else {
-                // For creation, we need to sanitize empty strings to nulls for numeric/optional fields
                 const numericFields = ['ping_interval', 'icon_size', 'name_text_size', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold'];
                 for (const key in data) {
                     if (numericFields.includes(key) && data[key] === '') {
@@ -418,11 +433,24 @@ function initMap() {
                 }
                 
                 const createData = { ...data, map_id: currentMapId };
-                await api.post('create_device', createData);
+                const newDevice = await api.post('create_device', createData);
+                const visNode = {
+                    id: newDevice.id,
+                    label: newDevice.name,
+                    title: buildNodeTitle(newDevice),
+                    x: newDevice.x, y: newDevice.y,
+                    shape: 'icon',
+                    icon: { face: "'Font Awesome 6 Free'", weight: "900", code: iconMap[newDevice.type] || iconMap.other, size: parseInt(newDevice.icon_size) || 50, color: statusColorMap[newDevice.status] || statusColorMap.unknown },
+                    font: { color: 'white', size: parseInt(newDevice.name_text_size) || 14, multi: true },
+                    deviceData: newDevice
+                };
+                if (newDevice.type === 'box') {
+                    Object.assign(visNode, { shape: 'box', color: { background: 'rgba(49, 65, 85, 0.5)', border: '#475569' }, margin: 20, level: -1 });
+                }
+                nodes.add(visNode);
                 window.notyf.success('Item created.');
             }
             deviceModal.classList.add('hidden');
-            await switchMap(currentMapId);
         } catch (error) {
             console.error("Failed to save device:", error);
             window.notyf.error(error.message || "An error occurred while saving. Please try again.");

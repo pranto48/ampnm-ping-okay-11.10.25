@@ -87,7 +87,14 @@ switch ($action) {
             $stmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
             $stmt->execute([$status, $last_seen, $last_avg_time, $last_ttl, $deviceId, $current_user_id]);
             
-            echo json_encode(['id' => $deviceId, 'status' => $status, 'last_seen' => $last_seen, 'last_avg_time' => $last_avg_time, 'last_ttl' => $last_ttl]);
+            echo json_encode([
+                'id' => $deviceId, 
+                'status' => $status, 
+                'last_seen' => $last_seen, 
+                'last_avg_time' => $last_avg_time, 
+                'last_ttl' => $last_ttl,
+                'last_ping_output' => $pingResult['output']
+            ]);
         }
         break;
 
@@ -109,9 +116,30 @@ switch ($action) {
 
     case 'get_devices':
         $map_id = $_GET['map_id'] ?? null;
-        $sql = "SELECT d.*, m.name as map_name FROM devices d JOIN maps m ON d.map_id = m.id WHERE d.user_id = ?";
+        $sql = "
+            SELECT 
+                d.*, 
+                m.name as map_name,
+                p.output as last_ping_output
+            FROM 
+                devices d
+            JOIN 
+                maps m ON d.map_id = m.id
+            LEFT JOIN 
+                ping_results p ON p.id = (
+                    SELECT id 
+                    FROM ping_results 
+                    WHERE host = d.ip 
+                    ORDER BY created_at DESC 
+                    LIMIT 1
+                )
+            WHERE d.user_id = ?
+        ";
         $params = [$current_user_id];
-        if ($map_id) { $sql .= " AND d.map_id = ?"; $params[] = $map_id; }
+        if ($map_id) { 
+            $sql .= " AND d.map_id = ?"; 
+            $params[] = $map_id; 
+        }
         $sql .= " ORDER BY d.created_at ASC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
