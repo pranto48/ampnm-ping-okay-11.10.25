@@ -40,6 +40,17 @@ function initMap() {
         window.cleanup = null;
     };
 
+    const populateLegend = () => {
+        const legendContainer = document.getElementById('status-legend');
+        if (!legendContainer) return;
+        const statusOrder = ['online', 'warning', 'critical', 'offline', 'unknown'];
+        legendContainer.innerHTML = statusOrder.map(status => {
+            const color = statusColorMap[status];
+            const label = status.charAt(0).toUpperCase() + status.slice(1);
+            return `<div class="legend-item"><div class="legend-dot" style="background-color: ${color};"></div><span>${label}</span></div>`;
+        }).join('');
+    };
+
     const performBulkRefresh = async () => {
         const icon = refreshStatusBtn.querySelector('i');
         icon.classList.add('fa-spin');
@@ -173,6 +184,7 @@ function initMap() {
     const initializeMap = () => {
         const container = document.getElementById('network-map');
         const contextMenu = document.getElementById('context-menu');
+        populateLegend();
         const data = { nodes, edges };
         const options = { 
             physics: false, 
