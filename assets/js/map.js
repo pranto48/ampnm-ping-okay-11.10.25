@@ -30,7 +30,7 @@ function initMap() {
         scanNetworkBtn = document.getElementById('scanNetworkBtn'), refreshStatusBtn = document.getElementById('refreshStatusBtn'),
         liveRefreshToggle = document.getElementById('liveRefreshToggle'),
         addDeviceBtn = document.getElementById('addDeviceBtn'), addEdgeBtn = document.getElementById('addEdgeBtn'),
-        deleteModeBtn = document.getElementById('deleteModeBtn'), fullscreenBtn = document.getElementById('fullscreenBtn'),
+        fullscreenBtn = document.getElementById('fullscreenBtn'),
         exportBtn = document.getElementById('exportBtn'), importBtn = document.getElementById('importBtn'),
         importFile = document.getElementById('importFile');
 
@@ -489,14 +489,6 @@ function initMap() {
     mapSelector.addEventListener('change', (e) => switchMap(e.target.value));
     addDeviceBtn.addEventListener('click', () => openDeviceModal()); cancelBtn.addEventListener('click', () => deviceModal.classList.add('hidden'));
     addEdgeBtn.addEventListener('click', () => { network.addEdgeMode(); window.notyf.info('Click on a node to start a connection.'); });
-    deleteModeBtn.addEventListener('click', () => {
-        const selection = network.getSelection();
-        if (selection.nodes.length > 0 || selection.edges.length > 0) {
-            network.deleteSelected();
-        } else {
-            window.notyf.error('Select an item to delete first.');
-        }
-    });
     cancelEdgeBtn.addEventListener('click', () => edgeModal.classList.add('hidden'));
     scanNetworkBtn.addEventListener('click', () => scanModal.classList.remove('hidden'));
     closeScanModal.addEventListener('click', () => scanModal.classList.add('hidden'));
