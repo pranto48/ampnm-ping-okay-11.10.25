@@ -1,8 +1,22 @@
 function initMap() {
     const API_URL = 'api.php';
     const api = {
-        get: (action, params = {}) => fetch(`${API_URL}?action=${action}&${new URLSearchParams(params)}`).then(res => res.json()),
-        post: (action, body) => fetch(`${API_URL}?action=${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(res => res.json())
+        get: async (action, params = {}) => {
+            const res = await fetch(`${API_URL}?action=${action}&${new URLSearchParams(params)}`);
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: 'Invalid JSON response from server' }));
+                throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        },
+        post: async (action, body) => {
+            const res = await fetch(`${API_URL}?action=${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: 'Invalid JSON response from server' }));
+                throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        }
     };
 
     let network = null, nodes = new vis.DataSet([]), edges = new vis.DataSet([]), currentMapId = null, pingIntervals = {};
@@ -357,26 +371,38 @@ function initMap() {
         e.preventDefault();
         
         const formData = new FormData(deviceForm);
-        const updates = Object.fromEntries(formData.entries());
-        const id = updates.id;
-        delete updates.id;
+        const data = Object.fromEntries(formData.entries());
+        const id = data.id;
+        delete data.id;
 
-        updates.show_live_ping = document.getElementById('showLivePing').checked;
+        data.show_live_ping = document.getElementById('showLivePing').checked;
 
         try {
-            if (id) { 
-                await api.post('update_device', { id, updates }); 
-                window.notyf.success('Item updated.'); 
-            } else { 
-                const createData = { ...updates, map_id: currentMapId };
-                await api.post('create_device', createData); 
-                window.notyf.success('Item created.'); 
+            if (id) {
+                // For updates, we can send the whole data object. The backend handler is robust.
+                await api.post('update_device', { id, updates: data });
+                window.notyf.success('Item updated.');
+            } else {
+                // For creation, we need to sanitize empty strings to nulls for numeric/optional fields
+                const numericFields = ['ping_interval', 'icon_size', 'name_text_size', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold'];
+                for (const key in data) {
+                    if (numericFields.includes(key) && data[key] === '') {
+                        data[key] = null;
+                    }
+                }
+                if (data.ip === '') {
+                    data.ip = null;
+                }
+                
+                const createData = { ...data, map_id: currentMapId };
+                await api.post('create_device', createData);
+                window.notyf.success('Item created.');
             }
-            deviceModal.classList.add('hidden'); 
+            deviceModal.classList.add('hidden');
             await switchMap(currentMapId);
         } catch (error) {
             console.error("Failed to save device:", error);
-            window.notyf.error("An error occurred while saving. Please try again.");
+            window.notyf.error(error.message || "An error occurred while saving. Please try again.");
         }
     });
 
