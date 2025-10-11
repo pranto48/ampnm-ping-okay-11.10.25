@@ -1,34 +1,15 @@
-#!/bin/sh
-# This script ensures the application waits for the database to be fully ready before starting.
+#!/bin/bash
 set -e
 
-# Use environment variables passed from docker-compose
-DB_HOST_VAR="$DB_HOST"
-TIMEOUT=60 # seconds
-ELAPSED=0
+# This script is executed when the Docker container starts.
 
-echo "--- Docker Entrypoint Script Started ---"
-echo "Waiting for database service at $DB_HOST_VAR (timeout: ${TIMEOUT}s)..."
+# 1. Modify Apache's configuration to listen on port 2266 instead of the default 80.
+echo "Configuring Apache to listen on port 2266..."
+sed -i 's/Listen 80/Listen 2266/g' /etc/apache2/ports.conf
+sed -i 's/<VirtualHost \*:80>/<VirtualHost \*:2266>/g' /etc/apache2/sites-available/000-default.conf
 
-# Loop until our custom PHP db_check script is successful or timeout is reached
-until php /var/www/html/includes/db_check.php; do
-    if [ $ELAPSED -ge $TIMEOUT ]; then
-        echo "❌ Database connection timeout after $TIMEOUT seconds."
-        echo "Please check the database container logs for errors."
-        exit 1
-    fi
-    echo "Database is not yet available. Retrying in 2 seconds..."
-    sleep 2
-    ELAPSED=$(($ELAPSED + 2))
-done
-
-echo "✅ Database connection successful!"
-
-# Run the database setup script to create/migrate tables automatically.
-echo "Running database setup script (database_setup.php)..."
-php /var/www/html/database_setup.php
-echo "✅ Database setup script finished."
-
-echo "--- Handing over to Apache Web Server ---"
-# Execute the main container command (CMD) which is 'apache2-foreground'
-exec "$@"
+# 2. Start the Apache web server.
+# 'exec' is used to replace the script process with the Apache process,
+# which is standard practice for container entrypoints.
+echo "Starting Apache web server..."
+exec apache2-foreground
