@@ -1,5 +1,5 @@
 <?php
-require_once 'includes/functions.php';
+require_once 'includes/auth_check.php';
 
 $pdo = getDbConnection();
 
