@@ -3,8 +3,8 @@
 $current_user_id = $_SESSION['user_id'];
 
 function getStatusFromPingResult($device, $pingResult, $parsedResult) {
-    $isAlive = ($pingResult['return_code'] === 0 && $parsedResult['packet_loss'] < 100);
-    if (!$isAlive) {
+    // Use the more reliable 'success' flag from the improved executePing function
+    if (!$pingResult['success']) {
         return 'offline';
     }
 
@@ -36,7 +36,7 @@ switch ($action) {
             foreach ($devices as $device) {
                 $old_status = $device['status'];
                 $pingResult = executePing($device['ip'], 1);
-                savePingResult($pdo, $device['ip'], $pingResult['output'], $pingResult['return_code']);
+                savePingResult($pdo, $device['ip'], $pingResult);
                 $parsedResult = parsePingOutput($pingResult['output']);
                 $new_status = getStatusFromPingResult($device, $pingResult, $parsedResult);
                 
@@ -77,7 +77,7 @@ switch ($action) {
             if (!$device['ip']) { echo json_encode(['id' => $deviceId, 'status' => 'unknown', 'last_seen' => $device['last_seen']]); exit; }
 
             $pingResult = executePing($device['ip'], 1);
-            savePingResult($pdo, $device['ip'], $pingResult['output'], $pingResult['return_code']);
+            savePingResult($pdo, $device['ip'], $pingResult);
             $parsedResult = parsePingOutput($pingResult['output']);
             $status = getStatusFromPingResult($device, $pingResult, $parsedResult);
             $last_seen = ($status !== 'offline') ? date('Y-m-d H:i:s') : $device['last_seen'];

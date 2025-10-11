@@ -12,7 +12,7 @@ switch ($action) {
                 exit;
             }
             $result = executePing($host, $count);
-            savePingResult($pdo, $host, $result['output'], $result['return_code']);
+            savePingResult($pdo, $host, $result);
             echo json_encode($result);
         }
         break;

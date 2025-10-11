@@ -1,35 +1,40 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// Function to execute ping command
+// Function to execute ping command more efficiently
 function executePing($host, $count = 4) {
     // Basic validation and sanitization for the host
     if (empty($host) || !preg_match('/^[a-zA-Z0-9\.\-]+$/', $host)) {
-        return ['output' => 'Invalid host provided.', 'return_code' => -1];
+        return ['output' => 'Invalid host provided.', 'return_code' => -1, 'success' => false];
     }
     
     // Escape the host to prevent command injection
     $escaped_host = escapeshellarg($host);
     
-    // Determine the correct ping command based on the OS
+    // Determine the correct ping command based on the OS, with timeouts
     if (stristr(PHP_OS, 'WIN')) {
-        // Windows: -n for count
-        $command = "ping -n $count $escaped_host";
+        // Windows: -n for count, -w for timeout in ms
+        $command = "ping -n $count -w 1000 $escaped_host";
     } else {
-        // Linux/Mac: -c for count
-        $command = "ping -c $count $escaped_host";
+        // Linux/Mac: -c for count, -W for timeout in seconds
+        $command = "ping -c $count -W 1 $escaped_host";
     }
     
-    $output = shell_exec($command . ' 2>&1');
-    $return_code = 0;
+    $output_array = [];
+    $return_code = -1;
     
-    // shell_exec doesn't provide a return code, so we use exec for that.
-    // We redirect output to null to avoid printing it twice.
-    exec($command . ' > /dev/null 2>&1', $exec_output, $return_code);
+    // Use exec to get both output and return code in one call
+    @exec($command . ' 2>&1', $output_array, $return_code);
     
+    $output = implode("\n", $output_array);
+    
+    // Determine success more reliably. Return code 0 is good, but we also check for 100% packet loss.
+    $success = ($return_code === 0 && strpos($output, '100% packet loss') === false && strpos($output, 'Lost = ' . $count) === false);
+
     return [
         'output' => $output,
-        'return_code' => $return_code
+        'return_code' => $return_code,
+        'success' => $success
     ];
 }
 
@@ -77,9 +82,9 @@ function parsePingOutput($output) {
 }
 
 // Function to save a ping result to the database
-function savePingResult($pdo, $host, $pingOutput, $returnCode) {
-    $parsed = parsePingOutput($pingOutput);
-    $success = ($returnCode === 0 && $parsed['packet_loss'] < 100);
+function savePingResult($pdo, $host, $pingResult) {
+    $parsed = parsePingOutput($pingResult['output']);
+    $success = $pingResult['success'];
 
     $sql = "INSERT INTO ping_results (host, packet_loss, avg_time, min_time, max_time, success, output) VALUES (?, ?, ?, ?, ?, ?, ?)";
     $stmt = $pdo->prepare($sql);
@@ -90,7 +95,7 @@ function savePingResult($pdo, $host, $pingOutput, $returnCode) {
         $parsed['min_time'],
         $parsed['max_time'],
         $success,
-        $pingOutput
+        $pingResult['output']
     ]);
 }
 
@@ -98,7 +103,7 @@ function savePingResult($pdo, $host, $pingOutput, $returnCode) {
 function pingDevice($ip) {
     $pingResult = executePing($ip, 1); // Ping once for speed
     $parsedResult = parsePingOutput($pingResult['output']);
-    $alive = ($pingResult['return_code'] === 0 && $parsedResult['packet_loss'] < 100);
+    $alive = $pingResult['success'];
 
     return [
         'ip' => $ip,
