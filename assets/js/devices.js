@@ -69,11 +69,24 @@ function initDevices() {
         detailsModalLoader.classList.remove('hidden');
         if (latencyChart) latencyChart.destroy();
 
-        const { device, history } = await api.get('get_device_details', { id: deviceId });
+        const [details, uptimeData] = await Promise.all([
+            api.get('get_device_details', { id: deviceId }),
+            api.get('get_device_uptime', { id: deviceId })
+        ]);
+        const { device, history } = details;
         
         detailsModalTitle.textContent = `${device.name} (${device.ip || 'No IP'})`;
         
         const renderThreshold = (label, value, unit) => value ? `<strong>${label}:</strong> <span>${value}${unit}</span>` : '';
+        const uptimeStatsHtml = device.ip
+            ? uptimeData.uptime_24h !== null
+                ? `
+                    <strong class="text-slate-400">Uptime (24h):</strong> <span class="text-white font-semibold">${uptimeData.uptime_24h}%</span>
+                    <strong class="text-slate-400">Uptime (7d):</strong> <span class="text-white font-semibold">${uptimeData.uptime_7d !== null ? uptimeData.uptime_7d + '%' : 'N/A'}</span>
+                    <strong class="text-slate-400">Outages (24h):</strong> <span class="text-white font-semibold">${uptimeData.outages_24h}</span>
+                `
+                : '<span class="text-slate-500 col-span-2">Not enough data to calculate uptime.</span>'
+            : '<span class="text-slate-500 col-span-2">Uptime not applicable (no IP).</span>';
 
         detailsModalContent.innerHTML = `
             <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
@@ -95,6 +108,10 @@ function initDevices() {
                             <div class="text-red-400">${renderThreshold('Critical Latency', device.critical_latency_threshold, 'ms')}</div>
                             <div class="text-red-400">${renderThreshold('Critical Packet Loss', device.critical_packetloss_threshold, '%')}</div>
                         </div>
+                    </div>
+                     <div>
+                        <h3 class="text-lg font-semibold text-white mb-2 border-b border-slate-700 pb-1">Uptime Statistics</h3>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">${uptimeStatsHtml}</div>
                     </div>
                 </div>
                 <div class="md:col-span-3">

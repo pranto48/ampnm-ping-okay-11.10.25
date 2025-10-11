@@ -98,6 +98,34 @@ switch ($action) {
         }
         break;
 
+    case 'get_device_uptime':
+        $deviceId = $_GET['id'] ?? 0;
+        if (!$deviceId) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
+        
+        $stmt = $pdo->prepare("SELECT ip FROM devices WHERE id = ? AND user_id = ?");
+        $stmt->execute([$deviceId, $current_user_id]);
+        $device = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$device || !$device['ip']) {
+            echo json_encode(['uptime_24h' => null, 'uptime_7d' => null, 'outages_24h' => null]);
+            exit;
+        }
+        $host = $device['ip'];
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) as total, SUM(success) as successful FROM ping_results WHERE host = ? AND created_at >= NOW() - INTERVAL 24 HOUR");
+        $stmt->execute([$host]);
+        $stats24h = $stmt->fetch(PDO::FETCH_ASSOC);
+        $uptime24h = ($stats24h['total'] > 0) ? round(($stats24h['successful'] / $stats24h['total']) * 100, 2) : null;
+        $outages24h = $stats24h['total'] - $stats24h['successful'];
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) as total, SUM(success) as successful FROM ping_results WHERE host = ? AND created_at >= NOW() - INTERVAL 7 DAY");
+        $stmt->execute([$host]);
+        $stats7d = $stmt->fetch(PDO::FETCH_ASSOC);
+        $uptime7d = ($stats7d['total'] > 0) ? round(($stats7d['successful'] / $stats7d['total']) * 100, 2) : null;
+
+        echo json_encode(['uptime_24h' => $uptime24h, 'uptime_7d' => $uptime7d, 'outages_24h' => $outages24h]);
+        break;
+
     case 'get_device_details':
         $deviceId = $_GET['id'] ?? 0;
         if (!$deviceId) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
