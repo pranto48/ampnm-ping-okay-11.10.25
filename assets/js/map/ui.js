@@ -54,6 +54,7 @@ MapApp.ui = {
         const isAnnotation = type === 'box';
         const isPingable = !isAnnotation;
         document.getElementById('deviceIpWrapper').style.display = isPingable ? 'block' : 'none';
+        document.getElementById('devicePortWrapper').style.display = isPingable ? 'block' : 'none';
         document.getElementById('pingIntervalWrapper').style.display = isPingable ? 'block' : 'none';
         document.getElementById('thresholdsWrapper').style.display = isPingable ? 'block' : 'none';
         document.getElementById('deviceIp').required = isPingable;
@@ -70,6 +71,7 @@ MapApp.ui = {
             document.getElementById('deviceId').value = node.id;
             document.getElementById('deviceName').value = node.deviceData.name;
             document.getElementById('deviceIp').value = node.deviceData.ip;
+            document.getElementById('checkPort').value = node.deviceData.check_port;
             document.getElementById('deviceType').value = node.deviceData.type;
             document.getElementById('pingInterval').value = node.deviceData.ping_interval;
             document.getElementById('iconSize').value = node.deviceData.icon_size;

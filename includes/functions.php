@@ -1,6 +1,29 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
+// Function to check a TCP port on a host
+function checkPortStatus($host, $port, $timeout = 1) {
+    $startTime = microtime(true);
+    // The '@' suppresses warnings on connection failure, which we handle ourselves.
+    $socket = @fsockopen($host, $port, $errno, $errstr, $timeout);
+    $endTime = microtime(true);
+
+    if ($socket) {
+        fclose($socket);
+        return [
+            'success' => true,
+            'time' => round(($endTime - $startTime) * 1000, 2), // time in ms
+            'output' => "Successfully connected to $host on port $port."
+        ];
+    } else {
+        return [
+            'success' => false,
+            'time' => 0,
+            'output' => "Connection failed: $errstr (Error no: $errno)"
+        ];
+    }
+}
+
 // Function to execute ping command more efficiently
 function executePing($host, $count = 4) {
     // Basic validation and sanitization for the host

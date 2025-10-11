@@ -105,6 +105,7 @@ try {
             `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             `user_id` INT(6) UNSIGNED NOT NULL,
             `ip` VARCHAR(15) NULL,
+            `check_port` INT(5) NULL,
             `name` VARCHAR(100) NOT NULL,
             `status` ENUM('online', 'offline', 'unknown', 'warning', 'critical') DEFAULT 'unknown',
             `last_seen` TIMESTAMP NULL,
@@ -182,6 +183,10 @@ try {
         $pdo->exec("ALTER TABLE `device_edges` MODIFY COLUMN `user_id` INT(6) UNSIGNED NOT NULL;");
         $pdo->exec("ALTER TABLE `device_edges` ADD CONSTRAINT `fk_device_edges_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
         message("Upgraded 'device_edges' table: assigned existing edges to admin.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'check_port')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `check_port` INT(5) NULL AFTER `ip`;");
+        message("Upgraded 'devices' table: added 'check_port' column.");
     }
 
     // Step 5: Check if the admin user has any maps
