@@ -195,8 +195,19 @@ function initDevices() {
             const mapId = document.getElementById('mapSelector')?.value;
             if (mapId) {
                 const result = await api.post('ping_all_devices', { map_id: mapId });
-                window.notyf.info(`Pinged ${result.count} devices.`);
-                await loadDevices(mapId);
+                if (result.success && result.updated_devices) {
+                    let changes = 0;
+                    result.updated_devices.forEach(device => {
+                        if (device.old_status !== device.status) {
+                            changes++;
+                            window.notyf.info(`'${device.name}' is now ${device.status}.`);
+                        }
+                    });
+                    if (changes === 0 && result.updated_devices.length > 0) {
+                        window.notyf.success('All device statuses are stable.');
+                    }
+                    await loadDevices(mapId); // Reload the table to show new statuses
+                }
             } else {
                 window.notyf.error("Please select a map first.");
             }

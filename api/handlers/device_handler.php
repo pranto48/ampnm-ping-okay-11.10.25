@@ -27,40 +27,55 @@ switch ($action) {
             $map_id = $input['map_id'] ?? null;
             if (!$map_id) { http_response_code(400); echo json_encode(['error' => 'Map ID is required']); exit; }
 
-            $stmt = $pdo->prepare("SELECT * FROM devices WHERE enabled = TRUE AND map_id = ? AND user_id = ? AND ip IS NOT NULL");
+            $stmt = $pdo->prepare("SELECT * FROM devices WHERE enabled = TRUE AND map_id = ? AND user_id = ? AND ip IS NOT NULL AND type != 'box'");
             $stmt->execute([$map_id, $current_user_id]);
             $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            $status_changes = [];
+            $updated_devices = [];
 
             foreach ($devices as $device) {
                 $old_status = $device['status'];
                 $new_status = 'unknown';
                 $last_avg_time = null;
                 $last_ttl = null;
+                $last_seen = $device['last_seen'];
+                $check_output = 'Device has no IP configured for checking.';
 
-                if (!empty($device['check_port']) && is_numeric($device['check_port'])) {
-                    $portCheckResult = checkPortStatus($device['ip'], $device['check_port']);
-                    $new_status = $portCheckResult['success'] ? 'online' : 'offline';
-                    $last_avg_time = $portCheckResult['time'];
-                } else {
-                    $pingResult = executePing($device['ip'], 1);
-                    savePingResult($pdo, $device['ip'], $pingResult);
-                    $parsedResult = parsePingOutput($pingResult['output']);
-                    $new_status = getStatusFromPingResult($device, $pingResult, $parsedResult);
-                    $last_avg_time = $parsedResult['avg_time'] ?? null;
-                    $last_ttl = $parsedResult['ttl'] ?? null;
+                if (!empty($device['ip'])) {
+                    if (!empty($device['check_port']) && is_numeric($device['check_port'])) {
+                        $portCheckResult = checkPortStatus($device['ip'], $device['check_port']);
+                        $new_status = $portCheckResult['success'] ? 'online' : 'offline';
+                        $last_avg_time = $portCheckResult['time'];
+                        $check_output = $portCheckResult['output'];
+                    } else {
+                        $pingResult = executePing($device['ip'], 1);
+                        savePingResult($pdo, $device['ip'], $pingResult);
+                        $parsedResult = parsePingOutput($pingResult['output']);
+                        $new_status = getStatusFromPingResult($device, $pingResult, $parsedResult);
+                        $last_avg_time = $parsedResult['avg_time'] ?? null;
+                        $last_ttl = $parsedResult['ttl'] ?? null;
+                        $check_output = $pingResult['output'];
+                    }
                 }
                 
-                if ($new_status !== $old_status) {
-                    $status_changes[] = ['name' => $device['name'], 'old_status' => $old_status, 'new_status' => $new_status];
-                }
+                if ($new_status !== 'offline') { $last_seen = date('Y-m-d H:i:s'); }
                 
                 $updateStmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
-                $updateStmt->execute([$new_status, ($new_status !== 'offline') ? date('Y-m-d H:i:s') : $device['last_seen'], $last_avg_time, $last_ttl, $device['id'], $current_user_id]);
+                $updateStmt->execute([$new_status, $last_seen, $last_avg_time, $last_ttl, $device['id'], $current_user_id]);
+
+                $updated_devices[] = [
+                    'id' => $device['id'],
+                    'name' => $device['name'],
+                    'old_status' => $old_status,
+                    'status' => $new_status,
+                    'last_seen' => $last_seen,
+                    'last_avg_time' => $last_avg_time,
+                    'last_ttl' => $last_ttl,
+                    'last_ping_output' => $check_output
+                ];
             }
             
-            echo json_encode(['success' => true, 'message' => 'All enabled devices have been checked.', 'count' => count($devices), 'status_changes' => $status_changes]);
+            echo json_encode(['success' => true, 'updated_devices' => $updated_devices]);
         }
         break;
 

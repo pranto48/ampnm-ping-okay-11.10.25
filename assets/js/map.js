@@ -115,8 +115,7 @@ function initMap() {
 
     els.refreshStatusBtn.addEventListener('click', async () => {
         els.refreshStatusBtn.disabled = true;
-        const count = await deviceManager.performBulkRefresh();
-        if (count > 0) window.notyf.info(`Refreshed status for ${count} devices.`);
+        await deviceManager.performBulkRefresh();
         if (!els.liveRefreshToggle.checked) els.refreshStatusBtn.disabled = false;
     });
 
