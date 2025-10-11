@@ -85,52 +85,33 @@ function initMap() {
     const performBulkRefresh = async () => {
         const icon = refreshStatusBtn.querySelector('i');
         icon.classList.add('fa-spin');
+        
+        // Get all device nodes that are pingable (have an IP, not a 'box' type)
+        const pingableNodes = nodes.get({
+            filter: (item) => item.deviceData && item.deviceData.ip && item.deviceData.type !== 'box'
+        });
+
+        if (pingableNodes.length === 0) {
+            icon.classList.remove('fa-spin');
+            return 0;
+        }
+
+        // Create an array of promises, where each promise pings a single device
+        const pingPromises = pingableNodes.map(node => pingSingleDevice(node.id));
+
         try {
-            const result = await api.post('ping_all_devices', { map_id: currentMapId });
-
-            if (result.status_changes && result.status_changes.length > 0) {
-                result.status_changes.forEach(change => {
-                    const { name, old_status, new_status } = change;
-                    if (new_status === 'critical' || new_status === 'offline') {
-                        window.notyf.error({ message: `Device '${name}' is now ${new_status}.`, duration: 5000, dismissible: true });
-                    } else if (new_status === 'online' && (old_status === 'critical' || old_status === 'offline')) {
-                        window.notyf.success({ message: `Device '${name}' is back online.`, duration: 3000 });
-                    }
-                });
-            }
-
-            const deviceData = await api.get('get_devices', { map_id: currentMapId });
-            
-            const updates = deviceData.map(d => {
-                const node = nodes.get(d.id);
-                if (!node) return null;
-
-                let label = d.name;
-                if (d.show_live_ping && d.status === 'online' && d.last_avg_time !== null) {
-                    label += `\n${d.last_avg_time}ms | TTL:${d.last_ttl || 'N/A'}`;
-                }
-                
-                return {
-                    id: d.id,
-                    deviceData: d,
-                    icon: { ...node.icon, color: statusColorMap[d.status] || statusColorMap.unknown },
-                    title: buildNodeTitle(d),
-                    label: label
-                };
-            }).filter(Boolean);
-
-            if (updates.length > 0) {
-                nodes.update(updates);
-            }
-            
-            return result.count;
+            // Wait for all individual ping operations to complete
+            await Promise.all(pingPromises);
         } catch (error) {
-            console.error("Bulk refresh failed:", error);
-            window.notyf.error("Failed to refresh device statuses.");
+            // This will catch any fundamental errors, but individual ping failures are handled in pingSingleDevice
+            console.error("An error occurred during the bulk refresh process:", error);
+            window.notyf.error("Some device checks may have failed during the refresh.");
         } finally {
+            // Stop the spinning icon once all operations are done
             icon.classList.remove('fa-spin');
         }
-        return 0;
+        
+        return pingableNodes.length;
     };
 
     const createMap = async () => {
