@@ -17,6 +17,8 @@ function message($text, $is_error = false) {
     <title>Database Setup</title>
     <style>
         body { background-color: #0f172a; color: #cbd5e1; font-family: sans-serif; padding: 2rem; }
+        .loader { border: 4px solid #334155; border-top: 4px solid #22d3ee; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; margin-right: 10px; vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -219,12 +221,14 @@ try {
     }
 
     echo "<h2 style='color: #06b6d4; font-family: sans-serif;'>Database setup completed successfully!</h2>";
+    echo "<p style='color: #94a3b8;'><span class='loader'></span>Redirecting to the application in 3 seconds...</p>";
+    echo '<meta http-equiv="refresh" content="3;url=index.php">';
 
 } catch (PDOException $e) {
     message("Database setup failed: " . $e->getMessage(), true);
     exit(1);
 }
 ?>
-    <a href="index.php" style="color: #22d3ee; text-decoration: none; font-size: 1.2rem;">&larr; Back to Dashboard</a>
+    <a href="index.php" style="color: #22d3ee; text-decoration: none; font-size: 1.2rem;">&larr; Go to Dashboard</a>
 </body>
 </html>
