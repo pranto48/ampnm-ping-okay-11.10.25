@@ -40,6 +40,8 @@ MapApp.network = {
         MapApp.state.network.on("oncontext", (params) => {
             params.event.preventDefault();
             const nodeId = MapApp.state.network.getNodeAt(params.pointer.DOM);
+            const edgeId = MapApp.state.network.getEdgeAt(params.pointer.DOM);
+
             if (nodeId) {
                 const node = MapApp.state.nodes.get(nodeId);
                 contextMenu.innerHTML = `
@@ -52,7 +54,18 @@ MapApp.network = {
                 contextMenu.style.top = `${params.event.pageY}px`;
                 contextMenu.style.display = 'block';
                 document.addEventListener('click', closeContextMenu, { once: true });
-            } else { closeContextMenu(); }
+            } else if (edgeId) {
+                contextMenu.innerHTML = `
+                    <div class="context-menu-item" data-action="edit-edge" data-id="${edgeId}"><i class="fas fa-edit fa-fw mr-2"></i>Edit Connection</div>
+                    <div class="context-menu-item" data-action="delete-edge" data-id="${edgeId}" style="color: #ef4444;"><i class="fas fa-trash-alt fa-fw mr-2"></i>Delete Connection</div>
+                `;
+                contextMenu.style.left = `${params.event.pageX}px`;
+                contextMenu.style.top = `${params.event.pageY}px`;
+                contextMenu.style.display = 'block';
+                document.addEventListener('click', closeContextMenu, { once: true });
+            } else { 
+                closeContextMenu(); 
+            }
         });
         contextMenu.addEventListener('click', async (e) => {
             const target = e.target.closest('.context-menu-item');
@@ -74,6 +87,18 @@ MapApp.network = {
                         await MapApp.api.post('delete_device', { id });
                         window.notyf.success('Device deleted.');
                         MapApp.state.nodes.remove(id);
+                    }
+                } else if (action === 'edit-edge') {
+                    MapApp.ui.openEdgeModal(id);
+                } else if (action === 'delete-edge') {
+                    if (confirm('Are you sure you want to delete this connection?')) {
+                        const result = await MapApp.api.post('delete_edge', { id });
+                        if (result.success) {
+                            window.notyf.success('Connection deleted.');
+                            MapApp.state.edges.remove(id);
+                        } else {
+                            window.notyf.error('Failed to delete connection.');
+                        }
                     }
                 }
             }
