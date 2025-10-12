@@ -1,5 +1,8 @@
 window.MapApp = window.MapApp || {};
 
+const warningSound = new Audio('assets/sounds/warning.mp3');
+const criticalSound = new Audio('assets/sounds/critical.mp3');
+
 MapApp.deviceManager = {
     pingSingleDevice: async (deviceId) => {
         const node = MapApp.state.nodes.get(deviceId);
@@ -11,6 +14,12 @@ MapApp.deviceManager = {
         const newStatus = result.status;
 
         if (newStatus !== oldStatus) {
+            if (newStatus === 'warning') {
+                warningSound.play();
+            } else if (newStatus === 'critical') {
+                criticalSound.play();
+            }
+
             if (newStatus === 'critical' || newStatus === 'offline') {
                 window.notyf.error({ message: `Device '${node.deviceData.name}' is now ${newStatus}.`, duration: 0, dismissible: true });
             } else if (newStatus === 'online' && (oldStatus === 'critical' || oldStatus === 'offline')) {
@@ -43,6 +52,12 @@ MapApp.deviceManager = {
 
                 if (device.old_status !== device.status) {
                     statusChanges++;
+                    if (device.status === 'warning') {
+                        warningSound.play();
+                    } else if (device.status === 'critical') {
+                        criticalSound.play();
+                    }
+                    
                     if (device.status === 'critical' || device.status === 'offline') {
                         window.notyf.error({ message: `Device '${device.name}' is now ${device.status}.`, duration: 5000, dismissible: true });
                     } else if (device.status === 'online' && (device.old_status === 'critical' || device.old_status === 'offline')) {
