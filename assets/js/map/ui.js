@@ -10,6 +10,7 @@ MapApp.ui = {
             mapWrapper: document.getElementById('network-map-wrapper'),
             mapSelector: document.getElementById('mapSelector'),
             newMapBtn: document.getElementById('newMapBtn'),
+            renameMapBtn: document.getElementById('renameMapBtn'),
             deleteMapBtn: document.getElementById('deleteMapBtn'),
             mapContainer: document.getElementById('map-container'),
             noMapsContainer: document.getElementById('no-maps'),

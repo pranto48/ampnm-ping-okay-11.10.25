@@ -227,6 +227,27 @@ function initMap() {
 
     els.newMapBtn.addEventListener('click', mapManager.createMap);
     els.createFirstMapBtn.addEventListener('click', mapManager.createMap);
+    els.renameMapBtn.addEventListener('click', async () => {
+        if (!state.currentMapId) {
+            window.notyf.error('No map selected to rename.');
+            return;
+        }
+        const selectedOption = els.mapSelector.options[els.mapSelector.selectedIndex];
+        const currentName = selectedOption.text;
+        const newName = prompt('Enter a new name for the map:', currentName);
+    
+        if (newName && newName.trim() !== '' && newName !== currentName) {
+            try {
+                await api.post('update_map', { id: state.currentMapId, name: newName });
+                selectedOption.text = newName;
+                els.currentMapName.textContent = newName;
+                window.notyf.success('Map renamed successfully.');
+            } catch (error) {
+                console.error("Failed to rename map:", error);
+                window.notyf.error(error.message || "Could not rename map.");
+            }
+        }
+    });
     els.deleteMapBtn.addEventListener('click', async () => {
         if (confirm(`Delete map "${els.mapSelector.options[els.mapSelector.selectedIndex].text}"?`)) {
             await api.post('delete_map', { id: state.currentMapId });

@@ -21,6 +21,21 @@ switch ($action) {
         }
         break;
 
+    case 'update_map':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $input['id'] ?? null;
+            $name = $input['name'] ?? '';
+            if (!$id || empty($name)) { 
+                http_response_code(400); 
+                echo json_encode(['error' => 'Map ID and name are required']); 
+                exit; 
+            }
+            $stmt = $pdo->prepare("UPDATE maps SET name = ? WHERE id = ? AND user_id = ?");
+            $stmt->execute([$name, $id, $current_user_id]);
+            echo json_encode(['success' => true, 'message' => 'Map renamed successfully.']);
+        }
+        break;
+
     case 'delete_map':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $input['id'] ?? null;
