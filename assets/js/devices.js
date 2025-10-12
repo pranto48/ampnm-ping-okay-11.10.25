@@ -38,7 +38,7 @@ function initDevices() {
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400">${lastSeen}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button class="details-device-btn text-cyan-400 hover:text-cyan-300 mr-3" data-id="${device.id}" title="View Details"><i class="fas fa-chart-line"></i></button>
-                    <a href="/map.php?map_id=${device.map_id}&edit_device_id=${device.id}" data-navigo class="text-yellow-400 hover:text-yellow-300 mr-3" title="Edit Device"><i class="fas fa-edit"></i></a>
+                    <a href="map.php?map_id=${device.map_id}&edit_device_id=${device.id}" class="text-yellow-400 hover:text-yellow-300 mr-3" title="Edit Device"><i class="fas fa-edit"></i></a>
                     <button class="check-device-btn text-green-400 hover:text-green-300 mr-3" data-id="${device.id}" title="Check Status"><i class="fas fa-sync"></i></button>
                     <button class="delete-device-btn text-red-500 hover:text-red-400" data-id="${device.id}" title="Delete Device"><i class="fas fa-trash"></i></button>
                 </td>
@@ -55,7 +55,6 @@ function initDevices() {
             const devices = await api.get('get_devices', mapId ? { map_id: mapId } : {});
             if (devices.length > 0) {
                 devicesTableBody.innerHTML = devices.map(renderDeviceRow).join('');
-                window.router.updatePageLinks();
             } else {
                 noDevicesMessage.classList.remove('hidden');
             }

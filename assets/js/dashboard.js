@@ -31,9 +31,7 @@ function initDashboard() {
         }
         dashboardLoader.classList.remove('hidden');
         dashboardWidgets.classList.add('hidden');
-        manageDevicesLink.href = `/devices.php?map_id=${mapId}`;
-        manageDevicesLink.setAttribute('data-navigo', true);
-        window.router.updatePageLinks();
+        manageDevicesLink.href = `devices.php?map_id=${mapId}`;
 
         try {
             const data = await api.get('get_dashboard_data', { map_id: mapId });

@@ -2,7 +2,6 @@
     <footer class="text-center py-4 text-slate-500 text-sm">
         <p>Dyad Network Security Dashboard</p>
     </footer>
-    <script src="https://unpkg.com/navigo@8.11.1/lib/navigo.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
     <script src="assets/js/shared.js"></script>
     <script src="assets/js/dashboard.js"></script>
@@ -21,6 +20,44 @@
     <script src="assets/js/map.js"></script>
     
     <script src="assets/js/users.js"></script>
-    <script src="assets/js/app.js"></script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Notyf for toast notifications
+        window.notyf = new Notyf({
+            duration: 3000,
+            position: { x: 'right', y: 'top' },
+            types: [
+                { type: 'success', backgroundColor: '#22c55e', icon: { className: 'fas fa-check-circle', tagName: 'i', color: 'white' } },
+                { type: 'error', backgroundColor: '#ef4444', icon: { className: 'fas fa-times-circle', tagName: 'i', color: 'white' } },
+                { type: 'info', backgroundColor: '#3b82f6', icon: { className: 'fas fa-info-circle', tagName: 'i', color: 'white' } }
+            ]
+        });
+
+        const page = '<?php echo basename($_SERVER['PHP_SELF']); ?>';
+        
+        // Set active nav link
+        const navLinks = document.querySelectorAll('#main-nav a');
+        navLinks.forEach(link => {
+            const linkPage = link.getAttribute('href');
+            if (linkPage === page || (page === 'index.php' && linkPage === '/')) {
+                link.classList.add('bg-slate-700', 'text-white');
+            }
+        });
+
+        // Initialize page-specific JS
+        if (page === 'index.php') {
+            initDashboard();
+        } else if (page === 'devices.php') {
+            initDevices();
+        } else if (page === 'history.php') {
+            initHistory();
+        } else if (page === 'map.php') {
+            initMap();
+        } else if (page === 'users.php') {
+            initUsers();
+        }
+    });
+    </script>
 </body>
 </html>
