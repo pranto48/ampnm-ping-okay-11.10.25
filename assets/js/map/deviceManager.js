@@ -21,9 +21,9 @@ MapApp.deviceManager = {
             }
 
             if (newStatus === 'critical' || newStatus === 'offline') {
-                window.notyf.error({ message: `Device '${node.deviceData.name}' is now ${newStatus}.`, duration: 0, dismissible: true });
+                window.notyf.error({ message: `Device '${node.deviceData.name}' is now ${newStatus}.`, duration: 5000, dismissible: true });
             } else if (newStatus === 'online' && (oldStatus === 'critical' || oldStatus === 'offline')) {
-                window.notyf.success({ message: `Device '${node.deviceData.name}' is back online.`, duration: 3000 });
+                window.notyf.success({ message: `Device '${node.deviceData.name}' is back online.`, duration: 5000 });
             }
         }
 
@@ -61,9 +61,9 @@ MapApp.deviceManager = {
                     if (device.status === 'critical' || device.status === 'offline') {
                         window.notyf.error({ message: `Device '${device.name}' is now ${device.status}.`, duration: 5000, dismissible: true });
                     } else if (device.status === 'online' && (device.old_status === 'critical' || device.old_status === 'offline')) {
-                        window.notyf.success({ message: `Device '${device.name}' is back online.`, duration: 3000 });
+                        window.notyf.success({ message: `Device '${device.name}' is back online.`, duration: 5000 });
                     } else {
-                        window.notyf.open({ type: 'info', message: `Device '${device.name}' changed status to ${device.status}.` });
+                        window.notyf.open({ type: 'info', message: `Device '${device.name}' changed status to ${device.status}.`, duration: 5000 });
                     }
                 }
 
