@@ -32,9 +32,6 @@ MapApp.network = {
         MapApp.state.network.on("doubleClick", (params) => { 
             if (params.nodes.length > 0) MapApp.ui.openDeviceModal(params.nodes[0]); 
         });
-        MapApp.state.network.on("click", (params) => { 
-            if (params.edges.length > 0) MapApp.ui.openEdgeModal(params.edges[0]); 
-        });
 
         const closeContextMenu = () => { contextMenu.style.display = 'none'; };
         MapApp.state.network.on("oncontext", (params) => {
