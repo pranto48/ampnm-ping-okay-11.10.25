@@ -48,7 +48,46 @@ function initMap() {
 
         try {
             if (id) {
-                await api.post('update_device', { id, updates: data });
+                const updatedDevice = await api.post('update_device', { id, updates: data });
+                const existingNode = state.nodes.get(id);
+                if (existingNode) {
+                    let label = updatedDevice.name;
+                    if (updatedDevice.show_live_ping && updatedDevice.status === 'online' && updatedDevice.last_avg_time !== null) {
+                        label += `\n${updatedDevice.last_avg_time}ms | TTL:${updatedDevice.last_ttl || 'N/A'}`;
+                    }
+
+                    const nodeUpdate = {
+                        id: updatedDevice.id,
+                        label: label,
+                        title: MapApp.utils.buildNodeTitle(updatedDevice),
+                        deviceData: updatedDevice,
+                        font: { ...existingNode.font, size: parseInt(updatedDevice.name_text_size) || 14 },
+                    };
+
+                    if (updatedDevice.type === 'box') {
+                        Object.assign(nodeUpdate, { shape: 'box' });
+                    } else {
+                        Object.assign(nodeUpdate, {
+                            icon: {
+                                ...existingNode.icon,
+                                code: MapApp.config.iconMap[updatedDevice.type] || MapApp.config.iconMap.other,
+                                size: parseInt(updatedDevice.icon_size) || 50,
+                            }
+                        });
+                    }
+                    
+                    state.nodes.update(nodeUpdate);
+
+                    if (existingNode.deviceData.ping_interval !== updatedDevice.ping_interval) {
+                        if (state.pingIntervals[id]) {
+                            clearInterval(state.pingIntervals[id]);
+                            delete state.pingIntervals[id];
+                        }
+                        if (updatedDevice.ping_interval > 0 && updatedDevice.ip) {
+                            state.pingIntervals[id] = setInterval(() => deviceManager.pingSingleDevice(id), updatedDevice.ping_interval * 1000);
+                        }
+                    }
+                }
                 window.notyf.success('Item updated.');
             } else {
                 const numericFields = ['ping_interval', 'icon_size', 'name_text_size', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold'];
