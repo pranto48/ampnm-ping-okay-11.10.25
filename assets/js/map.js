@@ -172,6 +172,28 @@ function initMap() {
         }
     });
 
+    els.exportBtn.addEventListener('click', () => {
+        if (!state.currentMapId) {
+            window.notyf.error('No map selected to export.');
+            return;
+        }
+        const mapName = els.mapSelector.options[els.mapSelector.selectedIndex].text;
+        const devices = state.nodes.get({ fields: ['id', 'deviceData'] }).map(node => ({
+            id: node.id,
+            ...node.deviceData
+        }));
+        const edges = state.edges.get({ fields: ['from', 'to', 'connection_type'] });
+        const exportData = { devices, edges };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `${mapName.replace(/\s+/g, '_')}_export.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+        window.notyf.success('Map exported successfully.');
+    });
+
     els.importBtn.addEventListener('click', () => els.importFile.click());
     els.importFile.addEventListener('change', (e) => {
         const file = e.target.files[0];
