@@ -17,6 +17,7 @@ function initDevices() {
     const deviceForm = document.getElementById('deviceForm');
     const cancelBtn = document.getElementById('cancelBtn');
     let latencyChart = null;
+    let availableMaps = []; // Cache maps list
 
     const api = {
         get: (action, params = {}) => fetch(`${API_URL}?action=${action}&${new URLSearchParams(params)}`).then(res => res.json()),
@@ -72,9 +73,26 @@ function initDevices() {
         finally { tableLoader.classList.add('hidden'); }
     };
 
-    const openDeviceModal = (device = null) => {
+    const populateMapSelector = async (selectElement, selectedMapId) => {
+        if (availableMaps.length === 0) {
+            try {
+                availableMaps = await api.get('get_maps');
+            } catch (e) {
+                console.error("Could not fetch maps for selector", e);
+                return;
+            }
+        }
+        selectElement.innerHTML = `
+            <option value="">Unassigned</option>
+            ${availableMaps.map(map => `<option value="${map.id}" ${map.id == selectedMapId ? 'selected' : ''}>${map.name}</option>`).join('')}
+        `;
+    };
+
+    const openDeviceModal = async (device = null) => {
         deviceForm.reset();
         document.getElementById('deviceId').value = '';
+        const mapSelector = document.getElementById('deviceMap');
+        
         if (device) {
             document.getElementById('modalTitle').textContent = 'Edit Device';
             document.getElementById('deviceId').value = device.id;
@@ -82,8 +100,10 @@ function initDevices() {
             document.getElementById('deviceIp').value = device.ip;
             document.getElementById('checkPort').value = device.check_port;
             document.getElementById('deviceType').value = device.type;
+            await populateMapSelector(mapSelector, device.map_id);
         } else {
             document.getElementById('modalTitle').textContent = 'Create Device';
+            await populateMapSelector(mapSelector, null);
         }
         deviceModal.classList.remove('hidden');
     };
@@ -213,8 +233,8 @@ function initDevices() {
         }
 
         if (button.classList.contains('edit-device-btn')) {
-            const device = await api.get('get_device_details', { id: deviceId });
-            openDeviceModal(device.device);
+            const deviceDetails = await api.get('get_device_details', { id: deviceId });
+            await openDeviceModal(deviceDetails.device);
         }
 
         if (button.classList.contains('check-device-btn')) {
@@ -262,7 +282,7 @@ function initDevices() {
     });
 
     closeDetailsModal.addEventListener('click', () => detailsModal.classList.add('hidden'));
-    createDeviceBtn.addEventListener('click', () => openDeviceModal());
+    createDeviceBtn.addEventListener('click', async () => await openDeviceModal());
     cancelBtn.addEventListener('click', () => deviceModal.classList.add('hidden'));
 
     loadDevices();
