@@ -28,18 +28,19 @@ if (session_status() === PHP_SESSION_NONE) {
                     </a>
                 </div>
                 <div class="hidden md:block">
-                    <div id="main-nav" class="ml-10 flex items-baseline space-x-4">
-                        <a href="index.php" class="px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
-                        <a href="devices.php" class="px-3 py-2 rounded-md text-sm font-medium">Devices</a>
-                        <a href="history.php" class="px-3 py-2 rounded-md text-sm font-medium">History</a>
-                        <a href="map.php" class="px-3 py-2 rounded-md text-sm font-medium">Map</a>
-                        <a href="status_logs.php" class="px-3 py-2 rounded-md text-sm font-medium">Status Logs</a>
+                    <div id="main-nav" class="ml-10 flex items-baseline space-x-1">
+                        <a href="index.php" class="nav-link"><i class="fas fa-tachometer-alt fa-fw mr-2"></i>Dashboard</a>
+                        <a href="devices.php" class="nav-link"><i class="fas fa-server fa-fw mr-2"></i>Devices</a>
+                        <a href="history.php" class="nav-link"><i class="fas fa-history fa-fw mr-2"></i>History</a>
+                        <a href="map.php" class="nav-link"><i class="fas fa-project-diagram fa-fw mr-2"></i>Map</a>
+                        <a href="status_logs.php" class="nav-link"><i class="fas fa-clipboard-list fa-fw mr-2"></i>Status Logs</a>
                         <?php if (isset($_SESSION['username']) && $_SESSION['username'] === 'admin'): ?>
-                            <a href="users.php" class="px-3 py-2 rounded-md text-sm font-medium">Users</a>
+                            <a href="users.php" class="nav-link"><i class="fas fa-users-cog fa-fw mr-2"></i>Users</a>
                         <?php endif; ?>
-                        <a href="logout.php" class="px-3 py-2 rounded-md text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white">Logout</a>
+                        <a href="logout.php" class="nav-link"><i class="fas fa-sign-out-alt fa-fw mr-2"></i>Logout</a>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
+    <div class="page-content">

@@ -34,3 +34,33 @@ async function createMapSelector(containerId, onChangeCallback) {
         return null;
     }
 }
+
+/**
+ * Opens a modal with animation.
+ * @param {string} modalId - The ID of the modal element.
+ */
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hidden');
+        // Use a timeout to ensure the 'hidden' class is removed before adding 'is-open'
+        setTimeout(() => modal.classList.add('is-open'), 10);
+    }
+}
+
+/**
+ * Closes a modal with animation.
+ * @param {string} modalId - The ID of the modal element.
+ */
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('is-open');
+        // Listen for the transition to end before adding 'hidden'
+        const onTransitionEnd = () => {
+            modal.classList.add('hidden');
+            modal.removeEventListener('transitionend', onTransitionEnd);
+        };
+        modal.addEventListener('transitionend', onTransitionEnd);
+    }
+}

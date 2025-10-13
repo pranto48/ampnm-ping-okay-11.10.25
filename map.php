@@ -64,8 +64,8 @@ include 'header.php';
     </div>
 
     <!-- Modals -->
-    <div id="deviceModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+    <div id="deviceModal" class="modal-backdrop hidden">
+        <div class="modal-panel bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
             <h2 id="modalTitle" class="text-xl font-semibold text-white mb-4">Add Device</h2>
             <form id="deviceForm">
                 <input type="hidden" id="deviceId" name="id">
@@ -174,8 +174,8 @@ include 'header.php';
         </div>
     </div>
 
-    <div id="edgeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
+    <div id="edgeModal" class="modal-backdrop hidden">
+        <div class="modal-panel bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-sm">
             <h2 class="text-xl font-semibold text-white mb-4">Edit Connection</h2>
             <form id="edgeForm">
                 <input type="hidden" id="edgeId">
@@ -190,8 +190,8 @@ include 'header.php';
         </div>
     </div>
 
-    <div id="scanModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-2xl border border-slate-700">
+    <div id="scanModal" class="modal-backdrop hidden">
+        <div class="modal-panel bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-2xl border border-slate-700">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-semibold text-white">Scan Network for Devices</h2>
                 <button id="closeScanModal" class="text-slate-400 hover:text-white text-2xl">&times;</button>
@@ -216,8 +216,8 @@ include 'header.php';
         </div>
     </div>
 
-    <div id="mapSettingsModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
-        <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-slate-700">
+    <div id="mapSettingsModal" class="modal-backdrop hidden">
+        <div class="modal-panel bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-slate-700">
             <h2 class="text-xl font-semibold text-white mb-4">Map Appearance Settings</h2>
             <form id="mapSettingsForm">
                 <div class="space-y-4">
@@ -251,8 +251,8 @@ include 'header.php';
     </div>
     
     <!-- Place Device Modal -->
-    <div id="placeDeviceModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
-        <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-slate-700">
+    <div id="placeDeviceModal" class="modal-backdrop hidden">
+        <div class="modal-panel bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-slate-700">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-semibold text-white">Place an Existing Device</h2>
                 <button id="closePlaceDeviceModal" class="text-slate-400 hover:text-white text-2xl">&times;</button>

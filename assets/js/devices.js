@@ -114,7 +114,7 @@ function initDevices() {
             document.getElementById('modalTitle').textContent = 'Create Device';
             await populateMapSelector(mapSelector, null);
         }
-        deviceModal.classList.remove('hidden');
+        openModal('deviceModal');
     };
 
     deviceForm.addEventListener('submit', async (e) => {
@@ -133,7 +133,7 @@ function initDevices() {
                 await api.post('create_device', data);
                 window.notyf.success('Device created.');
             }
-            deviceModal.classList.add('hidden');
+            closeModal('deviceModal');
             loadDevices();
         } catch (error) {
             window.notyf.error('Failed to save device.');
@@ -141,7 +141,7 @@ function initDevices() {
     });
 
     const openDetailsModal = async (deviceId) => {
-        detailsModal.classList.remove('hidden');
+        openModal('detailsModal');
         detailsModalContent.classList.add('hidden');
         detailsModalLoader.classList.remove('hidden');
         if (latencyChart) latencyChart.destroy();
@@ -291,9 +291,9 @@ function initDevices() {
         }
     });
 
-    closeDetailsModal.addEventListener('click', () => detailsModal.classList.add('hidden'));
+    closeDetailsModal.addEventListener('click', () => closeModal('detailsModal'));
     createDeviceBtn.addEventListener('click', async () => await openDeviceModal());
-    cancelBtn.addEventListener('click', () => deviceModal.classList.add('hidden'));
+    cancelBtn.addEventListener('click', () => closeModal('deviceModal'));
 
     loadDevices();
 }

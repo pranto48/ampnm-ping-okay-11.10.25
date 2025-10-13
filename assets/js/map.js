@@ -143,7 +143,7 @@ function initMap() {
                 state.nodes.add(visNode);
                 window.notyf.success('Item created.');
             }
-            els.deviceModal.classList.add('hidden');
+            closeModal('deviceModal');
         } catch (error) {
             console.error("Failed to save device:", error);
             window.notyf.error(error.message || "An error occurred while saving.");
@@ -196,7 +196,7 @@ function initMap() {
         const id = document.getElementById('edgeId').value;
         const connection_type = document.getElementById('connectionType').value;
         await api.post('update_edge', { id, connection_type });
-        els.edgeModal.classList.add('hidden');
+        closeModal('edgeModal');
         state.edges.update({ id, connection_type, label: connection_type });
         window.notyf.success('Connection updated.');
     });
@@ -221,7 +221,7 @@ function initMap() {
     els.scanResults.addEventListener('click', (e) => {
         if (e.target.classList.contains('add-scanned-device-btn')) {
             const { ip, name } = e.target.dataset;
-            els.scanModal.classList.add('hidden');
+            closeModal('scanModal');
             MapApp.ui.openDeviceModal(null, { ip, name });
             e.target.textContent = 'Added';
             e.target.disabled = true;
@@ -334,19 +334,19 @@ function initMap() {
     });
     els.mapSelector.addEventListener('change', (e) => mapManager.switchMap(e.target.value));
     els.addDeviceBtn.addEventListener('click', () => MapApp.ui.openDeviceModal());
-    els.cancelBtn.addEventListener('click', () => els.deviceModal.classList.add('hidden'));
+    els.cancelBtn.addEventListener('click', () => closeModal('deviceModal'));
     els.addEdgeBtn.addEventListener('click', () => {
         state.network.addEdgeMode();
         window.notyf.info('Click on a node to start a connection.');
     });
-    els.cancelEdgeBtn.addEventListener('click', () => els.edgeModal.classList.add('hidden'));
-    els.scanNetworkBtn.addEventListener('click', () => els.scanModal.classList.remove('hidden'));
-    els.closeScanModal.addEventListener('click', () => els.scanModal.classList.add('hidden'));
+    els.cancelEdgeBtn.addEventListener('click', () => closeModal('edgeModal'));
+    els.scanNetworkBtn.addEventListener('click', () => openModal('scanModal'));
+    els.closeScanModal.addEventListener('click', () => closeModal('scanModal'));
     document.getElementById('deviceType').addEventListener('change', (e) => MapApp.ui.toggleDeviceModalFields(e.target.value));
 
     // Place Device Modal Logic
     els.placeDeviceBtn.addEventListener('click', async () => {
-        els.placeDeviceModal.classList.remove('hidden');
+        openModal('placeDeviceModal');
         els.placeDeviceLoader.classList.remove('hidden');
         els.placeDeviceList.innerHTML = '';
         try {
@@ -373,7 +373,7 @@ function initMap() {
             els.placeDeviceLoader.classList.add('hidden');
         }
     });
-    els.closePlaceDeviceModal.addEventListener('click', () => els.placeDeviceModal.classList.add('hidden'));
+    els.closePlaceDeviceModal.addEventListener('click', () => closeModal('placeDeviceModal'));
     els.placeDeviceList.addEventListener('click', async (e) => {
         if (e.target.classList.contains('place-device-item-btn')) {
             const deviceId = e.target.dataset.id;
@@ -420,10 +420,10 @@ function initMap() {
             document.getElementById('mapBgColor').value = currentMap.background_color || '#1e293b';
             document.getElementById('mapBgColorHex').value = currentMap.background_color || '#1e293b';
             document.getElementById('mapBgImageUrl').value = currentMap.background_image_url || '';
-            els.mapSettingsModal.classList.remove('hidden');
+            openModal('mapSettingsModal');
         }
     });
-    els.cancelMapSettingsBtn.addEventListener('click', () => els.mapSettingsModal.classList.add('hidden'));
+    els.cancelMapSettingsBtn.addEventListener('click', () => closeModal('mapSettingsModal'));
     document.getElementById('mapBgColor').addEventListener('input', (e) => {
         document.getElementById('mapBgColorHex').value = e.target.value;
     });
@@ -439,7 +439,7 @@ function initMap() {
         await api.post('update_map', { id: state.currentMapId, updates });
         await mapManager.loadMaps(); // Reload maps to get fresh data
         await mapManager.switchMap(state.currentMapId); // Re-apply settings
-        els.mapSettingsModal.classList.add('hidden');
+        closeModal('mapSettingsModal');
         window.notyf.success('Map settings saved.');
     });
     els.resetMapBgBtn.addEventListener('click', async () => {
@@ -447,7 +447,7 @@ function initMap() {
         await api.post('update_map', { id: state.currentMapId, updates });
         await mapManager.loadMaps();
         await mapManager.switchMap(state.currentMapId);
-        els.mapSettingsModal.classList.add('hidden');
+        closeModal('mapSettingsModal');
         window.notyf.success('Map background reset to default.');
     });
     els.mapBgUpload.addEventListener('change', async (e) => {

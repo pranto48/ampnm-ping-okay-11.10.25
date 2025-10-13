@@ -44,8 +44,8 @@ include 'header.php';
     </div>
 
     <!-- Device Details Modal -->
-    <div id="detailsModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
-        <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-3xl border border-slate-700 transform transition-all">
+    <div id="detailsModal" class="modal-backdrop hidden">
+        <div class="modal-panel bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-3xl border border-slate-700">
             <div class="flex items-center justify-between mb-4">
                 <h2 id="detailsModalTitle" class="text-2xl font-semibold text-white"></h2>
                 <button id="closeDetailsModal" class="text-slate-400 hover:text-white text-2xl">&times;</button>
@@ -56,8 +56,8 @@ include 'header.php';
     </div>
 
     <!-- Add/Edit Device Modal -->
-    <div id="deviceModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div id="deviceModal" class="modal-backdrop hidden">
+        <div class="modal-panel bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 id="modalTitle" class="text-xl font-semibold text-white mb-4">Add Device</h2>
             <form id="deviceForm">
                 <input type="hidden" id="deviceId" name="id">
