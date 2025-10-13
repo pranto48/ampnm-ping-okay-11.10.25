@@ -47,8 +47,8 @@ MapApp.network = {
                     ${node.deviceData.ip ? `<div class="context-menu-item" data-action="ping" data-id="${nodeId}"><i class="fas fa-sync fa-fw mr-2"></i>Check Status</div>` : ''}
                     <div class="context-menu-item" data-action="delete" data-id="${nodeId}" style="color: #ef4444;"><i class="fas fa-trash-alt fa-fw mr-2"></i>Delete</div>
                 `;
-                contextMenu.style.left = `${params.event.pageX}px`;
-                contextMenu.style.top = `${params.event.pageY}px`;
+                contextMenu.style.left = `${params.pointer.DOM.x}px`;
+                contextMenu.style.top = `${params.pointer.DOM.y}px`;
                 contextMenu.style.display = 'block';
                 document.addEventListener('click', closeContextMenu, { once: true });
             } else if (edgeId) {
@@ -56,8 +56,8 @@ MapApp.network = {
                     <div class="context-menu-item" data-action="edit-edge" data-id="${edgeId}"><i class="fas fa-edit fa-fw mr-2"></i>Edit Connection</div>
                     <div class="context-menu-item" data-action="delete-edge" data-id="${edgeId}" style="color: #ef4444;"><i class="fas fa-trash-alt fa-fw mr-2"></i>Delete Connection</div>
                 `;
-                contextMenu.style.left = `${params.event.pageX}px`;
-                contextMenu.style.top = `${params.event.pageY}px`;
+                contextMenu.style.left = `${params.pointer.DOM.x}px`;
+                contextMenu.style.top = `${params.pointer.DOM.y}px`;
                 contextMenu.style.display = 'block';
                 document.addEventListener('click', closeContextMenu, { once: true });
             } else { 
