@@ -2,23 +2,36 @@
 // This file is included by api.php and assumes $pdo, $action, and $input are available.
 $current_user_id = $_SESSION['user_id'];
 
-function getStatusFromPingResult($device, $pingResult, $parsedResult) {
-    // Use the more reliable 'success' flag from the improved executePing function
+function getStatusFromPingResult($device, $pingResult, $parsedResult, &$details) {
     if (!$pingResult['success']) {
+        $details = 'Device offline or unreachable.';
         return 'offline';
     }
 
-    $status = 'online'; // Default to online if alive
+    $status = 'online';
+    $details = "Online with {$parsedResult['avg_time']}ms latency.";
+
     if ($device['critical_latency_threshold'] && $parsedResult['avg_time'] > $device['critical_latency_threshold']) {
         $status = 'critical';
+        $details = "Critical latency: {$parsedResult['avg_time']}ms (>{$device['critical_latency_threshold']}ms).";
     } elseif ($device['critical_packetloss_threshold'] && $parsedResult['packet_loss'] > $device['critical_packetloss_threshold']) {
         $status = 'critical';
+        $details = "Critical packet loss: {$parsedResult['packet_loss']}% (>{$device['critical_packetloss_threshold']}%).";
     } elseif ($device['warning_latency_threshold'] && $parsedResult['avg_time'] > $device['warning_latency_threshold']) {
         $status = 'warning';
+        $details = "Warning latency: {$parsedResult['avg_time']}ms (>{$device['warning_latency_threshold']}ms).";
     } elseif ($device['warning_packetloss_threshold'] && $parsedResult['packet_loss'] > $device['warning_packetloss_threshold']) {
         $status = 'warning';
+        $details = "Warning packet loss: {$parsedResult['packet_loss']}% (>{$device['warning_packetloss_threshold']}%).";
     }
     return $status;
+}
+
+function logStatusChange($pdo, $deviceId, $oldStatus, $newStatus, $details) {
+    if ($oldStatus !== $newStatus) {
+        $stmt = $pdo->prepare("INSERT INTO device_status_logs (device_id, status, details) VALUES (?, ?, ?)");
+        $stmt->execute([$deviceId, $newStatus, $details]);
+    }
 }
 
 switch ($action) {
@@ -40,6 +53,7 @@ switch ($action) {
                 $last_ttl = null;
                 $last_seen = $device['last_seen'];
                 $check_output = 'Device has no IP configured for checking.';
+                $details = '';
 
                 if (!empty($device['ip'])) {
                     if (!empty($device['check_port']) && is_numeric($device['check_port'])) {
@@ -47,11 +61,12 @@ switch ($action) {
                         $new_status = $portCheckResult['success'] ? 'online' : 'offline';
                         $last_avg_time = $portCheckResult['time'];
                         $check_output = $portCheckResult['output'];
+                        $details = $portCheckResult['success'] ? "Port {$device['check_port']} is open." : "Port {$device['check_port']} is closed.";
                     } else {
                         $pingResult = executePing($device['ip'], 1);
                         savePingResult($pdo, $device['ip'], $pingResult);
                         $parsedResult = parsePingOutput($pingResult['output']);
-                        $new_status = getStatusFromPingResult($device, $pingResult, $parsedResult);
+                        $new_status = getStatusFromPingResult($device, $pingResult, $parsedResult, $details);
                         $last_avg_time = $parsedResult['avg_time'] ?? null;
                         $last_ttl = $parsedResult['ttl'] ?? null;
                         $check_output = $pingResult['output'];
@@ -60,6 +75,7 @@ switch ($action) {
                 
                 if ($new_status !== 'offline') { $last_seen = date('Y-m-d H:i:s'); }
                 
+                logStatusChange($pdo, $device['id'], $old_status, $new_status, $details);
                 $updateStmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
                 $updateStmt->execute([$new_status, $last_seen, $last_avg_time, $last_ttl, $device['id'], $current_user_id]);
 
@@ -90,11 +106,13 @@ switch ($action) {
             
             if (!$device) { http_response_code(404); echo json_encode(['error' => 'Device not found']); exit; }
 
+            $old_status = $device['status'];
             $status = 'unknown';
             $last_seen = $device['last_seen'];
             $last_avg_time = null;
             $last_ttl = null;
             $check_output = 'Device has no IP configured for checking.';
+            $details = '';
 
             if (!empty($device['ip'])) {
                 if (!empty($device['check_port']) && is_numeric($device['check_port'])) {
@@ -102,11 +120,12 @@ switch ($action) {
                     $status = $portCheckResult['success'] ? 'online' : 'offline';
                     $last_avg_time = $portCheckResult['time'];
                     $check_output = $portCheckResult['output'];
+                    $details = $portCheckResult['success'] ? "Port {$device['check_port']} is open." : "Port {$device['check_port']} is closed.";
                 } else {
                     $pingResult = executePing($device['ip'], 1);
                     savePingResult($pdo, $device['ip'], $pingResult);
                     $parsedResult = parsePingOutput($pingResult['output']);
-                    $status = getStatusFromPingResult($device, $pingResult, $parsedResult);
+                    $status = getStatusFromPingResult($device, $pingResult, $parsedResult, $details);
                     $last_avg_time = $parsedResult['avg_time'] ?? null;
                     $last_ttl = $parsedResult['ttl'] ?? null;
                     $check_output = $pingResult['output'];
@@ -115,6 +134,7 @@ switch ($action) {
             
             if ($status !== 'offline') { $last_seen = date('Y-m-d H:i:s'); }
             
+            logStatusChange($pdo, $deviceId, $old_status, $status, $details);
             $stmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
             $stmt->execute([$status, $last_seen, $last_avg_time, $last_ttl, $deviceId, $current_user_id]);
             

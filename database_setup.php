@@ -146,6 +146,15 @@ try {
             FOREIGN KEY (`source_id`) REFERENCES `devices`(`id`) ON DELETE CASCADE,
             FOREIGN KEY (`target_id`) REFERENCES `devices`(`id`) ON DELETE CASCADE,
             FOREIGN KEY (`map_id`) REFERENCES `maps`(`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        "CREATE TABLE IF NOT EXISTS `device_status_logs` (
+            `id` INT(10) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `device_id` INT(6) UNSIGNED NOT NULL,
+            `status` ENUM('online', 'offline', 'unknown', 'warning', 'critical') NOT NULL,
+            `details` VARCHAR(255) NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (`device_id`) REFERENCES `devices`(`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
     ];
 
@@ -226,7 +235,8 @@ try {
             'idx_ip' => '(`ip`)',
             'idx_map_id' => '(`map_id`)',
             'idx_user_id' => '(`user_id`)'
-        ]
+        ],
+        'device_status_logs' => ['idx_device_created' => '(`device_id`, `created_at` DESC)']
     ];
 
     foreach ($indexes as $table => $indexList) {

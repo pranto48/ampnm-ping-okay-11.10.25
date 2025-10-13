@@ -12,7 +12,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
@@ -33,6 +33,7 @@ if (session_status() === PHP_SESSION_NONE) {
                         <a href="devices.php" class="px-3 py-2 rounded-md text-sm font-medium">Devices</a>
                         <a href="history.php" class="px-3 py-2 rounded-md text-sm font-medium">History</a>
                         <a href="map.php" class="px-3 py-2 rounded-md text-sm font-medium">Map</a>
+                        <a href="status_logs.php" class="px-3 py-2 rounded-md text-sm font-medium">Status Logs</a>
                         <?php if (isset($_SESSION['username']) && $_SESSION['username'] === 'admin'): ?>
                             <a href="users.php" class="px-3 py-2 rounded-md text-sm font-medium">Users</a>
                         <?php endif; ?>

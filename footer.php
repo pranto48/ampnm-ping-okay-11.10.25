@@ -20,6 +20,7 @@
     <script src="assets/js/map.js"></script>
     
     <script src="assets/js/users.js"></script>
+    <script src="assets/js/status_logs.js"></script>
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -56,6 +57,8 @@
             initMap();
         } else if (page === 'users.php') {
             initUsers();
+        } else if (page === 'status_logs.php') {
+            initStatusLogs();
         }
     });
     </script>
