@@ -3,7 +3,7 @@ window.MapApp = window.MapApp || {};
 const onlineSound = new Audio('assets/sounds/online.mp3');
 const warningSound = new Audio('assets/sounds/warning.mp3');
 const criticalSound = new Audio('assets/sounds/critical.mp3');
-const offlineSound = new Audio('assets/sounds/critical.mp3'); // Re-using critical sound for offline
+const offlineSound = new Audio('assets/sounds/offline.mp3');
 
 MapApp.deviceManager = {
     pingSingleDevice: async (deviceId) => {
