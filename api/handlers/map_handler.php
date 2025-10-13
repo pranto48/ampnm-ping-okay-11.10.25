@@ -116,12 +116,33 @@ switch ($action) {
 
                 // Insert new devices
                 $device_id_map = [];
-                $sql = "INSERT INTO devices (user_id, name, ip, type, x, y, map_id, ping_interval, icon_size, name_text_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO devices (
+                    user_id, name, ip, check_port, type, x, y, map_id, 
+                    ping_interval, icon_size, name_text_size, icon_url, 
+                    warning_latency_threshold, warning_packetloss_threshold, 
+                    critical_latency_threshold, critical_packetloss_threshold, 
+                    show_live_ping
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $pdo->prepare($sql);
                 foreach ($devices as $device) {
                     $stmt->execute([
-                        $current_user_id, $device['name'], $device['ip'], $device['type'], $device['x'], $device['y'], $map_id,
-                        $device['ping_interval'] ?? null, $device['icon_size'] ?? 50, $device['name_text_size'] ?? 14
+                        $current_user_id,
+                        $device['name'] ?? 'Unnamed Device',
+                        $device['ip'] ?? null,
+                        $device['check_port'] ?? null,
+                        $device['type'] ?? 'other',
+                        $device['x'] ?? null,
+                        $device['y'] ?? null,
+                        $map_id,
+                        $device['ping_interval'] ?? null,
+                        $device['icon_size'] ?? 50,
+                        $device['name_text_size'] ?? 14,
+                        $device['icon_url'] ?? null,
+                        $device['warning_latency_threshold'] ?? null,
+                        $device['warning_packetloss_threshold'] ?? null,
+                        $device['critical_latency_threshold'] ?? null,
+                        $device['critical_packetloss_threshold'] ?? null,
+                        ($device['show_live_ping'] ?? false) ? 1 : 0
                     ]);
                     $new_id = $pdo->lastInsertId();
                     $device_id_map[$device['id']] = $new_id;
