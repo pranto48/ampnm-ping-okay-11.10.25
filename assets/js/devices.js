@@ -239,7 +239,26 @@ function initDevices() {
     });
 
     bulkCheckBtn.addEventListener('click', async () => {
-        window.notyf.error('Bulk check must be initiated from a specific map page.');
+        const icon = bulkCheckBtn.querySelector('i');
+        icon.classList.add('fa-spin');
+        bulkCheckBtn.disabled = true;
+        window.notyf.info('Starting global device status check...');
+    
+        try {
+            const result = await api.post('check_all_devices_globally');
+            if (result.success) {
+                window.notyf.success(`${result.message} ${result.status_changes} status changes detected.`);
+                await loadDevices(); // Refresh the table to show new statuses
+            } else {
+                throw new Error(result.error || 'Unknown error during bulk check.');
+            }
+        } catch (error) {
+            console.error('Bulk check failed:', error);
+            window.notyf.error('Global device check failed.');
+        } finally {
+            icon.classList.remove('fa-spin');
+            bulkCheckBtn.disabled = false;
+        }
     });
 
     closeDetailsModal.addEventListener('click', () => detailsModal.classList.add('hidden'));
