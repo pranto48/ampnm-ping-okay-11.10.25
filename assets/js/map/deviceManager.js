@@ -3,6 +3,7 @@ window.MapApp = window.MapApp || {};
 const onlineSound = new Audio('assets/sounds/online.mp3');
 const warningSound = new Audio('assets/sounds/warning.mp3');
 const criticalSound = new Audio('assets/sounds/critical.mp3');
+const offlineSound = new Audio('assets/sounds/critical.mp3'); // Re-using critical sound for offline
 
 MapApp.deviceManager = {
     pingSingleDevice: async (deviceId) => {
@@ -19,6 +20,8 @@ MapApp.deviceManager = {
                 warningSound.play();
             } else if (newStatus === 'critical') {
                 criticalSound.play();
+            } else if (newStatus === 'offline') {
+                offlineSound.play();
             } else if (newStatus === 'online' && (oldStatus === 'offline' || oldStatus === 'critical' || oldStatus === 'warning')) {
                 onlineSound.play();
             }
@@ -59,6 +62,8 @@ MapApp.deviceManager = {
                         warningSound.play();
                     } else if (device.status === 'critical') {
                         criticalSound.play();
+                    } else if (device.status === 'offline') {
+                        offlineSound.play();
                     } else if (device.status === 'online' && (device.old_status === 'offline' || device.old_status === 'critical' || device.old_status === 'warning')) {
                         onlineSound.play();
                     }
