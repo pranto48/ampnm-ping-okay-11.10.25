@@ -100,6 +100,15 @@ function initDevices() {
             document.getElementById('deviceIp').value = device.ip;
             document.getElementById('checkPort').value = device.check_port;
             document.getElementById('deviceType').value = device.type;
+            document.getElementById('icon_url').value = device.icon_url || '';
+            document.getElementById('pingInterval').value = device.ping_interval;
+            document.getElementById('iconSize').value = device.icon_size;
+            document.getElementById('nameTextSize').value = device.name_text_size;
+            document.getElementById('warning_latency_threshold').value = device.warning_latency_threshold;
+            document.getElementById('warning_packetloss_threshold').value = device.warning_packetloss_threshold;
+            document.getElementById('critical_latency_threshold').value = device.critical_latency_threshold;
+            document.getElementById('critical_packetloss_threshold').value = device.critical_packetloss_threshold;
+            document.getElementById('showLivePing').checked = device.show_live_ping;
             await populateMapSelector(mapSelector, device.map_id);
         } else {
             document.getElementById('modalTitle').textContent = 'Create Device';
@@ -112,6 +121,7 @@ function initDevices() {
         e.preventDefault();
         const formData = new FormData(deviceForm);
         const data = Object.fromEntries(formData.entries());
+        data.show_live_ping = document.getElementById('showLivePing').checked;
         const id = data.id;
         delete data.id;
 
