@@ -4,12 +4,18 @@ function initDevices() {
     const bulkCheckBtn = document.getElementById('bulkCheckBtn');
     const tableLoader = document.getElementById('tableLoader');
     const noDevicesMessage = document.getElementById('noDevicesMessage');
+    const createDeviceBtn = document.getElementById('createDeviceBtn');
 
+    // Modals
     const detailsModal = document.getElementById('detailsModal');
     const detailsModalTitle = document.getElementById('detailsModalTitle');
     const detailsModalContent = document.getElementById('detailsModalContent');
     const detailsModalLoader = document.getElementById('detailsModalLoader');
     const closeDetailsModal = document.getElementById('closeDetailsModal');
+    
+    const deviceModal = document.getElementById('deviceModal');
+    const deviceForm = document.getElementById('deviceForm');
+    const cancelBtn = document.getElementById('cancelBtn');
     let latencyChart = null;
 
     const api = {
@@ -29,16 +35,20 @@ function initDevices() {
         const statusClass = statusClasses[device.status] || statusClasses.unknown;
         const statusIndicatorClass = `status-indicator status-${device.status}`;
         const lastSeen = device.last_seen ? new Date(device.last_seen).toLocaleString() : 'Never';
+        const mapLink = device.map_id ? `<a href="map.php?map_id=${device.map_id}" class="text-cyan-400 hover:underline">${device.map_name}</a>` : '<span class="text-slate-500">Unassigned</span>';
+        const viewOnMapLink = device.map_id ? `<a href="map.php?map_id=${device.map_id}&edit_device_id=${device.id}" class="text-cyan-400 hover:text-cyan-300 mr-3" title="View on Map"><i class="fas fa-map-marked-alt"></i></a>` : `<span class="text-slate-600 mr-3" title="Not on a map"><i class="fas fa-map-marked-alt"></i></span>`;
 
         return `
             <tr data-id="${device.id}" class="border-b border-slate-700 hover:bg-slate-800/50">
                 <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-white">${device.name}</div><div class="text-sm text-slate-400 capitalize">${device.type}</div></td>
                 <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-slate-400 font-mono">${device.ip || 'N/A'}</div></td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">${mapLink}</td>
                 <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex items-center gap-2 text-xs leading-5 font-semibold rounded-full ${statusClass}"><div class="${statusIndicatorClass}"></div>${device.status}</span></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400">${lastSeen}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button class="details-device-btn text-cyan-400 hover:text-cyan-300 mr-3" data-id="${device.id}" title="View Details"><i class="fas fa-chart-line"></i></button>
-                    <a href="map.php?map_id=${device.map_id}&edit_device_id=${device.id}" class="text-yellow-400 hover:text-yellow-300 mr-3" title="Edit Device"><i class="fas fa-edit"></i></a>
+                    <button class="details-device-btn text-blue-400 hover:text-blue-300 mr-3" data-id="${device.id}" title="View Details"><i class="fas fa-chart-line"></i></button>
+                    ${viewOnMapLink}
+                    <button class="edit-device-btn text-yellow-400 hover:text-yellow-300 mr-3" data-id="${device.id}" title="Edit Device"><i class="fas fa-edit"></i></button>
                     <button class="check-device-btn text-green-400 hover:text-green-300 mr-3" data-id="${device.id}" title="Check Status"><i class="fas fa-sync"></i></button>
                     <button class="delete-device-btn text-red-500 hover:text-red-400" data-id="${device.id}" title="Delete Device"><i class="fas fa-trash"></i></button>
                 </td>
@@ -46,13 +56,13 @@ function initDevices() {
         `;
     };
 
-    const loadDevices = async (mapId) => {
+    const loadDevices = async () => {
         tableLoader.classList.remove('hidden');
         noDevicesMessage.classList.add('hidden');
         devicesTableBody.innerHTML = '';
         
         try {
-            const devices = await api.get('get_devices', mapId ? { map_id: mapId } : {});
+            const devices = await api.get('get_devices');
             if (devices.length > 0) {
                 devicesTableBody.innerHTML = devices.map(renderDeviceRow).join('');
             } else {
@@ -61,6 +71,44 @@ function initDevices() {
         } catch (error) { console.error('Failed to load devices:', error); }
         finally { tableLoader.classList.add('hidden'); }
     };
+
+    const openDeviceModal = (device = null) => {
+        deviceForm.reset();
+        document.getElementById('deviceId').value = '';
+        if (device) {
+            document.getElementById('modalTitle').textContent = 'Edit Device';
+            document.getElementById('deviceId').value = device.id;
+            document.getElementById('deviceName').value = device.name;
+            document.getElementById('deviceIp').value = device.ip;
+            document.getElementById('checkPort').value = device.check_port;
+            document.getElementById('deviceType').value = device.type;
+        } else {
+            document.getElementById('modalTitle').textContent = 'Create Device';
+        }
+        deviceModal.classList.remove('hidden');
+    };
+
+    deviceForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(deviceForm);
+        const data = Object.fromEntries(formData.entries());
+        const id = data.id;
+        delete data.id;
+
+        try {
+            if (id) {
+                await api.post('update_device', { id, updates: data });
+                window.notyf.success('Device updated.');
+            } else {
+                await api.post('create_device', data);
+                window.notyf.success('Device created.');
+            }
+            deviceModal.classList.add('hidden');
+            loadDevices();
+        } catch (error) {
+            window.notyf.error('Failed to save device.');
+        }
+    });
 
     const openDetailsModal = async (deviceId) => {
         detailsModal.classList.remove('hidden');
@@ -94,7 +142,7 @@ function initDevices() {
                         <h3 class="text-lg font-semibold text-white mb-2 border-b border-slate-700 pb-1">Configuration</h3>
                         <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                             <strong class="text-slate-400">Type:</strong> <span class="text-white capitalize">${device.type}</span>
-                            <strong class="text-slate-400">Map:</strong> <span class="text-white">${device.map_name}</span>
+                            <strong class="text-slate-400">Map:</strong> <span class="text-white">${device.map_name || 'Unassigned'}</span>
                             <strong class="text-slate-400">Ping Interval:</strong> <span class="text-white">${device.ping_interval ? `${device.ping_interval}s` : 'Disabled'}</span>
                             <strong class="text-slate-400">Live Ping:</strong> <span class="text-white">${device.show_live_ping ? 'Enabled' : 'Disabled'}</span>
                         </div>
@@ -164,14 +212,18 @@ function initDevices() {
             openDetailsModal(deviceId);
         }
 
+        if (button.classList.contains('edit-device-btn')) {
+            const device = await api.get('get_device_details', { id: deviceId });
+            openDeviceModal(device.device);
+        }
+
         if (button.classList.contains('check-device-btn')) {
             const icon = button.querySelector('i');
             icon.classList.add('fa-spin');
             button.disabled = true;
             try {
                 await api.post('check_device', { id: deviceId });
-                const currentMapId = document.getElementById('mapSelector')?.value;
-                await loadDevices(currentMapId);
+                await loadDevices();
             } catch (error) { console.error('Failed to check device:', error); }
             finally { button.disabled = false; icon.classList.remove('fa-spin'); }
         }
@@ -187,47 +239,12 @@ function initDevices() {
     });
 
     bulkCheckBtn.addEventListener('click', async () => {
-        const icon = bulkCheckBtn.querySelector('i');
-        icon.classList.add('fa-spin');
-        bulkCheckBtn.disabled = true;
-        try {
-            const mapId = document.getElementById('mapSelector')?.value;
-            if (mapId) {
-                const result = await api.post('ping_all_devices', { map_id: mapId });
-                if (result.success && result.updated_devices) {
-                    let changes = 0;
-                    result.updated_devices.forEach(device => {
-                        if (device.old_status !== device.status) {
-                            changes++;
-                            window.notyf.info(`'${device.name}' is now ${device.status}.`);
-                        }
-                    });
-                    if (changes === 0 && result.updated_devices.length > 0) {
-                        window.notyf.success('All device statuses are stable.');
-                    }
-                    await loadDevices(mapId); // Reload the table to show new statuses
-                }
-            } else {
-                window.notyf.error("Please select a map first.");
-            }
-        } catch (error) {
-            console.error('Failed to check all devices:', error);
-        } finally {
-            icon.classList.remove('fa-spin');
-            bulkCheckBtn.disabled = false;
-        }
+        window.notyf.error('Bulk check must be initiated from a specific map page.');
     });
 
     closeDetailsModal.addEventListener('click', () => detailsModal.classList.add('hidden'));
+    createDeviceBtn.addEventListener('click', () => openDeviceModal());
+    cancelBtn.addEventListener('click', () => deviceModal.classList.add('hidden'));
 
-    createMapSelector('map-selector-container', loadDevices).then(selector => {
-        if (selector) {
-            const urlParams = new URLSearchParams(window.location.search);
-            const mapIdFromUrl = urlParams.get('map_id');
-            if (mapIdFromUrl) {
-                selector.value = mapIdFromUrl;
-            }
-            loadDevices(selector.value);
-        }
-    });
+    loadDevices();
 }

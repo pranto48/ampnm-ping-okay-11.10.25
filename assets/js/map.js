@@ -25,6 +25,11 @@ function initMap() {
     els.cancelMapSettingsBtn = document.getElementById('cancelMapSettingsBtn');
     els.resetMapBgBtn = document.getElementById('resetMapBgBtn');
     els.mapBgUpload = document.getElementById('mapBgUpload');
+    els.placeDeviceBtn = document.getElementById('placeDeviceBtn');
+    els.placeDeviceModal = document.getElementById('placeDeviceModal');
+    els.closePlaceDeviceModal = document.getElementById('closePlaceDeviceModal');
+    els.placeDeviceList = document.getElementById('placeDeviceList');
+    els.placeDeviceLoader = document.getElementById('placeDeviceLoader');
 
     // Cleanup function for SPA navigation
     window.cleanup = () => {
@@ -338,6 +343,75 @@ function initMap() {
     els.scanNetworkBtn.addEventListener('click', () => els.scanModal.classList.remove('hidden'));
     els.closeScanModal.addEventListener('click', () => els.scanModal.classList.add('hidden'));
     document.getElementById('deviceType').addEventListener('change', (e) => MapApp.ui.toggleDeviceModalFields(e.target.value));
+
+    // Place Device Modal Logic
+    els.placeDeviceBtn.addEventListener('click', async () => {
+        els.placeDeviceModal.classList.remove('hidden');
+        els.placeDeviceLoader.classList.remove('hidden');
+        els.placeDeviceList.innerHTML = '';
+        try {
+            const unmappedDevices = await api.get('get_devices', { unmapped: true });
+            if (unmappedDevices.length > 0) {
+                els.placeDeviceList.innerHTML = unmappedDevices.map(device => `
+                    <div class="flex items-center justify-between p-2 border-b border-slate-700 hover:bg-slate-700/50">
+                        <div>
+                            <div class="font-medium text-white">${device.name}</div>
+                            <div class="text-sm text-slate-400 font-mono">${device.ip || 'No IP'}</div>
+                        </div>
+                        <button class="place-device-item-btn px-3 py-1 bg-cyan-600/50 text-cyan-300 rounded-lg hover:bg-cyan-600/80 text-sm" data-id="${device.id}">
+                            Place
+                        </button>
+                    </div>
+                `).join('');
+            } else {
+                els.placeDeviceList.innerHTML = '<p class="text-center text-slate-500 py-4">No unassigned devices found.</p>';
+            }
+        } catch (error) {
+            console.error('Failed to load unmapped devices:', error);
+            els.placeDeviceList.innerHTML = '<p class="text-center text-red-400 py-4">Could not load devices.</p>';
+        } finally {
+            els.placeDeviceLoader.classList.add('hidden');
+        }
+    });
+    els.closePlaceDeviceModal.addEventListener('click', () => els.placeDeviceModal.classList.add('hidden'));
+    els.placeDeviceList.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('place-device-item-btn')) {
+            const deviceId = e.target.dataset.id;
+            e.target.disabled = true;
+            e.target.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            const viewPosition = state.network.getViewPosition();
+            const canvasPosition = state.network.canvas.DOMtoCanvas(viewPosition);
+
+            const updatedDevice = await api.post('update_device', {
+                id: deviceId,
+                updates: { map_id: state.currentMapId, x: canvasPosition.x, y: canvasPosition.y }
+            });
+
+            // Add the device to the map visually
+            const baseNode = {
+                id: updatedDevice.id, label: updatedDevice.name, title: MapApp.utils.buildNodeTitle(updatedDevice),
+                x: updatedDevice.x, y: updatedDevice.y,
+                font: { color: 'white', size: parseInt(updatedDevice.name_text_size) || 14, multi: true },
+                deviceData: updatedDevice
+            };
+            let visNode;
+            if (updatedDevice.icon_url) {
+                visNode = { ...baseNode, shape: 'image', image: updatedDevice.icon_url, size: (parseInt(updatedDevice.icon_size) || 50) / 2, color: { border: MapApp.config.statusColorMap[updatedDevice.status] || MapApp.config.statusColorMap.unknown, background: 'transparent' }, borderWidth: 3 };
+            } else if (updatedDevice.type === 'box') {
+                visNode = { ...baseNode, shape: 'box', color: { background: 'rgba(49, 65, 85, 0.5)', border: '#475569' }, margin: 20, level: -1 };
+            } else {
+                visNode = { ...baseNode, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: MapApp.config.iconMap[updatedDevice.type] || MapApp.config.iconMap.other, size: parseInt(updatedDevice.icon_size) || 50, color: MapApp.config.statusColorMap[updatedDevice.status] || MapApp.config.statusColorMap.unknown } };
+            }
+            state.nodes.add(visNode);
+            
+            window.notyf.success(`Device "${updatedDevice.name}" placed on map.`);
+            e.target.closest('.flex').remove(); // Remove from list
+            if (els.placeDeviceList.children.length === 0) {
+                els.placeDeviceList.innerHTML = '<p class="text-center text-slate-500 py-4">No unassigned devices found.</p>';
+            }
+        }
+    });
 
     // Map Settings Modal Logic
     els.mapSettingsBtn.addEventListener('click', () => {

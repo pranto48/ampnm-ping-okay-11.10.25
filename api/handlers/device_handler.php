@@ -173,7 +173,7 @@ switch ($action) {
     case 'get_device_details':
         $deviceId = $_GET['id'] ?? 0;
         if (!$deviceId) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
-        $stmt = $pdo->prepare("SELECT d.*, m.name as map_name FROM devices d JOIN maps m ON d.map_id = m.id WHERE d.id = ? AND d.user_id = ?");
+        $stmt = $pdo->prepare("SELECT d.*, m.name as map_name FROM devices d LEFT JOIN maps m ON d.map_id = m.id WHERE d.id = ? AND d.user_id = ?");
         $stmt->execute([$deviceId, $current_user_id]);
         $device = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$device) { http_response_code(404); echo json_encode(['error' => 'Device not found']); exit; }
@@ -188,6 +188,8 @@ switch ($action) {
 
     case 'get_devices':
         $map_id = $_GET['map_id'] ?? null;
+        $unmapped = isset($_GET['unmapped']);
+
         $sql = "
             SELECT 
                 d.*, 
@@ -195,7 +197,7 @@ switch ($action) {
                 p.output as last_ping_output
             FROM 
                 devices d
-            JOIN 
+            LEFT JOIN 
                 maps m ON d.map_id = m.id
             LEFT JOIN 
                 ping_results p ON p.id = (
@@ -212,6 +214,9 @@ switch ($action) {
             $sql .= " AND d.map_id = ?"; 
             $params[] = $map_id; 
         }
+        if ($unmapped) {
+            $sql .= " AND d.map_id IS NULL";
+        }
         $sql .= " ORDER BY d.created_at ASC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
@@ -224,7 +229,7 @@ switch ($action) {
             $sql = "INSERT INTO devices (user_id, name, ip, check_port, type, map_id, x, y, ping_interval, icon_size, name_text_size, icon_url, warning_latency_threshold, warning_packetloss_threshold, critical_latency_threshold, critical_packetloss_threshold, show_live_ping) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $current_user_id, $input['name'], $input['ip'] ?? null, $input['check_port'] ?? null, $input['type'], $input['map_id'],
+                $current_user_id, $input['name'], $input['ip'] ?? null, $input['check_port'] ?? null, $input['type'], $input['map_id'] ?? null,
                 $input['x'] ?? null, $input['y'] ?? null,
                 $input['ping_interval'] ?? null, $input['icon_size'] ?? 50, $input['name_text_size'] ?? 14, $input['icon_url'] ?? null,
                 $input['warning_latency_threshold'] ?? null, $input['warning_packetloss_threshold'] ?? null,
@@ -244,7 +249,7 @@ switch ($action) {
             $id = $input['id'] ?? null;
             $updates = $input['updates'] ?? [];
             if (!$id || empty($updates)) { http_response_code(400); echo json_encode(['error' => 'Device ID and updates are required']); exit; }
-            $allowed_fields = ['name', 'ip', 'check_port', 'type', 'x', 'y', 'ping_interval', 'icon_size', 'name_text_size', 'icon_url', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold', 'show_live_ping'];
+            $allowed_fields = ['name', 'ip', 'check_port', 'type', 'x', 'y', 'map_id', 'ping_interval', 'icon_size', 'name_text_size', 'icon_url', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold', 'show_live_ping'];
             $fields = []; $params = [];
             foreach ($updates as $key => $value) {
                 if (in_array($key, $allowed_fields)) {
@@ -260,7 +265,7 @@ switch ($action) {
             $params[] = $id; $params[] = $current_user_id;
             $sql = "UPDATE devices SET " . implode(', ', $fields) . " WHERE id = ? AND user_id = ?";
             $stmt = $pdo->prepare($sql); $stmt->execute($params);
-            $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ? AND user_id = ?"); $stmt->execute([$id, $current_user_id]);
+            $stmt = $pdo->prepare("SELECT d.*, m.name as map_name FROM devices d LEFT JOIN maps m ON d.map_id = m.id WHERE d.id = ? AND d.user_id = ?"); $stmt->execute([$id, $current_user_id]);
             $device = $stmt->fetch(PDO::FETCH_ASSOC); echo json_encode($device);
         }
         break;

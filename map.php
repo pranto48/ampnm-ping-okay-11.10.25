@@ -34,10 +34,11 @@ include 'header.php';
                         </div>
 
                         <div class="pl-2 ml-2 border-l border-slate-700 flex items-center gap-2">
-                            <button id="addDeviceBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Add Device"><i class="fas fa-plus"></i></button>
+                            <button id="placeDeviceBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Place Existing Device"><i class="fas fa-download"></i></button>
+                            <button id="addDeviceBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Add New Device"><i class="fas fa-plus"></i></button>
                             <button id="addEdgeBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Add Connection"><i class="fas fa-project-diagram"></i></button>
-                            <button id="exportBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Export Map"><i class="fas fa-download"></i></button>
-                            <button id="importBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Import Map"><i class="fas fa-upload"></i></button>
+                            <button id="exportBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Export Map"><i class="fas fa-file-export"></i></button>
+                            <button id="importBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Import Map"><i class="fas fa-file-import"></i></button>
                             <input type="file" id="importFile" class="hidden" accept=".json">
                             <button id="mapSettingsBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Map Settings"><i class="fas fa-cog"></i></button>
                             <button id="fullscreenBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
@@ -246,6 +247,20 @@ include 'header.php';
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+    
+    <!-- Place Device Modal -->
+    <div id="placeDeviceModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-slate-700">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-white">Place an Existing Device</h2>
+                <button id="closePlaceDeviceModal" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div id="placeDeviceList" class="max-h-96 overflow-y-auto">
+                <!-- Unmapped devices will be listed here -->
+            </div>
+            <div id="placeDeviceLoader" class="text-center py-8 hidden"><div class="loader mx-auto"></div></div>
         </div>
     </div>
 </main>
