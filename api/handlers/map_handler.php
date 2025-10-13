@@ -4,7 +4,7 @@ $current_user_id = $_SESSION['user_id'];
 
 switch ($action) {
     case 'get_maps':
-        $stmt = $pdo->prepare("SELECT m.id, m.name, m.type, m.updated_at as lastModified, (SELECT COUNT(*) FROM devices WHERE map_id = m.id AND user_id = ?) as deviceCount FROM maps m WHERE m.user_id = ? ORDER BY m.created_at ASC");
+        $stmt = $pdo->prepare("SELECT m.id, m.name, m.type, m.background_color, m.background_image_url, m.updated_at as lastModified, (SELECT COUNT(*) FROM devices WHERE map_id = m.id AND user_id = ?) as deviceCount FROM maps m WHERE m.user_id = ? ORDER BY m.created_at ASC");
         $stmt->execute([$current_user_id, $current_user_id]);
         $maps = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($maps);
@@ -24,15 +24,25 @@ switch ($action) {
     case 'update_map':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $input['id'] ?? null;
-            $name = $input['name'] ?? '';
-            if (!$id || empty($name)) { 
-                http_response_code(400); 
-                echo json_encode(['error' => 'Map ID and name are required']); 
-                exit; 
+            $updates = $input['updates'] ?? [];
+            if (!$id || empty($updates)) { http_response_code(400); echo json_encode(['error' => 'Map ID and updates are required']); exit; }
+            
+            $allowed_fields = ['name', 'background_color', 'background_image_url'];
+            $fields = []; $params = [];
+            foreach ($updates as $key => $value) {
+                if (in_array($key, $allowed_fields)) {
+                    $fields[] = "$key = ?";
+                    $params[] = ($value === '') ? null : $value;
+                }
             }
-            $stmt = $pdo->prepare("UPDATE maps SET name = ? WHERE id = ? AND user_id = ?");
-            $stmt->execute([$name, $id, $current_user_id]);
-            echo json_encode(['success' => true, 'message' => 'Map renamed successfully.']);
+
+            if (empty($fields)) { http_response_code(400); echo json_encode(['error' => 'No valid fields to update']); exit; }
+            
+            $params[] = $id; $params[] = $current_user_id;
+            $sql = "UPDATE maps SET " . implode(', ', $fields) . " WHERE id = ? AND user_id = ?";
+            $stmt = $pdo->prepare($sql); $stmt->execute($params);
+            
+            echo json_encode(['success' => true, 'message' => 'Map updated successfully.']);
         }
         break;
 
@@ -133,6 +143,63 @@ switch ($action) {
                 $pdo->rollBack();
                 http_response_code(500);
                 echo json_encode(['error' => 'Import failed: ' . $e->getMessage()]);
+            }
+        }
+        break;
+    
+    case 'upload_map_background':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $mapId = $_POST['map_id'] ?? null;
+            if (!$mapId || !isset($_FILES['backgroundFile'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Map ID and background file are required.']);
+                exit;
+            }
+    
+            $stmt = $pdo->prepare("SELECT id FROM maps WHERE id = ? AND user_id = ?");
+            $stmt->execute([$mapId, $current_user_id]);
+            if (!$stmt->fetch()) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Map not found or access denied.']);
+                exit;
+            }
+    
+            $uploadDir = __DIR__ . '/../../uploads/map_backgrounds/';
+            if (!is_dir($uploadDir)) {
+                if (!mkdir($uploadDir, 0755, true)) {
+                    http_response_code(500);
+                    echo json_encode(['error' => 'Failed to create upload directory.']);
+                    exit;
+                }
+            }
+    
+            $file = $_FILES['backgroundFile'];
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                http_response_code(500);
+                echo json_encode(['error' => 'File upload error code: ' . $file['error']]);
+                exit;
+            }
+    
+            $fileInfo = new SplFileInfo($file['name']);
+            $extension = strtolower($fileInfo->getExtension());
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'];
+            if (!in_array($extension, $allowedExtensions)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid file type.']);
+                exit;
+            }
+
+            $newFileName = 'map_' . $mapId . '_' . time() . '.' . $extension;
+            $uploadPath = $uploadDir . $newFileName;
+            $urlPath = 'uploads/map_backgrounds/' . $newFileName;
+    
+            if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+                $stmt = $pdo->prepare("UPDATE maps SET background_image_url = ? WHERE id = ? AND user_id = ?");
+                $stmt->execute([$urlPath, $mapId, $current_user_id]);
+                echo json_encode(['success' => true, 'url' => $urlPath]);
+            } else {
+                http_response_code(500);
+                echo json_encode(['error' => 'Failed to save uploaded file.']);
             }
         }
         break;

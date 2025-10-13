@@ -18,6 +18,14 @@ function initMap() {
         deviceManager
     } = MapApp;
 
+    // Add new elements to cache
+    els.mapSettingsBtn = document.getElementById('mapSettingsBtn');
+    els.mapSettingsModal = document.getElementById('mapSettingsModal');
+    els.mapSettingsForm = document.getElementById('mapSettingsForm');
+    els.cancelMapSettingsBtn = document.getElementById('cancelMapSettingsBtn');
+    els.resetMapBgBtn = document.getElementById('resetMapBgBtn');
+    els.mapBgUpload = document.getElementById('mapBgUpload');
+
     // Cleanup function for SPA navigation
     window.cleanup = () => {
         if (state.animationFrameId) {
@@ -301,7 +309,7 @@ function initMap() {
     
         if (newName && newName.trim() !== '' && newName !== currentName) {
             try {
-                await api.post('update_map', { id: state.currentMapId, name: newName });
+                await api.post('update_map', { id: state.currentMapId, updates: { name: newName } });
                 selectedOption.text = newName;
                 els.currentMapName.textContent = newName;
                 window.notyf.success('Map renamed successfully.');
@@ -330,6 +338,66 @@ function initMap() {
     els.scanNetworkBtn.addEventListener('click', () => els.scanModal.classList.remove('hidden'));
     els.closeScanModal.addEventListener('click', () => els.scanModal.classList.add('hidden'));
     document.getElementById('deviceType').addEventListener('change', (e) => MapApp.ui.toggleDeviceModalFields(e.target.value));
+
+    // Map Settings Modal Logic
+    els.mapSettingsBtn.addEventListener('click', () => {
+        const currentMap = state.maps.find(m => m.id == state.currentMapId);
+        if (currentMap) {
+            document.getElementById('mapBgColor').value = currentMap.background_color || '#1e293b';
+            document.getElementById('mapBgColorHex').value = currentMap.background_color || '#1e293b';
+            document.getElementById('mapBgImageUrl').value = currentMap.background_image_url || '';
+            els.mapSettingsModal.classList.remove('hidden');
+        }
+    });
+    els.cancelMapSettingsBtn.addEventListener('click', () => els.mapSettingsModal.classList.add('hidden'));
+    document.getElementById('mapBgColor').addEventListener('input', (e) => {
+        document.getElementById('mapBgColorHex').value = e.target.value;
+    });
+    document.getElementById('mapBgColorHex').addEventListener('input', (e) => {
+        document.getElementById('mapBgColor').value = e.target.value;
+    });
+    els.mapSettingsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const updates = {
+            background_color: document.getElementById('mapBgColorHex').value,
+            background_image_url: document.getElementById('mapBgImageUrl').value
+        };
+        await api.post('update_map', { id: state.currentMapId, updates });
+        await mapManager.loadMaps(); // Reload maps to get fresh data
+        await mapManager.switchMap(state.currentMapId); // Re-apply settings
+        els.mapSettingsModal.classList.add('hidden');
+        window.notyf.success('Map settings saved.');
+    });
+    els.resetMapBgBtn.addEventListener('click', async () => {
+        const updates = { background_color: null, background_image_url: null };
+        await api.post('update_map', { id: state.currentMapId, updates });
+        await mapManager.loadMaps();
+        await mapManager.switchMap(state.currentMapId);
+        els.mapSettingsModal.classList.add('hidden');
+        window.notyf.success('Map background reset to default.');
+    });
+    els.mapBgUpload.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const loader = document.getElementById('mapBgUploadLoader');
+        loader.classList.remove('hidden');
+        const formData = new FormData();
+        formData.append('map_id', state.currentMapId);
+        formData.append('backgroundFile', file);
+        try {
+            const res = await fetch(`${MapApp.config.API_URL}?action=upload_map_background`, { method: 'POST', body: formData });
+            const result = await res.json();
+            if (result.success) {
+                document.getElementById('mapBgImageUrl').value = result.url;
+                window.notyf.success('Image uploaded. Click Save to apply.');
+            } else { throw new Error(result.error); }
+        } catch (error) {
+            window.notyf.error('Upload failed: ' + error.message);
+        } finally {
+            loader.classList.add('hidden');
+            e.target.value = '';
+        }
+    });
 
     // Initial Load
     (async () => {

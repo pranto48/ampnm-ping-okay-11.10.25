@@ -95,6 +95,8 @@ try {
             `name` VARCHAR(100) NOT NULL,
             `type` VARCHAR(50) NOT NULL,
             `description` TEXT,
+            `background_color` VARCHAR(20) NULL,
+            `background_image_url` VARCHAR(255) NULL,
             `is_default` BOOLEAN DEFAULT FALSE,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -192,6 +194,14 @@ try {
     if (!columnExists($pdo, $dbname, 'devices', 'icon_url')) {
         $pdo->exec("ALTER TABLE `devices` ADD COLUMN `icon_url` VARCHAR(255) NULL AFTER `name_text_size`;");
         message("Upgraded 'devices' table: added 'icon_url' column for custom icons.");
+    }
+    if (!columnExists($pdo, $dbname, 'maps', 'background_color')) {
+        $pdo->exec("ALTER TABLE `maps` ADD COLUMN `background_color` VARCHAR(20) NULL AFTER `description`;");
+        message("Upgraded 'maps' table: added 'background_color' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'maps', 'background_image_url')) {
+        $pdo->exec("ALTER TABLE `maps` ADD COLUMN `background_image_url` VARCHAR(255) NULL AFTER `background_color`;");
+        message("Upgraded 'maps' table: added 'background_image_url' column.");
     }
 
     // Step 5: Check if the admin user has any maps

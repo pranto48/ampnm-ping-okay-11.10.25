@@ -14,6 +14,7 @@ MapApp.mapManager = {
 
     loadMaps: async () => {
         const maps = await MapApp.api.get('get_maps');
+        MapApp.state.maps = maps;
         MapApp.ui.els.mapSelector.innerHTML = '';
         if (maps.length > 0) {
             maps.forEach(map => { 
@@ -48,7 +49,15 @@ MapApp.mapManager = {
         }
         
         MapApp.state.currentMapId = mapId; 
-        MapApp.ui.els.currentMapName.textContent = MapApp.ui.els.mapSelector.options[MapApp.ui.els.mapSelector.selectedIndex].text;
+        const currentMap = MapApp.state.maps.find(m => m.id == mapId);
+        if (currentMap) {
+            MapApp.ui.els.currentMapName.textContent = currentMap.name;
+            const mapEl = document.getElementById('network-map');
+            mapEl.style.backgroundColor = currentMap.background_color || '';
+            mapEl.style.backgroundImage = currentMap.background_image_url ? `url(${currentMap.background_image_url})` : '';
+            mapEl.style.backgroundSize = 'cover';
+            mapEl.style.backgroundPosition = 'center';
+        }
         
         const [deviceData, edgeData] = await Promise.all([
             MapApp.api.get('get_devices', { map_id: mapId }), 

@@ -39,6 +39,7 @@ include 'header.php';
                             <button id="exportBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Export Map"><i class="fas fa-download"></i></button>
                             <button id="importBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Import Map"><i class="fas fa-upload"></i></button>
                             <input type="file" id="importFile" class="hidden" accept=".json">
+                            <button id="mapSettingsBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Map Settings"><i class="fas fa-cog"></i></button>
                             <button id="fullscreenBtn" class="px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600" title="Toggle Fullscreen"><i class="fas fa-expand"></i></button>
                         </div>
                     </div>
@@ -211,6 +212,40 @@ include 'header.php';
                     <p class="text-sm mt-2">(Requires <a href="https://nmap.org/" target="_blank" class="text-cyan-400 hover:underline">nmap</a> to be installed on the server)</p>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="mapSettingsModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-slate-700">
+            <h2 class="text-xl font-semibold text-white mb-4">Map Appearance Settings</h2>
+            <form id="mapSettingsForm">
+                <div class="space-y-4">
+                    <div>
+                        <label for="mapBgColor" class="block text-sm font-medium text-slate-400 mb-1">Background Color</label>
+                        <div class="flex items-center gap-2">
+                            <input type="color" id="mapBgColor" name="background_color" class="p-1 h-10 w-14 block bg-slate-900 border border-slate-600 cursor-pointer rounded-lg" value="#1e293b">
+                            <input type="text" id="mapBgColorHex" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="mapBgImageUrl" class="block text-sm font-medium text-slate-400 mb-1">Background Image URL</label>
+                        <input type="text" id="mapBgImageUrl" name="background_image_url" placeholder="Leave blank for no image" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div class="text-center text-slate-500 text-sm">OR</div>
+                    <div>
+                        <label for="mapBgUpload" class="block text-sm font-medium text-slate-400 mb-1">Upload Background Image</label>
+                        <input type="file" id="mapBgUpload" accept="image/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-600/20 file:text-cyan-300 hover:file:bg-cyan-600/40">
+                        <div id="mapBgUploadLoader" class="hidden mt-2"><div class="loader inline-block w-4 h-4"></div><span class="ml-2 text-sm">Uploading...</span></div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-6">
+                    <button type="button" id="resetMapBgBtn" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600">Reset to Default</button>
+                    <div>
+                        <button type="button" id="cancelMapSettingsBtn" class="px-4 py-2 bg-slate-600 text-slate-300 rounded-lg hover:bg-slate-500 mr-2">Close</button>
+                        <button type="submit" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">Save Changes</button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 </main>
