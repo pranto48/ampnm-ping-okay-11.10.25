@@ -66,6 +66,9 @@ MapApp.ui = {
     openDeviceModal: (deviceId = null, prefill = {}) => {
         MapApp.ui.els.deviceForm.reset();
         document.getElementById('deviceId').value = '';
+        const previewWrapper = document.getElementById('icon_preview_wrapper');
+        previewWrapper.classList.add('hidden');
+
         if (deviceId) {
             const node = MapApp.state.nodes.get(deviceId);
             document.getElementById('modalTitle').textContent = 'Edit Item';
@@ -74,6 +77,11 @@ MapApp.ui = {
             document.getElementById('deviceIp').value = node.deviceData.ip;
             document.getElementById('checkPort').value = node.deviceData.check_port;
             document.getElementById('deviceType').value = node.deviceData.type;
+            document.getElementById('icon_url').value = node.deviceData.icon_url || '';
+            if (node.deviceData.icon_url) {
+                document.getElementById('icon_preview').src = node.deviceData.icon_url;
+                previewWrapper.classList.remove('hidden');
+            }
             document.getElementById('pingInterval').value = node.deviceData.ping_interval;
             document.getElementById('iconSize').value = node.deviceData.icon_size;
             document.getElementById('nameTextSize').value = node.deviceData.name_text_size;

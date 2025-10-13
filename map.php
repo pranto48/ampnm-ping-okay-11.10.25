@@ -82,7 +82,7 @@ include 'header.php';
                         <p class="text-xs text-slate-500 mt-1">If set, status is based on this port. If empty, it will use ICMP (ping).</p>
                     </div>
                     <div>
-                        <label for="deviceType" class="block text-sm font-medium text-slate-400 mb-1">Type</label>
+                        <label for="deviceType" class="block text-sm font-medium text-slate-400 mb-1">Type (Default Icon)</label>
                         <select id="deviceType" name="type" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
                             <option value="box">Box (Group)</option>
                             <option value="camera">CC Camera</option>
@@ -105,6 +105,25 @@ include 'header.php';
                             <option value="other">Other</option>
                         </select>
                     </div>
+                    <fieldset class="border border-slate-600 rounded-lg p-4">
+                        <legend class="text-sm font-medium text-slate-400 px-2">Custom Icon</legend>
+                        <div class="space-y-3">
+                            <div>
+                                <label for="icon_url" class="block text-sm font-medium text-slate-400 mb-1">Icon URL</label>
+                                <input type="text" id="icon_url" name="icon_url" placeholder="Leave blank to use default icon" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                            </div>
+                            <div class="text-center text-slate-500 text-sm">OR</div>
+                            <div>
+                                <label for="icon_upload" class="block text-sm font-medium text-slate-400 mb-1">Upload Icon</label>
+                                <input type="file" id="icon_upload" name="icon_upload" accept="image/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-600/20 file:text-cyan-300 hover:file:bg-cyan-600/40">
+                                <div id="icon_upload_loader" class="hidden mt-2"><div class="loader inline-block w-4 h-4"></div><span class="ml-2 text-sm">Uploading...</span></div>
+                                <p class="text-xs text-slate-500 mt-1">Upload requires the item to be saved first.</p>
+                            </div>
+                            <div id="icon_preview_wrapper" class="hidden mt-2 text-center">
+                                <img id="icon_preview" src="" alt="Icon Preview" class="max-w-full h-16 mx-auto bg-slate-700 p-1 rounded">
+                            </div>
+                        </div>
+                    </fieldset>
                     <div id="pingIntervalWrapper">
                         <label for="pingInterval" class="block text-sm font-medium text-slate-400 mb-1">Ping Interval (seconds)</label>
                         <input type="number" id="pingInterval" name="ping_interval" placeholder="e.g., 60 (optional)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">

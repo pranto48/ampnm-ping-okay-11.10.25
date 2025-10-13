@@ -60,10 +60,30 @@ MapApp.mapManager = {
             if (d.show_live_ping && d.status === 'online' && d.last_avg_time !== null) {
                 label += `\n${d.last_avg_time}ms | TTL:${d.last_ttl || 'N/A'}`;
             }
-            if (d.type === 'box') {
-                return { id: d.id, label: d.name, title: d.name, x: d.x, y: d.y, shape: 'box', color: { background: 'rgba(49, 65, 85, 0.5)', border: '#475569' }, font: { color: 'white', size: parseInt(d.name_text_size) || 14 }, margin: 20, deviceData: d, level: -1 };
+
+            const baseNode = {
+                id: d.id, label: label, title: MapApp.utils.buildNodeTitle(d),
+                x: d.x, y: d.y,
+                font: { color: 'white', size: parseInt(d.name_text_size) || 14, multi: true },
+                deviceData: d
+            };
+
+            if (d.icon_url) {
+                return {
+                    ...baseNode,
+                    shape: 'image',
+                    image: d.icon_url,
+                    size: (parseInt(d.icon_size) || 50) / 2, // vis.js size is radius
+                    color: { border: MapApp.config.statusColorMap[d.status] || MapApp.config.statusColorMap.unknown, background: 'transparent' },
+                    borderWidth: 3
+                };
             }
-            return { id: d.id, label: label, title: MapApp.utils.buildNodeTitle(d), x: d.x, y: d.y, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: MapApp.config.iconMap[d.type] || MapApp.config.iconMap.other, size: parseInt(d.icon_size) || 50, color: MapApp.config.statusColorMap[d.status] || MapApp.config.statusColorMap.unknown }, font: { color: 'white', size: parseInt(d.name_text_size) || 14, multi: true }, deviceData: d };
+            
+            if (d.type === 'box') {
+                return { ...baseNode, shape: 'box', color: { background: 'rgba(49, 65, 85, 0.5)', border: '#475569' }, margin: 20, level: -1 };
+            }
+
+            return { ...baseNode, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: MapApp.config.iconMap[d.type] || MapApp.config.iconMap.other, size: parseInt(d.icon_size) || 50, color: MapApp.config.statusColorMap[d.status] || MapApp.config.statusColorMap.unknown } };
         });
         MapApp.state.nodes.clear(); 
         MapApp.state.nodes.add(visNodes);

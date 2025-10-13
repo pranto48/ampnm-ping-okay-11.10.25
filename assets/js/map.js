@@ -64,14 +64,27 @@ function initMap() {
                         font: { ...existingNode.font, size: parseInt(updatedDevice.name_text_size) || 14 },
                     };
 
-                    if (updatedDevice.type === 'box') {
+                    if (updatedDevice.icon_url) {
+                        Object.assign(nodeUpdate, {
+                            shape: 'image',
+                            image: updatedDevice.icon_url,
+                            size: (parseInt(updatedDevice.icon_size) || 50) / 2,
+                            color: { border: MapApp.config.statusColorMap[updatedDevice.status] || MapApp.config.statusColorMap.unknown, background: 'transparent' },
+                            borderWidth: 3
+                        });
+                        delete nodeUpdate.icon;
+                    } else if (updatedDevice.type === 'box') {
                         Object.assign(nodeUpdate, { shape: 'box' });
                     } else {
                         Object.assign(nodeUpdate, {
+                            shape: 'icon',
+                            image: null,
                             icon: {
-                                ...existingNode.icon,
+                                ...(existingNode.icon || {}),
+                                face: "'Font Awesome 6 Free'", weight: "900",
                                 code: MapApp.config.iconMap[updatedDevice.type] || MapApp.config.iconMap.other,
                                 size: parseInt(updatedDevice.icon_size) || 50,
+                                color: MapApp.config.statusColorMap[updatedDevice.status] || MapApp.config.statusColorMap.unknown
                             }
                         });
                     }
@@ -97,14 +110,23 @@ function initMap() {
                 if (data.ip === '') data.ip = null;
                 
                 const newDevice = await api.post('create_device', { ...data, map_id: state.currentMapId });
-                const visNode = {
-                    id: newDevice.id, label: newDevice.name, title: MapApp.utils.buildNodeTitle(newDevice), x: newDevice.x, y: newDevice.y,
-                    shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: MapApp.config.iconMap[newDevice.type] || MapApp.config.iconMap.other, size: parseInt(newDevice.icon_size) || 50, color: MapApp.config.statusColorMap[newDevice.status] || MapApp.config.statusColorMap.unknown },
-                    font: { color: 'white', size: parseInt(newDevice.name_text_size) || 14, multi: true }, deviceData: newDevice
+                
+                const baseNode = {
+                    id: newDevice.id, label: newDevice.name, title: MapApp.utils.buildNodeTitle(newDevice),
+                    x: newDevice.x, y: newDevice.y,
+                    font: { color: 'white', size: parseInt(newDevice.name_text_size) || 14, multi: true },
+                    deviceData: newDevice
                 };
-                if (newDevice.type === 'box') {
-                    Object.assign(visNode, { shape: 'box', color: { background: 'rgba(49, 65, 85, 0.5)', border: '#475569' }, margin: 20, level: -1 });
+
+                let visNode;
+                if (newDevice.icon_url) {
+                    visNode = { ...baseNode, shape: 'image', image: newDevice.icon_url, size: (parseInt(newDevice.icon_size) || 50) / 2, color: { border: MapApp.config.statusColorMap[newDevice.status] || MapApp.config.statusColorMap.unknown, background: 'transparent' }, borderWidth: 3 };
+                } else if (newDevice.type === 'box') {
+                    visNode = { ...baseNode, shape: 'box', color: { background: 'rgba(49, 65, 85, 0.5)', border: '#475569' }, margin: 20, level: -1 };
+                } else {
+                    visNode = { ...baseNode, shape: 'icon', icon: { face: "'Font Awesome 6 Free'", weight: "900", code: MapApp.config.iconMap[newDevice.type] || MapApp.config.iconMap.other, size: parseInt(newDevice.icon_size) || 50, color: MapApp.config.statusColorMap[newDevice.status] || MapApp.config.statusColorMap.unknown } };
                 }
+
                 state.nodes.add(visNode);
                 window.notyf.success('Item created.');
             }
@@ -112,6 +134,47 @@ function initMap() {
         } catch (error) {
             console.error("Failed to save device:", error);
             window.notyf.error(error.message || "An error occurred while saving.");
+        }
+    });
+
+    document.getElementById('icon_upload').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        const deviceId = document.getElementById('deviceId').value;
+        if (!file) return;
+        if (!deviceId) {
+            window.notyf.error('Please save the item before uploading an icon.');
+            e.target.value = '';
+            return;
+        }
+    
+        const loader = document.getElementById('icon_upload_loader');
+        loader.classList.remove('hidden');
+    
+        const formData = new FormData();
+        formData.append('id', deviceId);
+        formData.append('iconFile', file);
+    
+        try {
+            const res = await fetch(`${MapApp.config.API_URL}?action=upload_device_icon`, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await res.json();
+            if (result.success) {
+                document.getElementById('icon_url').value = result.url;
+                const previewImg = document.getElementById('icon_preview');
+                previewImg.src = result.url;
+                document.getElementById('icon_preview_wrapper').classList.remove('hidden');
+                window.notyf.success('Icon uploaded. Press Save to apply changes.');
+            } else {
+                throw new Error(result.error || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Icon upload failed:', error);
+            window.notyf.error(error.message);
+        } finally {
+            loader.classList.add('hidden');
+            e.target.value = '';
         }
     });
 

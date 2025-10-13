@@ -118,6 +118,7 @@ try {
             `ping_interval` INT(11) NULL,
             `icon_size` INT(11) DEFAULT 50,
             `name_text_size` INT(11) DEFAULT 14,
+            `icon_url` VARCHAR(255) NULL,
             `warning_latency_threshold` INT(11) NULL,
             `warning_packetloss_threshold` INT(11) NULL,
             `critical_latency_threshold` INT(11) NULL,
@@ -187,6 +188,10 @@ try {
     if (!columnExists($pdo, $dbname, 'devices', 'check_port')) {
         $pdo->exec("ALTER TABLE `devices` ADD COLUMN `check_port` INT(5) NULL AFTER `ip`;");
         message("Upgraded 'devices' table: added 'check_port' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'icon_url')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `icon_url` VARCHAR(255) NULL AFTER `name_text_size`;");
+        message("Upgraded 'devices' table: added 'icon_url' column for custom icons.");
     }
 
     // Step 5: Check if the admin user has any maps

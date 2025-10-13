@@ -9,7 +9,7 @@ $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
 // Group actions by handler
 $pingActions = ['manual_ping', 'scan_network', 'ping_device', 'get_ping_history'];
-$deviceActions = ['get_devices', 'create_device', 'update_device', 'delete_device', 'get_device_details', 'check_device', 'check_all_devices', 'ping_all_devices', 'get_device_uptime'];
+$deviceActions = ['get_devices', 'create_device', 'update_device', 'delete_device', 'get_device_details', 'check_device', 'check_all_devices', 'ping_all_devices', 'get_device_uptime', 'upload_device_icon'];
 $mapActions = ['get_maps', 'create_map', 'delete_map', 'get_edges', 'create_edge', 'update_edge', 'delete_edge', 'import_map', 'update_map'];
 $dashboardActions = ['get_dashboard_data'];
 $userActions = ['get_users', 'create_user', 'delete_user'];
