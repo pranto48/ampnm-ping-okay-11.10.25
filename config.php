@@ -6,13 +6,6 @@ define('DB_USERNAME', getenv('DB_USER') ?: 'root');
 define('DB_PASSWORD', getenv('DB_PASSWORD') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'network_monitor');
 
-// License Management Configuration
-// IMPORTANT: Replace 'http://localhost:8000/api/v1/validate-license' with the actual URL of your new PHP app's license validation API.
-define('LICENSE_API_URL', getenv('LICENSE_API_URL') ?: 'http://localhost:8000/api/v1/validate-license');
-// This will be the license key provided to your customers.
-define('LICENSE_KEY', getenv('LICENSE_KEY') ?: 'YOUR_DEFAULT_LICENSE_KEY');
-
-
 // Create database connection
 function getDbConnection() {
     static $pdo = null;

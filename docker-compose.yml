@@ -11,9 +11,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      # Add dependency on the new sales/licensing app if it provides the license API
-      # sales_licensing_app:
-      #   condition: service_healthy
+      sales_licensing_app: # Main app now depends on the licensing app
+        condition: service_healthy
     environment:
       - DB_HOST=127.0.0.1
       - DB_NAME=network_monitor
@@ -21,9 +20,9 @@ services:
       - DB_PASSWORD=password
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
-      # New: License Management Environment Variables
-      # IMPORTANT: Update LICENSE_API_URL to point to your actual sales_licensing_app API endpoint
-      - LICENSE_API_URL=http://sales_licensing_app:80/api/v1/validate-license # Example: points to the new app's internal Docker network address
+      # New: License Management Environment Variables for the main app
+      # This URL points to the license validation API of the separate sales_licensing_app service
+      - LICENSE_API_URL=http://sales_licensing_app/api/v1/validate-license
       - LICENSE_KEY=YOUR_PRODUCT_LICENSE_KEY_HERE # Replace with the actual license key for this deployment
     restart: unless-stopped
     network_mode: "host" # Keep host mode for ping functionality
@@ -47,25 +46,21 @@ services:
       timeout: 5s
       retries: 10
 
-  # Placeholder for your new PHP Sales & Licensing Application
-  # You will replace this with your actual Dockerfile and configuration for the new app.
-  # This service will manage its own Supabase connection and expose the license validation API.
   sales_licensing_app:
     build:
-      context: ./new-php-app # You'll create this directory and its Dockerfile
+      context: ./new-php-app # Points to the new directory
       dockerfile: Dockerfile
     ports:
-      - "8000:80" # Expose port 80 for the new app (or whatever port it uses)
+      - "8000:80" # Expose port 80 for the new app
     environment:
-      # Supabase credentials for the new app
+      # Supabase credentials for the new app (replace with your actual Supabase project details)
       - SUPABASE_URL=YOUR_SUPABASE_URL
       - SUPABASE_KEY=YOUR_SUPABASE_KEY
-      # Other environment variables for your new PHP app
     volumes:
       - ./new-php-app:/var/www/html # Mount your new PHP app code here
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"] # Example health check
+      test: ["CMD-SHELL", "curl -f http://localhost/api/v1/validate-license || exit 1"] # Health check for the API endpoint
       interval: 30s
       timeout: 10s
       retries: 3
