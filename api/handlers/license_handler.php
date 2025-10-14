@@ -1,5 +1,5 @@
 <?php
-// This file is included by api.php and assumes $pdo, $supabaseClient, $action, and $input are available.
+// This file is included by api.php and assumes $pdo, $action, and $input are available.
 
 // Ensure only admin can perform these actions (using PHP app's session for now)
 if ($_SESSION['username'] !== 'admin') {
@@ -11,29 +11,23 @@ if ($_SESSION['username'] !== 'admin') {
 switch ($action) {
     case 'get_licenses':
         try {
-            $response = $supabaseClient->from('licenses')
-                                       ->select('id, user_id, license_key, status, issued_at, expires_at, max_devices, current_devices')
-                                       ->order('created_at', false) // false for DESC
-                                       ->execute();
-            $licenses = $response->data;
-
-            // Fetch user emails from auth.users for display
-            $user_ids = array_column($licenses, 'user_id');
-            if (!empty($user_ids)) {
-                $user_response = $supabaseClient->from('users') // auth.users is exposed as 'users' in the client
-                                                ->select('id, email')
-                                                ->in('id', $user_ids)
-                                                ->execute();
-                $supabase_users = $user_response->data;
-                $user_email_map = [];
-                foreach ($supabase_users as $user) {
-                    $user_email_map[$user['id']] = $user['email'];
-                }
-
-                foreach ($licenses as &$license) {
-                    $license['user_email'] = $user_email_map[$license['user_id']] ?? 'N/A';
-                }
-            }
+            $stmt = $pdo->prepare("
+                SELECT 
+                    l.id, 
+                    l.user_id, 
+                    l.license_key, 
+                    l.status, 
+                    l.issued_at, 
+                    l.expires_at, 
+                    l.max_devices, 
+                    l.current_devices,
+                    u.username as user_email -- Using username as 'email' for display
+                FROM licenses l
+                JOIN users u ON l.user_id = u.id
+                ORDER BY l.created_at DESC
+            ");
+            $stmt->execute();
+            $licenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode($licenses);
         } catch (Exception $e) {
             http_response_code(500);
@@ -43,7 +37,7 @@ switch ($action) {
 
     case 'create_license':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $user_id = $input['user_id'] ?? null; // This should be a Supabase user UUID
+            $user_id = $input['user_id'] ?? null; 
             $license_key = $input['license_key'] ?? '';
             $status = $input['status'] ?? 'active';
             $issued_at = $input['issued_at'] ?? null;
@@ -58,34 +52,18 @@ switch ($action) {
 
             try {
                 // Check if license key already exists
-                $existing_license_response = $supabaseClient->from('licenses')
-                                                            ->select('id')
-                                                            ->eq('license_key', $license_key)
-                                                            ->limit(1)
-                                                            ->execute();
-                if (!empty($existing_license_response->data)) {
+                $stmt = $pdo->prepare("SELECT id FROM licenses WHERE license_key = ? LIMIT 1");
+                $stmt->execute([$license_key]);
+                if ($stmt->fetch()) {
                     http_response_code(409);
                     echo json_encode(['error' => 'License key already exists.']);
                     exit;
                 }
 
-                $data_to_insert = [
-                    'user_id' => $user_id,
-                    'license_key' => $license_key,
-                    'status' => $status,
-                    'issued_at' => $issued_at,
-                    'expires_at' => $expires_at,
-                    'max_devices' => $max_devices,
-                    'current_devices' => 0 // Default to 0
-                ];
-
-                $response = $supabaseClient->from('licenses')
-                                           ->insert($data_to_insert)
-                                           ->execute();
+                $sql = "INSERT INTO licenses (user_id, license_key, status, issued_at, expires_at, max_devices, current_devices) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$user_id, $license_key, $status, $issued_at, $expires_at, $max_devices, 0]);
                 
-                if ($response->hasError()) {
-                    throw new Exception($response->getError()->getMessage());
-                }
                 echo json_encode(['success' => true, 'message' => 'License created successfully.']);
             } catch (Exception $e) {
                 http_response_code(500);
@@ -106,35 +84,27 @@ switch ($action) {
             }
 
             $allowed_fields = ['user_id', 'license_key', 'status', 'issued_at', 'expires_at', 'max_devices', 'current_devices'];
-            $data_to_update = [];
+            $fields = [];
+            $params = [];
             foreach ($updates as $key => $value) {
                 if (in_array($key, $allowed_fields)) {
-                    $data_to_update[$key] = $value;
+                    $fields[] = "$key = ?";
+                    $params[] = $value;
                 }
             }
-            // Add updated_at manually as Supabase client doesn't auto-update it for us
-            $data_to_update['updated_at'] = date('Y-m-d H:i:s');
 
-            if (empty($data_to_update)) {
+            if (empty($fields)) {
                 http_response_code(400);
                 echo json_encode(['error' => 'No valid fields to update.']);
                 exit;
             }
-
-            try {
-                $response = $supabaseClient->from('licenses')
-                                           ->update($data_to_update)
-                                           ->eq('id', $id)
-                                           ->execute();
-                
-                if ($response->hasError()) {
-                    throw new Exception($response->getError()->getMessage());
-                }
-                echo json_encode(['success' => true, 'message' => 'License updated successfully.']);
-            } catch (Exception $e) {
-                http_response_code(500);
-                echo json_encode(['error' => 'Failed to update license: ' . $e->getMessage()]);
-            }
+            
+            $params[] = $id;
+            $sql = "UPDATE licenses SET " . implode(', ', $fields) . ", updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            echo json_encode(['success' => true, 'message' => 'License updated successfully.']);
         }
         break;
 
@@ -148,14 +118,8 @@ switch ($action) {
             }
 
             try {
-                $response = $supabaseClient->from('licenses')
-                                           ->delete()
-                                           ->eq('id', $id)
-                                           ->execute();
-                
-                if ($response->hasError()) {
-                    throw new Exception($response->getError()->getMessage());
-                }
+                $stmt = $pdo->prepare("DELETE FROM licenses WHERE id = ?");
+                $stmt->execute([$id]);
                 echo json_encode(['success' => true, 'message' => 'License deleted successfully.']);
             } catch (Exception $e) {
                 http_response_code(500);

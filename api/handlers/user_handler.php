@@ -1,5 +1,5 @@
 <?php
-// This file is included by api.php and assumes $pdo, $supabaseClient, $action, and $input are available.
+// This file is included by api.php and assumes $pdo, $action, and $input are available.
 
 // Ensure only admin can perform these actions
 if ($_SESSION['username'] !== 'admin') {
@@ -15,19 +15,7 @@ switch ($action) {
         echo json_encode($users);
         break;
 
-    case 'get_supabase_users': // New action to fetch users from Supabase
-        try {
-            $response = $supabaseClient->from('users') // 'users' is the public schema view of auth.users
-                                       ->select('id, email')
-                                       ->order('email', false) // Order by email ascending
-                                       ->execute();
-            $supabase_users = $response->data;
-            echo json_encode($supabase_users);
-        } catch (Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => 'Failed to fetch Supabase users: ' . $e->getMessage()]);
-        }
-        break;
+    // Removed 'get_supabase_users' action as it's no longer needed.
 
     case 'create_user':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

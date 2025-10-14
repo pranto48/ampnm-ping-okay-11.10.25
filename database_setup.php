@@ -188,6 +188,21 @@ try {
             UNIQUE KEY `device_recipient_unique` (`device_id`, `recipient_email`),
             FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
             FOREIGN KEY (`device_id`) REFERENCES `devices`(`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        // New table for licenses (moved from Supabase)
+        "CREATE TABLE IF NOT EXISTS `licenses` (
+            `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `user_id` INT(6) UNSIGNED NOT NULL,
+            `license_key` VARCHAR(255) NOT NULL UNIQUE,
+            `status` ENUM('active', 'free', 'expired', 'revoked') DEFAULT 'active',
+            `issued_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `expires_at` TIMESTAMP NULL,
+            `max_devices` INT(11) DEFAULT 1,
+            `current_devices` INT(11) DEFAULT 0,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
     ];
 
