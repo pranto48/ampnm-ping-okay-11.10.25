@@ -63,15 +63,16 @@ include 'header.php';
                         </div>
                     </div>
 
-                    <!-- Network Devices -->
+                    <!-- Recent Activity -->
                     <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-semibold text-white">Monitored Devices</h2>
-                            <a href="devices.php" id="manageDevicesLink" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-sm">
-                                <i class="fas fa-edit mr-2"></i>Manage
-                            </a>
+                        <h2 class="text-xl font-semibold text-white mb-4">Recent Activity</h2>
+                        <div id="recentActivityList" class="space-y-3 max-h-60 overflow-y-auto">
+                            <!-- Recent activity items will be loaded here by JS -->
                         </div>
-                        <div id="deviceList" class="space-y-3 max-h-60 overflow-y-auto"></div>
+                        <div id="noRecentActivityMessage" class="text-center py-4 text-slate-500 hidden">
+                            <i class="fas fa-bell text-4xl mb-2"></i>
+                            <p>No recent activity for this map.</p>
+                        </div>
                     </div>
                 </div>
             </div>

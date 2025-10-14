@@ -34,21 +34,30 @@ if ($action === 'get_dashboard_data') {
     $stmt->execute([$map_id, $current_user_id]);
     $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get history
+    // Get recent status logs for the map's devices
     $stmt = $pdo->prepare("
-        SELECT p.* 
-        FROM ping_results p
-        JOIN devices d ON p.host = d.ip
-        WHERE d.map_id = ? AND d.user_id = ?
-        ORDER BY p.created_at DESC 
+        SELECT 
+            dsl.created_at, 
+            dsl.status, 
+            dsl.details, 
+            d.name as device_name, 
+            d.ip as device_ip
+        FROM 
+            device_status_logs dsl
+        JOIN 
+            devices d ON dsl.device_id = d.id
+        WHERE 
+            d.map_id = ? AND d.user_id = ?
+        ORDER BY 
+            dsl.created_at DESC 
         LIMIT 5
     ");
     $stmt->execute([$map_id, $current_user_id]);
-    $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $recent_activity = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
         'stats' => $stats,
         'devices' => $devices,
-        'history' => $history
+        'recent_activity' => $recent_activity
     ]);
 }
