@@ -54,8 +54,8 @@ services:
       - "8000:80" # Expose port 80 for the new app
     environment:
       # Supabase credentials for the new app (replace with your actual Supabase project details)
-      - SUPABASE_URL=YOUR_SUPABASE_URL
-      - SUPABASE_KEY=YOUR_SUPABASE_KEY
+      - SUPABASE_URL=https://eauhhlfldgzxcwslqemu.supabase.co
+      - SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhdWhobGZsZGd6eGN3c2xxZW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3MDg5NTgsImV4cCI6MjA3MDI4NDk1OH0.4JA8LlaE3cwUDSwbzO7NsWX09KZL75UQ7W2a3EN4XMA
     volumes:
       - ./new-php-app:/var/www/html # Mount your new PHP app code here
     restart: unless-stopped
