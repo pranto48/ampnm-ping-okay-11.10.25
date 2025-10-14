@@ -78,6 +78,10 @@ include 'header.php';
                         <label for="deviceIp" class="block text-sm font-medium text-slate-400 mb-1">IP Address</label>
                         <input type="text" id="deviceIp" name="ip" placeholder="IP Address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
                     </div>
+                    <div>
+                        <label for="deviceDescription" class="block text-sm font-medium text-slate-400 mb-1">Description</label>
+                        <textarea id="deviceDescription" name="description" rows="2" placeholder="Optional notes about the device" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500"></textarea>
+                    </div>
                     <div id="devicePortWrapper">
                         <label for="checkPort" class="block text-sm font-medium text-slate-400 mb-1">Service Port (Optional)</label>
                         <input type="number" id="checkPort" name="check_port" placeholder="e.g., 80 for HTTP" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">

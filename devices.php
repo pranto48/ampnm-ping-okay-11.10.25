@@ -7,9 +7,12 @@ include 'header.php';
     <div class="container mx-auto px-4 py-8">
         <div class="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
             <h1 class="text-3xl font-bold text-white">Device Inventory</h1>
-            <button id="createDeviceBtn" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">
-                <i class="fas fa-plus mr-2"></i>Create New Device
-            </button>
+            <div class="flex items-center gap-2">
+                <input type="file" id="importDevicesFile" class="hidden" accept=".amp">
+                <button id="importDevicesBtn" class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500"><i class="fas fa-file-import mr-2"></i>Import</button>
+                <button id="exportDevicesBtn" class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500"><i class="fas fa-file-export mr-2"></i>Export All</button>
+                <button id="createDeviceBtn" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700"><i class="fas fa-plus mr-2"></i>Create New Device</button>
+            </div>
         </div>
 
         <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6">
@@ -69,6 +72,10 @@ include 'header.php';
                     <div id="deviceIpWrapper">
                         <label for="deviceIp" class="block text-sm font-medium text-slate-400 mb-1">IP Address</label>
                         <input type="text" id="deviceIp" name="ip" placeholder="IP Address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div>
+                        <label for="deviceDescription" class="block text-sm font-medium text-slate-400 mb-1">Description</label>
+                        <textarea id="deviceDescription" name="description" rows="2" placeholder="Optional notes about the device" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500"></textarea>
                     </div>
                     <div id="devicePortWrapper">
                         <label for="checkPort" class="block text-sm font-medium text-slate-400 mb-1">Service Port (Optional)</label>

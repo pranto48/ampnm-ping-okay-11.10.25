@@ -35,6 +35,60 @@ function logStatusChange($pdo, $deviceId, $oldStatus, $newStatus, $details) {
 }
 
 switch ($action) {
+    case 'import_devices':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $devices = $input['devices'] ?? [];
+            if (empty($devices) || !is_array($devices)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'No devices provided or invalid format.']);
+                exit;
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $sql = "INSERT INTO devices (
+                    user_id, name, ip, check_port, type, description,
+                    ping_interval, icon_size, name_text_size, icon_url, 
+                    warning_latency_threshold, warning_packetloss_threshold, 
+                    critical_latency_threshold, critical_packetloss_threshold, 
+                    show_live_ping, map_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)"; // map_id is NULL
+
+                $stmt = $pdo->prepare($sql);
+                $imported_count = 0;
+
+                foreach ($devices as $device) {
+                    $stmt->execute([
+                        $current_user_id,
+                        ($device['name'] ?? 'Imported Device'),
+                        $device['ip'] ?? null,
+                        $device['check_port'] ?? null,
+                        $device['type'] ?? 'other',
+                        $device['description'] ?? null,
+                        $device['ping_interval'] ?? null,
+                        $device['icon_size'] ?? 50,
+                        $device['name_text_size'] ?? 14,
+                        $device['icon_url'] ?? null,
+                        $device['warning_latency_threshold'] ?? null,
+                        $device['warning_packetloss_threshold'] ?? null,
+                        $device['critical_latency_threshold'] ?? null,
+                        $device['critical_packetloss_threshold'] ?? null,
+                        ($device['show_live_ping'] ?? false) ? 1 : 0
+                    ]);
+                    $imported_count++;
+                }
+
+                $pdo->commit();
+                echo json_encode(['success' => true, 'message' => "Successfully imported {$imported_count} devices."]);
+
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                http_response_code(500);
+                echo json_encode(['error' => 'Import failed: ' . $e->getMessage()]);
+            }
+        }
+        break;
+
     case 'check_all_devices_globally':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("SELECT * FROM devices WHERE enabled = TRUE AND user_id = ? AND ip IS NOT NULL AND ip != '' AND type != 'box'");
@@ -278,10 +332,10 @@ switch ($action) {
 
     case 'create_device':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $sql = "INSERT INTO devices (user_id, name, ip, check_port, type, map_id, x, y, ping_interval, icon_size, name_text_size, icon_url, warning_latency_threshold, warning_packetloss_threshold, critical_latency_threshold, critical_packetloss_threshold, show_live_ping) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO devices (user_id, name, ip, check_port, type, description, map_id, x, y, ping_interval, icon_size, name_text_size, icon_url, warning_latency_threshold, warning_packetloss_threshold, critical_latency_threshold, critical_packetloss_threshold, show_live_ping) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $current_user_id, $input['name'], $input['ip'] ?? null, $input['check_port'] ?? null, $input['type'], $input['map_id'] ?? null,
+                $current_user_id, $input['name'], $input['ip'] ?? null, $input['check_port'] ?? null, $input['type'], $input['description'] ?? null, $input['map_id'] ?? null,
                 $input['x'] ?? null, $input['y'] ?? null,
                 $input['ping_interval'] ?? null, $input['icon_size'] ?? 50, $input['name_text_size'] ?? 14, $input['icon_url'] ?? null,
                 $input['warning_latency_threshold'] ?? null, $input['warning_packetloss_threshold'] ?? null,
@@ -301,7 +355,7 @@ switch ($action) {
             $id = $input['id'] ?? null;
             $updates = $input['updates'] ?? [];
             if (!$id || empty($updates)) { http_response_code(400); echo json_encode(['error' => 'Device ID and updates are required']); exit; }
-            $allowed_fields = ['name', 'ip', 'check_port', 'type', 'x', 'y', 'map_id', 'ping_interval', 'icon_size', 'name_text_size', 'icon_url', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold', 'show_live_ping'];
+            $allowed_fields = ['name', 'ip', 'check_port', 'type', 'description', 'x', 'y', 'map_id', 'ping_interval', 'icon_size', 'name_text_size', 'icon_url', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold', 'show_live_ping'];
             $fields = []; $params = [];
             foreach ($updates as $key => $value) {
                 if (in_array($key, $allowed_fields)) {

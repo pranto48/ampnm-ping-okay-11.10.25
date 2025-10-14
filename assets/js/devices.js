@@ -5,6 +5,9 @@ function initDevices() {
     const tableLoader = document.getElementById('tableLoader');
     const noDevicesMessage = document.getElementById('noDevicesMessage');
     const createDeviceBtn = document.getElementById('createDeviceBtn');
+    const exportDevicesBtn = document.getElementById('exportDevicesBtn');
+    const importDevicesBtn = document.getElementById('importDevicesBtn');
+    const importDevicesFile = document.getElementById('importDevicesFile');
 
     // Modals
     const detailsModal = document.getElementById('detailsModal');
@@ -98,6 +101,7 @@ function initDevices() {
             document.getElementById('deviceId').value = device.id;
             document.getElementById('deviceName').value = device.name;
             document.getElementById('deviceIp').value = device.ip;
+            document.getElementById('deviceDescription').value = device.description;
             document.getElementById('checkPort').value = device.check_port;
             document.getElementById('deviceType').value = device.type;
             document.getElementById('icon_url').value = device.icon_url || '';
@@ -289,6 +293,57 @@ function initDevices() {
             icon.classList.remove('fa-spin');
             bulkCheckBtn.disabled = false;
         }
+    });
+
+    exportDevicesBtn.addEventListener('click', async () => {
+        try {
+            const devices = await api.get('get_devices');
+            if (devices.length === 0) {
+                window.notyf.error('No devices to export.');
+                return;
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(devices, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            const date = new Date().toISOString().slice(0, 10);
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `devices_backup_${date}.amp`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            window.notyf.success('All devices exported successfully.');
+        } catch (error) {
+            window.notyf.error('Failed to export devices.');
+            console.error(error);
+        }
+    });
+
+    importDevicesBtn.addEventListener('click', () => importDevicesFile.click());
+
+    importDevicesFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const devices = JSON.parse(event.target.result);
+                if (!Array.isArray(devices)) throw new Error("Invalid file format.");
+
+                if (confirm(`This will add ${devices.length} devices to your inventory. Existing devices will not be affected. Continue?`)) {
+                    const result = await api.post('import_devices', { devices });
+                    if (result.success) {
+                        window.notyf.success(result.message);
+                        await loadDevices();
+                    } else {
+                        throw new Error(result.error);
+                    }
+                }
+            } catch (err) {
+                window.notyf.error('Failed to import devices: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+        importDevicesFile.value = ''; // Reset file input
     });
 
     closeDetailsModal.addEventListener('click', () => closeModal('detailsModal'));
