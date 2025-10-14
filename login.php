@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Dyad Network Security</title>
+    <title>Login - AMPNM</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
             <i class="fas fa-shield-halved text-cyan-400 text-6xl"></i>
-            <h1 class="text-3xl font-bold text-white mt-4">Network Security</h1>
+            <h1 class="text-3xl font-bold text-white mt-4">AMPNM</h1>
             <p class="text-slate-400">Please sign in to continue</p>
         </div>
         <form method="POST" action="login.php" class="bg-slate-800/50 border border-slate-700 rounded-lg shadow-xl p-8 space-y-6">

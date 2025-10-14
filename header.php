@@ -8,7 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dyad Network Security</title>
+    <title>AMPNM</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -24,7 +24,7 @@ if (session_status() === PHP_SESSION_NONE) {
                 <div class="flex items-center">
                     <a href="index.php" class="flex items-center gap-2 text-white font-bold">
                         <i class="fas fa-shield-halved text-cyan-400 text-2xl"></i>
-                        <span>Network Security</span>
+                        <span>AMPNM</span>
                     </a>
                 </div>
                 <div class="hidden md:block">

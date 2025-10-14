@@ -1,7 +1,7 @@
 </div> <!-- Close .page-content -->
 </main>
     <footer class="text-center py-4 text-slate-500 text-sm">
-        <p>Dyad Network Security Dashboard</p>
+        <p>AMPNM Dashboard</p>
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
     <script src="assets/js/shared.js"></script>
