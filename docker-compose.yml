@@ -22,9 +22,9 @@ services:
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
     restart: unless-stopped
-    # Removed network_mode: host for standard Docker networking
+    # Changed host port from 80 to 8080 to avoid 'port already allocated' error
     ports:
-      - "80:80" # Expose app on port 80
+      - "8080:80" # Expose app on port 8080 of the host
 
   db:
     image: mysql:8.0
