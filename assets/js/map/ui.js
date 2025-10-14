@@ -71,6 +71,11 @@ MapApp.ui = {
 
         if (deviceId) {
             const node = MapApp.state.nodes.get(deviceId);
+            if (!node) {
+                console.error("Node not found for ID:", deviceId);
+                window.notyf.error("Device not found on map.");
+                return;
+            }
             document.getElementById('modalTitle').textContent = 'Edit Item';
             document.getElementById('deviceId').value = node.id;
             document.getElementById('deviceName').value = node.deviceData.name;
@@ -96,14 +101,21 @@ MapApp.ui = {
             document.getElementById('deviceIp').value = prefill.ip || '';
         }
         MapApp.ui.toggleDeviceModalFields(document.getElementById('deviceType').value);
-        MapApp.ui.els.deviceModal.classList.remove('hidden');
+        // Use the shared openModal function
+        openModal('deviceModal');
     },
 
     openEdgeModal: (edgeId) => {
         const edge = MapApp.state.edges.get(edgeId);
+        if (!edge) {
+            console.error("Edge not found for ID:", edgeId);
+            window.notyf.error("Connection not found on map.");
+            return;
+        }
         document.getElementById('edgeId').value = edge.id;
         document.getElementById('connectionType').value = edge.connection_type || 'cat5';
-        MapApp.ui.els.edgeModal.classList.remove('hidden');
+        // Use the shared openModal function
+        openModal('edgeModal');
     },
 
     updateAndAnimateEdges: () => {
