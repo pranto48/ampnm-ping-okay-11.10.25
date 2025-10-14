@@ -29,8 +29,8 @@ function getStatusFromPingResult($device, $pingResult, $parsedResult, &$details)
 
 function logStatusChange($pdo, $deviceId, $oldStatus, $newStatus, $details) {
     if ($oldStatus !== $newStatus) {
-        $stmt = $pdo->prepare("INSERT INTO device_status_logs (device_id, status, details) VALUES (?, ?, ?)");
-        $stmt->execute([$deviceId, $newStatus, $details]);
+        $stmt = $pdo->prepare("INSERT INTO device_status_logs (device_id, old_status, status, details) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$deviceId, $oldStatus, $newStatus, $details]);
     }
 }
 

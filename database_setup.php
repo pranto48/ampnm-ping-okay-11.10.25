@@ -152,6 +152,7 @@ try {
         "CREATE TABLE IF NOT EXISTS `device_status_logs` (
             `id` INT(10) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             `device_id` INT(6) UNSIGNED NOT NULL,
+            `old_status` ENUM('online', 'offline', 'unknown', 'warning', 'critical') NULL,
             `status` ENUM('online', 'offline', 'unknown', 'warning', 'critical') NOT NULL,
             `details` VARCHAR(255) NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -216,6 +217,10 @@ try {
     if (!columnExists($pdo, $dbname, 'devices', 'notifications_enabled')) {
         $pdo->exec("ALTER TABLE `devices` ADD COLUMN `notifications_enabled` BOOLEAN DEFAULT FALSE AFTER `show_live_ping`;");
         message("Upgraded 'devices' table: added 'notifications_enabled' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'device_status_logs', 'old_status')) {
+        $pdo->exec("ALTER TABLE `device_status_logs` ADD COLUMN `old_status` ENUM('online', 'offline', 'unknown', 'warning', 'critical') NULL AFTER `device_id`;");
+        message("Upgraded 'device_status_logs' table: added 'old_status' column.");
     }
 
     // Step 5: Check if the admin user has any maps
