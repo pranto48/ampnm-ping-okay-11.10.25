@@ -310,6 +310,12 @@ try {
         message("Upgraded 'maps' table: added 'background_image_url' column.");
     }
 
+    // License table migrations
+    if (!columnExists($pdo, $dbname, 'licenses', 'current_devices')) {
+        $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `current_devices` INT(11) DEFAULT 0 AFTER `max_devices`;");
+        message("Upgraded 'licenses' table: added 'current_devices' column.");
+    }
+
 
     // Step 5: Check if the admin user has any maps
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM `maps` WHERE user_id = ?");
