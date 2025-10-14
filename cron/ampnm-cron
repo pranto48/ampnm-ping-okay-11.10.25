@@ -1,5 +1,0 @@
-# This cron job runs the global device status check every minute.
-# Output is redirected to a log file for debugging.
-* * * * * root php /var/www/html/cron/cron_check.php >> /var/log/cron.log 2>&1
-
-# An empty line is required at the end of the file for cron to read it properly.

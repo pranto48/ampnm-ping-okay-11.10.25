@@ -44,30 +44,6 @@ include 'header.php';
                 <p class="text-slate-500">No status event data found for the selected period.</p>
             </div>
         </div>
-
-        <!-- Detailed Log Table -->
-        <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 mt-8">
-            <h2 class="text-xl font-semibold text-white mb-4">Detailed Event Log</h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead class="border-b border-slate-700">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Timestamp</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Device</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Event</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Details</th>
-                        </tr>
-                    </thead>
-                    <tbody id="detailedLogTableBody">
-                        <!-- Rows will be inserted by JS -->
-                    </tbody>
-                </table>
-                <div id="detailedTableLoader" class="text-center py-8"><div class="loader mx-auto"></div></div>
-                <div id="noTableDataMessage" class="text-center py-16 hidden">
-                    <p class="text-slate-500">No detailed log entries found for the selected period.</p>
-                </div>
-            </div>
-        </div>
     </div>
 </main>
 

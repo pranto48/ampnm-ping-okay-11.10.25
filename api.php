@@ -13,8 +13,7 @@ $deviceActions = ['get_devices', 'create_device', 'update_device', 'delete_devic
 $mapActions = ['get_maps', 'create_map', 'delete_map', 'get_edges', 'create_edge', 'update_edge', 'delete_edge', 'import_map', 'update_map', 'upload_map_background'];
 $dashboardActions = ['get_dashboard_data'];
 $userActions = ['get_users', 'create_user', 'delete_user'];
-$logActions = ['get_status_logs', 'get_detailed_status_logs'];
-$notificationActions = ['get_notification_settings', 'update_notification_settings', 'test_smtp_settings'];
+$logActions = ['get_status_logs'];
 
 if (in_array($action, $pingActions)) {
     require __DIR__ . '/api/handlers/ping_handler.php';
@@ -28,8 +27,6 @@ if (in_array($action, $pingActions)) {
     require __DIR__ . '/api/handlers/user_handler.php';
 } elseif (in_array($action, $logActions)) {
     require __DIR__ . '/api/handlers/log_handler.php';
-} elseif (in_array($action, $notificationActions)) {
-    require __DIR__ . '/api/handlers/notification_handler.php';
 } elseif ($action === 'health') {
     echo json_encode(['status' => 'ok', 'timestamp' => date('c')]);
 } else {

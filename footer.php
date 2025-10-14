@@ -1,7 +1,7 @@
 </div> <!-- Close .page-content -->
 </main>
     <footer class="text-center py-4 text-slate-500 text-sm">
-        <p>&copy; <?php echo date('Y'); ?> AMPNM. Developed by <a href="https://itsupport.com.bd" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline">IT Support BD</a>.</p>
+        <p>AMPNM Dashboard</p>
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
     <script src="assets/js/shared.js"></script>
@@ -23,7 +23,6 @@
     
     <script src="assets/js/users.js"></script>
     <script src="assets/js/status_logs.js"></script>
-    <script src="assets/js/notifications.js"></script>
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -62,8 +61,6 @@
             initUsers();
         } else if (page === 'status_logs.php') {
             initStatusLogs();
-        } else if (page === 'notifications.php') {
-            initNotifications();
         }
     });
     </script>

@@ -1,33 +1,44 @@
+# Use the official PHP Apache image as the base
 FROM php:8.2-apache
 
-# Install system dependencies required for PHP extensions and nmap
+# Install system dependencies, including ping utility and mysql-client
 RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
-    libzip-dev \
+    iputils-ping \
+    default-mysql-client \
+    libpng-dev \
     libonig-dev \
-    nmap \
-    && rm -rf /var/lib/apt/lists/*
+    libxml2-dev \
+    zip \
+    unzip \
+    curl \
+    wget \
+    git \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo_mysql zip mbstring
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Enable Apache modules
+# Enable Apache mod_rewrite
 RUN a2enmod rewrite
-
-# Copy custom Apache configuration
-COPY docker/apache-conf/000-default.conf /etc/apache2/sites-available/000-default.conf
-
-# Copy the custom entrypoint script
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Expose port 80 (default for Apache)
+# Copy application files
+COPY . /var/www/html/
+
+# Copy and set permissions for the entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Set permissions for web server
+RUN chown -R www-data:www-data /var/www/html
+
+# Set the entrypoint
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# Expose port 80
 EXPOSE 80
 
-# Use the custom entrypoint script
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+# Start Apache in foreground
 CMD ["apache2-foreground"]

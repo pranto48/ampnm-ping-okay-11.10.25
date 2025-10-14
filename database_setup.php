@@ -1,6 +1,6 @@
 <?php
 // Database configuration using environment variables for Docker compatibility
-$servername = getenv('DB_HOST') ?: 'db'; // Use DB_HOST environment variable
+$servername = '127.0.0.1'; // Forcing 127.0.0.1 to resolve connection issues in Docker
 $username = 'root'; // Setup script needs root privileges to create DB and tables
 $password = getenv('MYSQL_ROOT_PASSWORD') ?: ''; // Get root password from Docker env
 $dbname = getenv('DB_NAME') ?: 'network_monitor';
@@ -128,7 +128,6 @@ try {
             `last_avg_time` DECIMAL(10, 2) NULL,
             `last_ttl` INT(11) NULL,
             `show_live_ping` BOOLEAN DEFAULT FALSE,
-            `notifications_enabled` BOOLEAN DEFAULT FALSE,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
@@ -152,7 +151,6 @@ try {
         "CREATE TABLE IF NOT EXISTS `device_status_logs` (
             `id` INT(10) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             `device_id` INT(6) UNSIGNED NOT NULL,
-            `old_status` ENUM('online', 'offline', 'unknown', 'warning', 'critical') NULL,
             `status` ENUM('online', 'offline', 'unknown', 'warning', 'critical') NOT NULL,
             `details` VARCHAR(255) NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -213,14 +211,6 @@ try {
     if (!columnExists($pdo, $dbname, 'maps', 'background_image_url')) {
         $pdo->exec("ALTER TABLE `maps` ADD COLUMN `background_image_url` VARCHAR(255) NULL AFTER `background_color`;");
         message("Upgraded 'maps' table: added 'background_image_url' column.");
-    }
-    if (!columnExists($pdo, $dbname, 'devices', 'notifications_enabled')) {
-        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `notifications_enabled` BOOLEAN DEFAULT FALSE AFTER `show_live_ping`;");
-        message("Upgraded 'devices' table: added 'notifications_enabled' column.");
-    }
-    if (!columnExists($pdo, $dbname, 'device_status_logs', 'old_status')) {
-        $pdo->exec("ALTER TABLE `device_status_logs` ADD COLUMN `old_status` ENUM('online', 'offline', 'unknown', 'warning', 'critical') NULL AFTER `device_id`;");
-        message("Upgraded 'device_status_logs' table: added 'old_status' column.");
     }
 
     // Step 5: Check if the admin user has any maps

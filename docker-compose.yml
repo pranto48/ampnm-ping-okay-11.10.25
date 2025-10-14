@@ -5,32 +5,26 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # The entrypoint and command are now defined within the Dockerfile
+    # This entrypoint ensures the script is executable and then runs it.
+    # The script configures and starts the Apache server on the correct port.
+    entrypoint: ["/bin/sh", "-c", "chmod +x /var/www/html/docker-entrypoint.sh && /var/www/html/docker-entrypoint.sh"]
     volumes:
       - ./:/var/www/html/
     depends_on:
       db:
         condition: service_healthy
     environment:
-      # Use the service name 'db' for inter-container communication
-      - DB_HOST=db
+      # We use 127.0.0.1 because network_mode: host connects the app container
+      # directly to the host's network, so it sees the database on localhost.
+      - DB_HOST=127.0.0.1
       - DB_NAME=network_monitor
       - DB_USER=user
       - DB_PASSWORD=password
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
-      # SMTP Environment Variables for Email Notifications (Update these with your actual SMTP details)
-      - SMTP_HOST=smtp.example.com
-      - SMTP_USER=your_email@example.com
-      - SMTP_PASS=your_email_password
-      - SMTP_SECURE=tls # or ssl
-      - SMTP_PORT=587 # or 465 for SSL
-      - SMTP_FROM_EMAIL=your_email@example.com
-      - SMTP_FROM_NAME="AMPNM Notifier"
-      - NOTIFICATION_EMAIL=admin@example.com # Default recipient for test emails
     restart: unless-stopped
-    ports:
-      - "2266:80" # Expose app on port 2266 of the host
+    # network_mode: host is required for the ping command to work correctly.
+    network_mode: "host"
 
   db:
     image: mysql:8.0
