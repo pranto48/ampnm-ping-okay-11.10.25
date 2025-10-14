@@ -8,6 +8,7 @@ function initDevices() {
     const exportDevicesBtn = document.getElementById('exportDevicesBtn');
     const importDevicesBtn = document.getElementById('importDevicesBtn');
     const importDevicesFile = document.getElementById('importDevicesFile');
+    const deviceSearchInput = document.getElementById('deviceSearchInput');
 
     // Modals
     const detailsModal = document.getElementById('detailsModal');
@@ -344,6 +345,31 @@ function initDevices() {
         };
         reader.readAsText(file);
         importDevicesFile.value = ''; // Reset file input
+    });
+
+    deviceSearchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = devicesTableBody.querySelectorAll('tr');
+        let visibleRows = 0;
+        rows.forEach(row => {
+            const textContent = row.textContent.toLowerCase();
+            if (textContent.includes(searchTerm)) {
+                row.style.display = '';
+                visibleRows++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (visibleRows === 0 && rows.length > 0) {
+            noDevicesMessage.textContent = 'No devices match your search.';
+            noDevicesMessage.classList.remove('hidden');
+        } else if (rows.length === 0) {
+            noDevicesMessage.textContent = 'No devices found. Create one to get started.';
+            noDevicesMessage.classList.remove('hidden');
+        } else {
+            noDevicesMessage.classList.add('hidden');
+        }
     });
 
     closeDetailsModal.addEventListener('click', () => closeModal('detailsModal'));
