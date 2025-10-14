@@ -7,4 +7,7 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
+
+// Perform license check for authenticated users
+require_once __DIR__ . '/license_check.php';
 ?>

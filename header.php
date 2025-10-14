@@ -26,6 +26,31 @@ if (session_status() === PHP_SESSION_NONE) {
                         <i class="fas fa-shield-halved text-cyan-400 text-2xl"></i>
                         <span>AMPNM</span>
                     </a>
+                    <?php if (isset($_SESSION['license_status'])): ?>
+                        <?php
+                            $status = $_SESSION['license_status'];
+                            $message = $_SESSION['license_message'];
+                            $badge_class = '';
+                            $icon_class = '';
+                            if ($status === 'valid') {
+                                $badge_class = 'bg-green-500/20 text-green-400';
+                                $icon_class = 'fas fa-check-circle';
+                            } elseif ($status === 'invalid' || $status === 'expired') {
+                                $badge_class = 'bg-red-500/20 text-red-400';
+                                $icon_class = 'fas fa-times-circle';
+                            } elseif ($status === 'unconfigured') {
+                                $badge_class = 'bg-yellow-500/20 text-yellow-400';
+                                $icon_class = 'fas fa-exclamation-triangle';
+                            } else { // error
+                                $badge_class = 'bg-orange-500/20 text-orange-400';
+                                $icon_class = 'fas fa-exclamation-circle';
+                            }
+                        ?>
+                        <span class="ml-4 px-3 py-1 rounded-full text-xs font-semibold <?= $badge_class ?>" title="<?= htmlspecialchars($message) ?>">
+                            <i class="<?= $icon_class ?> mr-1"></i>
+                            License: <?= ucfirst($status) ?>
+                        </span>
+                    <?php endif; ?>
                 </div>
                 <div class="hidden md:block">
                     <div id="main-nav" class="ml-10 flex items-baseline space-x-1">
