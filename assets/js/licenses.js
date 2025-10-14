@@ -73,10 +73,10 @@ function initLicenses() {
 
     const populateUserSelect = async () => {
         try {
-            // Fetch users from local MySQL via the existing API endpoint
-            const users = await api.get('get_users'); 
+            // Fetch users from Supabase via the new API endpoint
+            const users = await api.get('get_supabase_users'); 
             els.licenseUserId.innerHTML = '<option value="">-- Select User --</option>' + 
-                users.map(user => `<option value="${user.id}">${user.username}</option>`).join(''); // Use username for display
+                users.map(user => `<option value="${user.id}">${user.email}</option>`).join('');
         } catch (error) {
             console.error('Failed to load users for license assignment:', error);
             window.notyf.error('Failed to load users for license assignment.');
@@ -151,7 +151,7 @@ function initLicenses() {
             if (licenseToEdit) {
                 els.licenseFormTitle.textContent = 'Edit License';
                 els.licenseId.value = licenseToEdit.id;
-                els.licenseUserId.value = licenseToEdit.user_id; // This is now a local MySQL user ID
+                els.licenseUserId.value = licenseToEdit.user_id; // This is now a Supabase user ID (UUID)
                 els.licenseKey.value = licenseToEdit.license_key;
                 els.licenseStatus.value = licenseToEdit.status;
                 els.licenseIssuedAt.value = licenseToEdit.issued_at ? new Date(licenseToEdit.issued_at).toISOString().slice(0, 16) : '';
