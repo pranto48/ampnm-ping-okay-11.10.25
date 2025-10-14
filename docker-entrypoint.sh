@@ -19,6 +19,10 @@ done
 echo "Running database setup..."
 php database_setup.php
 
+# Start the cron service in the background
+echo "Starting cron service for background monitoring..."
+service cron start
+
 # Start Apache in the foreground
 echo "Starting Apache server..."
 exec apache2-foreground
