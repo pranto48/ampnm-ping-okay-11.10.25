@@ -2,8 +2,8 @@
 // Database configuration using environment variables for Docker compatibility
 $servername = '127.0.0.1'; // Forcing 127.0.0.1 to resolve connection issues in Docker
 $username = 'root'; // Setup script needs root privileges to create DB and tables
-$password = getenv('MYSQL_ROOT_PASSWORD') ?: ''; // Get root password from Docker env
-$dbname = getenv('DB_NAME') ?: 'network_monitor';
+$password = getenv('MYSQL_ROOT_PASSWORD') ? getenv('MYSQL_ROOT_PASSWORD') : '';
+$dbname = getenv('DB_NAME') ? getenv('DB_NAME') : 'network_monitor';
 
 function message($text, $is_error = false) {
     $color = $is_error ? '#ef4444' : '#22c55e';
@@ -47,7 +47,7 @@ try {
 
     // Step 2: Ensure admin user exists and set password from environment variable
     $admin_user = 'admin';
-    $admin_password = getenv('ADMIN_PASSWORD') ?: 'password';
+    $admin_password = getenv('ADMIN_PASSWORD') ? getenv('ADMIN_PASSWORD') : 'password';
     $is_default_password = ($admin_password === 'password');
 
     $stmt = $pdo->prepare("SELECT id, password FROM `users` WHERE username = ?");
