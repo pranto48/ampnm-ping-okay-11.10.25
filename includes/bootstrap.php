@@ -1,12 +1,4 @@
 <?php
-// Copyright Integrity Check
-$footerPath = __DIR__ . '/../footer.php';
-$expectedHash = 'c85a22888b69b12880d1526b88a4120a'; // MD5 hash of the correct footer.php
-
-if (!file_exists($footerPath) || md5_file($footerPath) !== $expectedHash) {
-    die("Critical Error: Copyright information has been tampered with or removed. Please restore the original footer file to continue using the application.");
-}
-
 // This is the new central bootstrap file.
 // It handles basic setup like loading functions and checking database integrity.
 
