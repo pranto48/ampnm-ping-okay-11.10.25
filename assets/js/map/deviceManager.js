@@ -1,10 +1,5 @@
 window.MapApp = window.MapApp || {};
 
-const onlineSound = new Audio('assets/sounds/online.mp3');
-const warningSound = new Audio('assets/sounds/warning.mp3');
-const criticalSound = new Audio('assets/sounds/critical.mp3');
-const offlineSound = new Audio('assets/sounds/offline.mp3');
-
 MapApp.deviceManager = {
     pingSingleDevice: async (deviceId) => {
         const node = MapApp.state.nodes.get(deviceId);
@@ -17,13 +12,13 @@ MapApp.deviceManager = {
 
         if (newStatus !== oldStatus) {
             if (newStatus === 'warning') {
-                warningSound.play();
+                SoundManager.play('warning');
             } else if (newStatus === 'critical') {
-                criticalSound.play();
+                SoundManager.play('critical');
             } else if (newStatus === 'offline') {
-                offlineSound.play();
+                SoundManager.play('offline');
             } else if (newStatus === 'online' && (oldStatus === 'offline' || oldStatus === 'critical' || oldStatus === 'warning')) {
-                onlineSound.play();
+                SoundManager.play('online');
             }
 
             if (newStatus === 'critical' || newStatus === 'offline') {
@@ -59,13 +54,13 @@ MapApp.deviceManager = {
                 if (device.old_status !== device.status) {
                     statusChanges++;
                     if (device.status === 'warning') {
-                        warningSound.play();
+                        SoundManager.play('warning');
                     } else if (device.status === 'critical') {
-                        criticalSound.play();
+                        SoundManager.play('critical');
                     } else if (device.status === 'offline') {
-                        offlineSound.play();
+                        SoundManager.play('offline');
                     } else if (device.status === 'online' && (device.old_status === 'offline' || device.old_status === 'critical' || device.old_status === 'warning')) {
-                        onlineSound.play();
+                        SoundManager.play('online');
                     }
                     
                     if (device.status === 'critical' || device.status === 'offline') {

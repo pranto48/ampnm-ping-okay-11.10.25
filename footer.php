@@ -15,6 +15,7 @@
     <script src="assets/js/map/api.js"></script>
     <script src="assets/js/map/utils.js"></script>
     <script src="assets/js/map/ui.js"></script>
+    <script src="assets/js/soundManager.js"></script>
     <script src="assets/js/map/deviceManager.js"></script>
     <script src="assets/js/map/mapManager.js"></script>
     <script src="assets/js/map/network.js"></script>
