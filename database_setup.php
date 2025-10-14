@@ -128,6 +128,7 @@ try {
             `last_avg_time` DECIMAL(10, 2) NULL,
             `last_ttl` INT(11) NULL,
             `show_live_ping` BOOLEAN DEFAULT FALSE,
+            `notifications_enabled` BOOLEAN DEFAULT FALSE,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
@@ -211,6 +212,10 @@ try {
     if (!columnExists($pdo, $dbname, 'maps', 'background_image_url')) {
         $pdo->exec("ALTER TABLE `maps` ADD COLUMN `background_image_url` VARCHAR(255) NULL AFTER `background_color`;");
         message("Upgraded 'maps' table: added 'background_image_url' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'notifications_enabled')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `notifications_enabled` BOOLEAN DEFAULT FALSE AFTER `show_live_ping`;");
+        message("Upgraded 'devices' table: added 'notifications_enabled' column.");
     }
 
     // Step 5: Check if the admin user has any maps

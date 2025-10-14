@@ -34,6 +34,29 @@ function logStatusChange($pdo, $deviceId, $oldStatus, $newStatus, $details) {
     }
 }
 
+function triggerNotification($device, $oldStatus, $newStatus, $details) {
+    if ($oldStatus !== $newStatus && $device['notifications_enabled']) {
+        $alert_statuses = ['offline', 'warning', 'critical'];
+        $is_recovery = $newStatus === 'online' && in_array($oldStatus, $alert_statuses);
+
+        if (in_array($newStatus, $alert_statuses) || $is_recovery) {
+            $subject = "Device Alert: " . $device['name'] . " is now " . strtoupper($newStatus);
+            if ($is_recovery) {
+                $subject = "Device Recovery: " . $device['name'] . " is back ONLINE";
+            }
+            
+            $body = "<b>Device:</b> " . htmlspecialchars($device['name']) . "<br>";
+            $body .= "<b>IP Address:</b> " . htmlspecialchars($device['ip']) . "<br>";
+            $body .= "<b>New Status:</b> " . strtoupper($newStatus) . "<br>";
+            $body .= "<b>Previous Status:</b> " . strtoupper($oldStatus) . "<br>";
+            $body .= "<b>Details:</b> " . htmlspecialchars($details) . "<br>";
+            $body .= "<b>Time:</b> " . date('Y-m-d H:i:s') . "<br>";
+
+            sendNotificationEmail($subject, $body);
+        }
+    }
+}
+
 switch ($action) {
     case 'import_devices':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -124,6 +147,7 @@ switch ($action) {
                 
                 if ($old_status !== $new_status) {
                     logStatusChange($pdo, $device['id'], $old_status, $new_status, $details);
+                    triggerNotification($device, $old_status, $new_status, $details);
                     $status_changes++;
                 }
                 
@@ -182,6 +206,7 @@ switch ($action) {
                 if ($new_status !== 'offline') { $last_seen = date('Y-m-d H:i:s'); }
                 
                 logStatusChange($pdo, $device['id'], $old_status, $new_status, $details);
+                triggerNotification($device, $old_status, $new_status, $details);
                 $updateStmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
                 $updateStmt->execute([$new_status, $last_seen, $last_avg_time, $last_ttl, $device['id'], $current_user_id]);
 
@@ -241,6 +266,7 @@ switch ($action) {
             if ($status !== 'offline') { $last_seen = date('Y-m-d H:i:s'); }
             
             logStatusChange($pdo, $deviceId, $old_status, $status, $details);
+            triggerNotification($device, $old_status, $status, $details);
             $stmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
             $stmt->execute([$status, $last_seen, $last_avg_time, $last_ttl, $deviceId, $current_user_id]);
             
@@ -355,12 +381,12 @@ switch ($action) {
             $id = $input['id'] ?? null;
             $updates = $input['updates'] ?? [];
             if (!$id || empty($updates)) { http_response_code(400); echo json_encode(['error' => 'Device ID and updates are required']); exit; }
-            $allowed_fields = ['name', 'ip', 'check_port', 'type', 'description', 'x', 'y', 'map_id', 'ping_interval', 'icon_size', 'name_text_size', 'icon_url', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold', 'show_live_ping'];
+            $allowed_fields = ['name', 'ip', 'check_port', 'type', 'description', 'x', 'y', 'map_id', 'ping_interval', 'icon_size', 'name_text_size', 'icon_url', 'warning_latency_threshold', 'warning_packetloss_threshold', 'critical_latency_threshold', 'critical_packetloss_threshold', 'show_live_ping', 'notifications_enabled'];
             $fields = []; $params = [];
             foreach ($updates as $key => $value) {
                 if (in_array($key, $allowed_fields)) {
                     $fields[] = "$key = ?";
-                    if ($key === 'show_live_ping') {
+                    if ($key === 'show_live_ping' || $key === 'notifications_enabled') {
                         $params[] = $value ? 1 : 0;
                     } else {
                         $params[] = ($value === '' || is_null($value)) ? null : $value;

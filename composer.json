@@ -1,0 +1,14 @@
+{
+    "name": "ampnm/network-monitor",
+    "description": "A simple network monitoring tool.",
+    "type": "project",
+    "require": {
+        "phpmailer/phpmailer": "^6.8"
+    },
+    "authors": [
+        {
+            "name": "IT Support BD",
+            "email": "info@itsupport.com.bd"
+        }
+    ]
+}

@@ -1,5 +1,39 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+// Function to send a notification email
+function sendNotificationEmail($subject, $body) {
+    $mail = new PHPMailer(true);
+    try {
+        // Server settings from environment variables
+        $mail->isSMTP();
+        $mail->Host       = getenv('SMTP_HOST');
+        $mail->SMTPAuth   = true;
+        $mail->Username   = getenv('SMTP_USER');
+        $mail->Password   = getenv('SMTP_PASS');
+        $mail->SMTPSecure = getenv('SMTP_SECURE') ?: PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = getenv('SMTP_PORT') ?: 587;
+
+        // Recipients
+        $mail->setFrom(getenv('SMTP_FROM_EMAIL'), getenv('SMTP_FROM_NAME') ?: 'AMPNM Notifier');
+        $mail->addAddress(getenv('NOTIFICATION_EMAIL'));
+
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+        $mail->AltBody = strip_tags($body);
+
+        $mail->send();
+        return ['success' => true, 'message' => 'Email has been sent'];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => "Message could not be sent. Mailer Error: {$mail->ErrorInfo}"];
+    }
+}
 
 // Function to check a TCP port on a host
 function checkPortStatus($host, $port, $timeout = 1) {

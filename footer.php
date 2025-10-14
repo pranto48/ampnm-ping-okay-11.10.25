@@ -23,6 +23,7 @@
     
     <script src="assets/js/users.js"></script>
     <script src="assets/js/status_logs.js"></script>
+    <script src="assets/js/notifications.js"></script>
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -61,6 +62,8 @@
             initUsers();
         } else if (page === 'status_logs.php') {
             initStatusLogs();
+        } else if (page === 'notifications.php') {
+            initNotifications();
         }
     });
     </script>
