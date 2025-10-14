@@ -14,17 +14,17 @@ services:
       db:
         condition: service_healthy
     environment:
-      # We use 127.0.0.1 because network_mode: host connects the app container
-      # directly to the host's network, so it sees the database on localhost.
-      - DB_HOST=127.0.0.1
+      # Use the service name 'db' for inter-container communication
+      - DB_HOST=db
       - DB_NAME=network_monitor
       - DB_USER=user
       - DB_PASSWORD=password
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
     restart: unless-stopped
-    # network_mode: host is required for the ping command to work correctly.
-    network_mode: "host"
+    # Removed network_mode: host for standard Docker networking
+    ports:
+      - "80:80" # Expose app on port 80
 
   db:
     image: mysql:8.0

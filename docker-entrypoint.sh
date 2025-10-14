@@ -1,28 +1,39 @@
 #!/bin/sh
 set -e
 
-# Run composer install to ensure all dependencies are present
+echo "--- Docker Entrypoint Script Started ---"
+
+# 1. Install PHP dependencies
 echo "Installing Composer dependencies..."
-composer install --no-interaction --optimize-autoloader
+composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# Wait for the database to be ready.
-# This is a simple loop that uses a separate script to check DB connection.
-echo "Waiting for database to be ready..."
-until php includes/db_check.php; do
-  >&2 echo "Database is unavailable - sleeping"
-  sleep 1
+# 2. Wait for MySQL database to be ready
+echo "Waiting for MySQL database to be ready..."
+/usr/bin/php /var/www/html/includes/db_check.php
+while [ $? -ne 0 ]; do
+    echo "MySQL not yet available, retrying in 2 seconds..."
+    sleep 2
+    /usr/bin/php /var/www/html/includes/db_check.php
 done
->&2 echo "Database is up - continuing..."
+echo "MySQL database is ready."
 
-# Run the database setup/migration script
-# This will create tables and the admin user if they don't exist.
-echo "Running database setup..."
-php database_setup.php
+# 3. Run database setup script
+echo "Running database setup script..."
+/usr/bin/php /var/www/html/database_setup.php
 
-# Start the cron service in the background
-echo "Starting cron service for background monitoring..."
-service cron start
+# 4. Ensure correct permissions for uploads
+echo "Setting permissions for uploads directory..."
+mkdir -p /var/www/html/uploads/icons
+mkdir -p /var/www/html/uploads/map_backgrounds
+chown -R www-data:www-data /var/www/html/uploads
+chmod -R 755 /var/www/html/uploads
 
-# Start Apache in the foreground
-echo "Starting Apache server..."
+# 5. Start cron service in the background
+echo "Starting cron service..."
+cron -f &
+
+# 6. Start Apache in the foreground
+echo "Starting Apache in foreground..."
 exec apache2-foreground
+
+echo "--- Docker Entrypoint Script Finished ---"

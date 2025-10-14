@@ -18,6 +18,9 @@ RUN apt-get update && apt-get install -y \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Copy custom php.ini
+COPY docker/php-conf/php.ini /usr/local/etc/php/conf.d/custom-php.ini
+
 # Copy the rest of the application files
 COPY . .
 
