@@ -24,6 +24,7 @@
     <script src="assets/js/users.js"></script>
     <script src="assets/js/status_logs.js"></script>
     <script src="assets/js/email_notifications.js"></script>
+    <script src="assets/js/licenses.js"></script>
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -64,6 +65,8 @@
             initStatusLogs();
         } else if (page === 'email_notifications.php') {
             initEmailNotifications();
+        } else if (page === 'licenses.php') {
+            initLicenses();
         }
     });
     </script>
