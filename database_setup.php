@@ -155,6 +155,39 @@ try {
             `details` VARCHAR(255) NULL,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (`device_id`) REFERENCES `devices`(`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        // New table for SMTP settings
+        "CREATE TABLE IF NOT EXISTS `smtp_settings` (
+            `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `user_id` INT(6) UNSIGNED NOT NULL,
+            `host` VARCHAR(255) NOT NULL,
+            `port` INT(5) NOT NULL,
+            `username` VARCHAR(255) NOT NULL,
+            `password` VARCHAR(255) NOT NULL,
+            `encryption` ENUM('none', 'ssl', 'tls') DEFAULT 'tls',
+            `from_email` VARCHAR(255) NOT NULL,
+            `from_name` VARCHAR(255) NULL,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY `user_id_unique` (`user_id`),
+            FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        // New table for device email subscriptions
+        "CREATE TABLE IF NOT EXISTS `device_email_subscriptions` (
+            `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `user_id` INT(6) UNSIGNED NOT NULL,
+            `device_id` INT(6) UNSIGNED NOT NULL,
+            `recipient_email` VARCHAR(255) NOT NULL,
+            `notify_on_online` BOOLEAN DEFAULT TRUE,
+            `notify_on_offline` BOOLEAN DEFAULT TRUE,
+            `notify_on_warning` BOOLEAN DEFAULT TRUE,
+            `notify_on_critical` BOOLEAN DEFAULT TRUE,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY `device_recipient_unique` (`device_id`, `recipient_email`),
+            FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+            FOREIGN KEY (`device_id`) REFERENCES `devices`(`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
     ];
 
@@ -212,6 +245,11 @@ try {
         $pdo->exec("ALTER TABLE `maps` ADD COLUMN `background_image_url` VARCHAR(255) NULL AFTER `background_color`;");
         message("Upgraded 'maps' table: added 'background_image_url' column.");
     }
+    if (!columnExists($pdo, $dbname, 'devices', 'description')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `description` TEXT NULL AFTER `type`;");
+        message("Upgraded 'devices' table: added 'description' column.");
+    }
+
 
     // Step 5: Check if the admin user has any maps
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM `maps` WHERE user_id = ?");

@@ -2,6 +2,61 @@
 // This file is included by api.php and assumes $pdo, $action, and $input are available.
 $current_user_id = $_SESSION['user_id'];
 
+// Placeholder for email notification function
+function sendEmailNotification($pdo, $device, $oldStatus, $newStatus, $details) {
+    // In a real application, this would fetch SMTP settings and subscriptions,
+    // then use a mailer library (e.g., PHPMailer) to send emails.
+    // For now, we'll just log that a notification *would* be sent.
+    error_log("DEBUG: Notification triggered for device '{$device['name']}' (ID: {$device['id']}). Status changed from {$oldStatus} to {$newStatus}. Details: {$details}");
+
+    // Fetch SMTP settings for the current user
+    $stmtSmtp = $pdo->prepare("SELECT * FROM smtp_settings WHERE user_id = ?");
+    $stmtSmtp->execute([$_SESSION['user_id']]);
+    $smtpSettings = $stmtSmtp->fetch(PDO::FETCH_ASSOC);
+
+    if (!$smtpSettings) {
+        error_log("DEBUG: No SMTP settings found for user {$_SESSION['user_id']}. Cannot send email notification.");
+        return;
+    }
+
+    // Fetch subscriptions for this device and status change
+    $sqlSubscriptions = "SELECT recipient_email FROM device_email_subscriptions WHERE device_id = ? AND user_id = ?";
+    $paramsSubscriptions = [$device['id'], $_SESSION['user_id']];
+
+    if ($newStatus === 'online') {
+        $sqlSubscriptions .= " AND notify_on_online = TRUE";
+    } elseif ($newStatus === 'offline') {
+        $sqlSubscriptions .= " AND notify_on_offline = TRUE";
+    } elseif ($newStatus === 'warning') {
+        $sqlSubscriptions .= " AND notify_on_warning = TRUE";
+    } elseif ($newStatus === 'critical') {
+        $sqlSubscriptions .= " AND notify_on_critical = TRUE";
+    } else {
+        // No specific notification for 'unknown' status changes
+        return;
+    }
+
+    $stmtSubscriptions = $pdo->prepare($sqlSubscriptions);
+    $stmtSubscriptions->execute($paramsSubscriptions);
+    $recipients = $stmtSubscriptions->fetchAll(PDO::FETCH_COLUMN);
+
+    if (empty($recipients)) {
+        error_log("DEBUG: No active subscriptions for device '{$device['name']}' on status '{$newStatus}'.");
+        return;
+    }
+
+    // Simulate sending email
+    foreach ($recipients as $recipient) {
+        error_log("DEBUG: Simulating email to {$recipient} for device '{$device['name']}' status change to '{$newStatus}'.");
+        // In a real scenario, you'd use a mailer library here:
+        // $mailer = new PHPMailer(true);
+        // Configure $mailer with $smtpSettings
+        // Set recipient, subject, body
+        // $mailer->send();
+    }
+}
+
+
 function getStatusFromPingResult($device, $pingResult, $parsedResult, &$details) {
     if (!$pingResult['success']) {
         $details = 'Device offline or unreachable.';
@@ -124,6 +179,7 @@ switch ($action) {
                 
                 if ($old_status !== $new_status) {
                     logStatusChange($pdo, $device['id'], $old_status, $new_status, $details);
+                    sendEmailNotification($pdo, $device, $old_status, $new_status, $details); // Trigger email notification
                     $status_changes++;
                 }
                 
@@ -182,6 +238,7 @@ switch ($action) {
                 if ($new_status !== 'offline') { $last_seen = date('Y-m-d H:i:s'); }
                 
                 logStatusChange($pdo, $device['id'], $old_status, $new_status, $details);
+                sendEmailNotification($pdo, $device, $old_status, $new_status, $details); // Trigger email notification
                 $updateStmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
                 $updateStmt->execute([$new_status, $last_seen, $last_avg_time, $last_ttl, $device['id'], $current_user_id]);
 
@@ -241,6 +298,7 @@ switch ($action) {
             if ($status !== 'offline') { $last_seen = date('Y-m-d H:i:s'); }
             
             logStatusChange($pdo, $deviceId, $old_status, $status, $details);
+            sendEmailNotification($pdo, $device, $old_status, $status, $details); // Trigger email notification
             $stmt = $pdo->prepare("UPDATE devices SET status = ?, last_seen = ?, last_avg_time = ?, last_ttl = ? WHERE id = ? AND user_id = ?");
             $stmt->execute([$status, $last_seen, $last_avg_time, $last_ttl, $deviceId, $current_user_id]);
             
