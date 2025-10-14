@@ -53,7 +53,7 @@ services:
       context: ./new-php-app # Points to the new directory
       dockerfile: Dockerfile
     ports:
-      - "3377:3377" # New app will now run on port 3377
+      - "3377:80" # Map external port 3377 to internal Apache port 80
     environment:
       # Supabase credentials for the new app (replace with your actual Supabase project details)
       - SUPABASE_URL=https://eauhhlfldgzxcwslqemu.supabase.co
@@ -62,7 +62,7 @@ services:
       - ./new-php-app:/var/www/html # Mount your new PHP app code here
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3377/api/v1/validate-license || exit 1"] # Health check for the API endpoint on new port
+      test: ["CMD-SHELL", "curl -f http://localhost/api/v1/validate-license || exit 1"] # Health check for the API endpoint on internal port 80
       interval: 30s
       timeout: 10s
       retries: 3
