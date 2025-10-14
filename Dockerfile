@@ -21,6 +21,12 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy the rest of the application files
 COPY . .
 
+# Add custom Apache configuration
+COPY docker/apache-conf/000-default.conf /etc/apache2/sites-available/000-default.conf
+
+# Enable mod_rewrite and the default site configuration
+RUN a2enmod rewrite && a2ensite 000-default.conf
+
 # Add cron job
 COPY cron/ampnm-cron /etc/cron.d/ampnm-cron
 RUN chmod 0644 /etc/cron.d/ampnm-cron
