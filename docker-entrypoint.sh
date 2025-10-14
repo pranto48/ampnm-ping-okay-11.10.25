@@ -1,15 +1,24 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
-# This script is executed when the Docker container starts.
+# Run composer install to ensure all dependencies are present
+echo "Installing Composer dependencies..."
+composer install --no-interaction --optimize-autoloader
 
-# 1. Modify Apache's configuration to listen on port 2266 instead of the default 80.
-echo "Configuring Apache to listen on port 2266..."
-sed -i 's/Listen 80/Listen 2266/g' /etc/apache2/ports.conf
-sed -i 's/<VirtualHost \*:80>/<VirtualHost \*:2266>/g' /etc/apache2/sites-available/000-default.conf
+# Wait for the database to be ready.
+# This is a simple loop that uses a separate script to check DB connection.
+echo "Waiting for database to be ready..."
+until php includes/db_check.php; do
+  >&2 echo "Database is unavailable - sleeping"
+  sleep 1
+done
+>&2 echo "Database is up - continuing..."
 
-# 2. Start the Apache web server.
-# 'exec' is used to replace the script process with the Apache process,
-# which is standard practice for container entrypoints.
-echo "Starting Apache web server..."
+# Run the database setup/migration script
+# This will create tables and the admin user if they don't exist.
+echo "Running database setup..."
+php database_setup.php
+
+# Start Apache in the foreground
+echo "Starting Apache server..."
 exec apache2-foreground
