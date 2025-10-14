@@ -22,10 +22,12 @@ services:
       - ADMIN_PASSWORD=password
       # New: License Management Environment Variables for the main app
       # This URL points to the license validation API of the separate sales_licensing_app service
-      - LICENSE_API_URL=http://sales_licensing_app/api/v1/validate-license
+      - LICENSE_API_URL=http://sales_licensing_app:3377/api/v1/validate-license
       - LICENSE_KEY=YOUR_PRODUCT_LICENSE_KEY_HERE # Replace with the actual license key for this deployment
+    ports:
+      - "2266:2266" # Main app will now run on port 2266
     restart: unless-stopped
-    network_mode: "host" # Keep host mode for ping functionality
+    # network_mode: "host" # Removed host mode as explicit port mapping is used
 
   db:
     image: mysql:8.0
@@ -51,7 +53,7 @@ services:
       context: ./new-php-app # Points to the new directory
       dockerfile: Dockerfile
     ports:
-      - "8000:80" # Expose port 80 for the new app
+      - "3377:3377" # New app will now run on port 3377
     environment:
       # Supabase credentials for the new app (replace with your actual Supabase project details)
       - SUPABASE_URL=https://eauhhlfldgzxcwslqemu.supabase.co
@@ -60,7 +62,7 @@ services:
       - ./new-php-app:/var/www/html # Mount your new PHP app code here
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/api/v1/validate-license || exit 1"] # Health check for the API endpoint
+      test: ["CMD-SHELL", "curl -f http://localhost:3377/api/v1/validate-license || exit 1"] # Health check for the API endpoint on new port
       interval: 30s
       timeout: 10s
       retries: 3
