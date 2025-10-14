@@ -5,9 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # This entrypoint ensures the script is executable and then runs it.
-    # The script configures and starts the Apache server on the correct port.
-    entrypoint: ["/bin/sh", "-c", "chmod +x /var/www/html/docker-entrypoint.sh && /var/www/html/docker-entrypoint.sh"]
+    # The entrypoint and command are now defined within the Dockerfile
     volumes:
       - ./:/var/www/html/
     depends_on:
@@ -21,8 +19,16 @@ services:
       - DB_PASSWORD=password
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
+      # SMTP Environment Variables for Email Notifications (Update these with your actual SMTP details)
+      - SMTP_HOST=smtp.example.com
+      - SMTP_USER=your_email@example.com
+      - SMTP_PASS=your_email_password
+      - SMTP_SECURE=tls # or ssl
+      - SMTP_PORT=587 # or 465 for SSL
+      - SMTP_FROM_EMAIL=your_email@example.com
+      - SMTP_FROM_NAME="AMPNM Notifier"
+      - NOTIFICATION_EMAIL=admin@example.com # Default recipient for test emails
     restart: unless-stopped
-    # Changed host port to 2266 as requested
     ports:
       - "2266:80" # Expose app on port 2266 of the host
 

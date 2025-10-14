@@ -1,40 +1,33 @@
-# Use an official PHP image with Apache
-FROM php:8.1-apache
+FROM php:8.2-apache
 
-# Set working directory
-WORKDIR /var/www/html
-
-# Install system dependencies required for the application and Composer
-# nmap is needed for network scanning, iputils-ping for ping command, cron for background jobs
+# Install system dependencies required for PHP extensions and nmap
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libzip-dev \
-    iputils-ping \
+    libonig-dev \
     nmap \
-    cron \
-    && docker-php-ext-install zip pdo pdo_mysql
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Install PHP extensions
+RUN docker-php-ext-install pdo_mysql zip mbstring
 
-# Copy custom php.ini
-COPY docker/php-conf/php.ini /usr/local/etc/php/conf.d/custom-php.ini
+# Enable Apache modules
+RUN a2enmod rewrite
 
-# Copy the rest of the application files
-COPY . .
-
-# Add custom Apache configuration
+# Copy custom Apache configuration
 COPY docker/apache-conf/000-default.conf /etc/apache2/sites-available/000-default.conf
 
-# Enable mod_rewrite and the default site configuration
-RUN a2enmod rewrite && a2ensite 000-default.conf
+# Copy the custom entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Add cron job
-COPY cron/ampnm-cron /etc/cron.d/ampnm-cron
-RUN chmod 0644 /etc/cron.d/ampnm-cron
-RUN crontab /etc/cron.d/ampnm-cron
+# Set working directory
+WORKDIR /var/www/html
 
-# The entrypoint script will handle Composer install and starting the server.
-# Ensure the entrypoint script is executable.
-RUN chmod +x /var/www/html/docker-entrypoint.sh
+# Expose port 80 (default for Apache)
+EXPOSE 80
+
+# Use the custom entrypoint script
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["apache2-foreground"]
