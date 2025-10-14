@@ -194,7 +194,7 @@ try {
     foreach ($tables as $sql) {
         $pdo->exec($sql);
         preg_match('/CREATE TABLE IF NOT EXISTS `(\w+)`/', $sql, $matches);
-        $tableName = $matches[1] ?? 'unknown';
+        $tableName = $matches[1] ? $matches[1] : 'unknown';
         message("Table '$tableName' checked/created successfully.");
     }
 
@@ -205,6 +205,7 @@ try {
         return $stmt->fetchColumn() > 0;
     }
 
+    // User ID migrations for existing tables
     if (!columnExists($pdo, $dbname, 'maps', 'user_id')) {
         $pdo->exec("ALTER TABLE `maps` ADD COLUMN `user_id` INT(6) UNSIGNED;");
         $updateStmt = $pdo->prepare("UPDATE `maps` SET user_id = ?");
@@ -229,14 +230,62 @@ try {
         $pdo->exec("ALTER TABLE `device_edges` ADD CONSTRAINT `fk_device_edges_user_id` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE;");
         message("Upgraded 'device_edges' table: assigned existing edges to admin.");
     }
+
+    // Device column migrations
     if (!columnExists($pdo, $dbname, 'devices', 'check_port')) {
         $pdo->exec("ALTER TABLE `devices` ADD COLUMN `check_port` INT(5) NULL AFTER `ip`;");
         message("Upgraded 'devices' table: added 'check_port' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'description')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `description` TEXT NULL AFTER `type`;");
+        message("Upgraded 'devices' table: added 'description' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'ping_interval')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `ping_interval` INT(11) NULL AFTER `map_id`;");
+        message("Upgraded 'devices' table: added 'ping_interval' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'icon_size')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `icon_size` INT(11) DEFAULT 50 AFTER `ping_interval`;");
+        message("Upgraded 'devices' table: added 'icon_size' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'name_text_size')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `name_text_size` INT(11) DEFAULT 14 AFTER `icon_size`;");
+        message("Upgraded 'devices' table: added 'name_text_size' column.");
     }
     if (!columnExists($pdo, $dbname, 'devices', 'icon_url')) {
         $pdo->exec("ALTER TABLE `devices` ADD COLUMN `icon_url` VARCHAR(255) NULL AFTER `name_text_size`;");
         message("Upgraded 'devices' table: added 'icon_url' column for custom icons.");
     }
+    if (!columnExists($pdo, $dbname, 'devices', 'warning_latency_threshold')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `warning_latency_threshold` INT(11) NULL AFTER `icon_url`;");
+        message("Upgraded 'devices' table: added 'warning_latency_threshold' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'warning_packetloss_threshold')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `warning_packetloss_threshold` INT(11) NULL AFTER `warning_latency_threshold`;");
+        message("Upgraded 'devices' table: added 'warning_packetloss_threshold' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'critical_latency_threshold')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `critical_latency_threshold` INT(11) NULL AFTER `warning_packetloss_threshold`;");
+        message("Upgraded 'devices' table: added 'critical_latency_threshold' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'critical_packetloss_threshold')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `critical_packetloss_threshold` INT(11) NULL AFTER `critical_latency_threshold`;");
+        message("Upgraded 'devices' table: added 'critical_packetloss_threshold' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'last_avg_time')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `last_avg_time` DECIMAL(10, 2) NULL AFTER `critical_packetloss_threshold`;");
+        message("Upgraded 'devices' table: added 'last_avg_time' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'last_ttl')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `last_ttl` INT(11) NULL AFTER `last_avg_time`;");
+        message("Upgraded 'devices' table: added 'last_ttl' column.");
+    }
+    if (!columnExists($pdo, $dbname, 'devices', 'show_live_ping')) {
+        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `show_live_ping` BOOLEAN DEFAULT FALSE AFTER `last_ttl`;");
+        message("Upgraded 'devices' table: added 'show_live_ping' column.");
+    }
+
+    // Map background migrations
     if (!columnExists($pdo, $dbname, 'maps', 'background_color')) {
         $pdo->exec("ALTER TABLE `maps` ADD COLUMN `background_color` VARCHAR(20) NULL AFTER `description`;");
         message("Upgraded 'maps' table: added 'background_color' column.");
@@ -244,10 +293,6 @@ try {
     if (!columnExists($pdo, $dbname, 'maps', 'background_image_url')) {
         $pdo->exec("ALTER TABLE `maps` ADD COLUMN `background_image_url` VARCHAR(255) NULL AFTER `background_color`;");
         message("Upgraded 'maps' table: added 'background_image_url' column.");
-    }
-    if (!columnExists($pdo, $dbname, 'devices', 'description')) {
-        $pdo->exec("ALTER TABLE `devices` ADD COLUMN `description` TEXT NULL AFTER `type`;");
-        message("Upgraded 'devices' table: added 'description' column.");
     }
 
 
