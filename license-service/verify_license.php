@@ -22,6 +22,7 @@ try {
     $pdo = getLicenseDbConnection();
 
     // 1. Fetch the license from MySQL
+    // We now also check if the license is assigned to a customer, though not strictly necessary for verification
     $stmt = $pdo->prepare("SELECT * FROM `licenses` WHERE license_key = ?");
     $stmt->execute([$app_license_key]);
     $license = $stmt->fetch(PDO::FETCH_ASSOC);

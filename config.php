@@ -8,7 +8,7 @@ define('DB_NAME', getenv('DB_NAME') ?: 'network_monitor');
 
 // External License API Configuration
 // IMPORTANT: Replace 'http://your-external-domain.com' with the actual URL where you deploy the license-service folder.
-define('LICENSE_API_URL', getenv('LICENSE_API_URL') ?: 'http://your-external-domain.com/license-service/verify_license.php');
+define('LICENSE_API_URL', getenv('LICENSE_API_URL') ?: 'https://portal.itsupport.com.bd/verify_license.php');
 define('APP_LICENSE_KEY', getenv('APP_LICENSE_KEY') ?: 'YOUR_DEFAULT_APP_LICENSE_KEY'); // This is the license key for *this* AMPNM instance
 
 // Create database connection

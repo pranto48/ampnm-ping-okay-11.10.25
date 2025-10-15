@@ -18,7 +18,7 @@ services:
       - DB_PASSWORD=password
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
-      - LICENSE_API_URL=http://your-external-domain.com/license-service/verify_license.php # Your external license verification service URL
+      - LICENSE_API_URL=https://portal.itsupport.com.bd/verify_license.php # Your external license verification service URL
       - APP_LICENSE_KEY=DEMO-AMPNM-APP-KEY-12345 # Replace with your actual application's license key
     ports:
       - "2266:2266" # Main app will now run on port 2266

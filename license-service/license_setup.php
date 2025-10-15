@@ -97,35 +97,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo = getLicenseDbConnection();
 
-            // Create licenses table
-            $pdo->exec("CREATE TABLE IF NOT EXISTS `licenses` (
+            // Create products table
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `products` (
                 `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `license_key` VARCHAR(255) NOT NULL UNIQUE,
-                `status` ENUM('active', 'free', 'expired', 'revoked') DEFAULT 'active',
-                `issued_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `expires_at` TIMESTAMP NULL,
+                `name` VARCHAR(255) NOT NULL,
+                `description` TEXT,
+                `price` DECIMAL(10, 2) NOT NULL,
                 `max_devices` INT(11) DEFAULT 1,
-                `current_devices` INT(11) DEFAULT 0,
+                `license_duration_days` INT(11) DEFAULT 365, -- e.g., 365 for 1 year
                 `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-            $setup_message .= '<p style="color: green;">Table `licenses` checked/created successfully.</p>';
+            $setup_message .= '<p style="color: green;">Table `products` checked/created successfully.</p>';
 
-            // Add initial license if provided
-            $initial_license_key = $_POST['initial_license_key'] ?? '';
-            $initial_max_devices = (int)($_POST['initial_max_devices'] ?? 1);
-            $initial_expires_at = $_POST['initial_expires_at'] ?? '';
+            // Create customers table
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `customers` (
+                `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                `email` VARCHAR(255) NOT NULL UNIQUE,
+                `password` VARCHAR(255) NOT NULL,
+                `first_name` VARCHAR(255),
+                `last_name` VARCHAR(255),
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            $setup_message .= '<p style="color: green;">Table `customers` checked/created successfully.</p>';
 
-            if (!empty($initial_license_key)) {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM `licenses` WHERE license_key = ?");
-                $stmt->execute([$initial_license_key]);
-                if ($stmt->fetchColumn() == 0) {
-                    $sql = "INSERT INTO `licenses` (license_key, max_devices, expires_at) VALUES (?, ?, ?)";
+            // Create orders table
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `orders` (
+                `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                `customer_id` INT(11) UNSIGNED NOT NULL,
+                `order_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `total_amount` DECIMAL(10, 2) NOT NULL,
+                `status` ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+                `payment_intent_id` VARCHAR(255) NULL, -- For Stripe/PayPal integration
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            $setup_message .= '<p style="color: green;">Table `orders` checked/created successfully.</p>';
+
+            // Create order_items table
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `order_items` (
+                `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                `order_id` INT(11) UNSIGNED NOT NULL,
+                `product_id` INT(11) UNSIGNED NOT NULL,
+                `quantity` INT(11) NOT NULL DEFAULT 1,
+                `price` DECIMAL(10, 2) NOT NULL,
+                `license_key_generated` VARCHAR(255) NULL, -- Store the generated license key here
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+                FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE RESTRICT
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            $setup_message .= '<p style="color: green;">Table `order_items` checked/created successfully.</p>';
+
+            // Modify licenses table to link to customers and products
+            // Add customer_id and product_id if they don't exist
+            function columnExists($pdo, $table, $column) {
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+                $stmt->execute([$table, $column]);
+                return $stmt->fetchColumn() > 0;
+            }
+
+            if (!columnExists($pdo, 'licenses', 'customer_id')) {
+                $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `customer_id` INT(11) UNSIGNED NULL AFTER `id`;");
+                $pdo->exec("ALTER TABLE `licenses` ADD CONSTRAINT `fk_licenses_customer_id` FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE SET NULL;");
+                $setup_message .= '<p style="color: green;">Added `customer_id` to `licenses` table.</p>';
+            }
+            if (!columnExists($pdo, 'licenses', 'product_id')) {
+                $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `product_id` INT(11) UNSIGNED NULL AFTER `customer_id`;");
+                $pdo->exec("ALTER TABLE `licenses` ADD CONSTRAINT `fk_licenses_product_id` FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE SET NULL;");
+                $setup_message .= '<p style="color: green;">Added `product_id` to `licenses` table.</p>';
+            }
+
+            // Create admin_users table for the portal's admin panel
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `admin_users` (
+                `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                `username` VARCHAR(255) NOT NULL UNIQUE,
+                `password` VARCHAR(255) NOT NULL,
+                `email` VARCHAR(255) NOT NULL UNIQUE,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            $setup_message .= '<p style="color: green;">Table `admin_users` checked/created successfully.</p>';
+
+            // Insert default admin user for the portal if not exists
+            $admin_username = 'admin';
+            $admin_email = 'admin@portal.itsupport.com.bd';
+            $admin_password = 'adminpassword'; // Default password for portal admin
+
+            $stmt = $pdo->prepare("SELECT id FROM `admin_users` WHERE username = ?");
+            $stmt->execute([$admin_username]);
+            if (!$stmt->fetch()) {
+                $hashed_password = password_hash($admin_password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("INSERT INTO `admin_users` (username, password, email) VALUES (?, ?, ?)");
+                $stmt->execute([$admin_username, $hashed_password, $admin_email]);
+                $setup_message .= '<p style="color: green;">Default admin user for portal created: ' . htmlspecialchars($admin_username) . ' with password: ' . htmlspecialchars($admin_password) . '</p>';
+            } else {
+                $setup_message .= '<p style="color: orange;">Portal admin user already exists.</p>';
+            }
+
+            // Insert some sample products if they don't exist
+            $sample_products = [
+                ['name' => 'AMPNM Basic License (10 Devices / 1 Year)', 'description' => 'Basic license for up to 10 devices, valid for 1 year.', 'price' => 99.00, 'max_devices' => 10, 'license_duration_days' => 365],
+                ['name' => 'AMPNM Pro License (50 Devices / 1 Year)', 'description' => 'Pro license for up to 50 devices, valid for 1 year.', 'price' => 299.00, 'max_devices' => 50, 'license_duration_days' => 365],
+                ['name' => 'AMPNM Enterprise License (Unlimited Devices / 1 Year)', 'description' => 'Enterprise license for unlimited devices, valid for 1 year.', 'price' => 999.00, 'max_devices' => 99999, 'license_duration_days' => 365],
+            ];
+
+            foreach ($sample_products as $product_data) {
+                $stmt = $pdo->prepare("SELECT id FROM `products` WHERE name = ?");
+                $stmt->execute([$product_data['name']]);
+                if (!$stmt->fetch()) {
+                    $sql = "INSERT INTO `products` (name, description, price, max_devices, license_duration_days) VALUES (?, ?, ?, ?, ?)";
                     $stmt = $pdo->prepare($sql);
-                    $stmt->execute([$initial_license_key, $initial_max_devices, empty($initial_expires_at) ? null : $initial_expires_at]);
-                    $setup_message .= '<p style="color: green;">Initial license key added successfully.</p>';
+                    $stmt->execute([$product_data['name'], $product_data['description'], $product_data['price'], $product_data['max_devices'], $product_data['license_duration_days']]);
+                    $setup_message .= '<p style="color: green;">Added sample product: ' . htmlspecialchars($product_data['name']) . '</p>';
                 } else {
-                    $setup_message .= '<p style="color: orange;">Initial license key already exists, skipped insertion.</p>';
+                    $setup_message .= '<p style="color: orange;">Sample product already exists: ' . htmlspecialchars($product_data['name']) . '</p>';
                 }
             }
 
@@ -148,7 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         h1, h2 { color: #0056b3; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="password"], input[type="number"], input[type="date"] {
+        input[type="text"], input[type="password"], input[type="email"], input[type="number"], input[type="date"] {
             width: calc(100% - 22px); padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;
         }
         button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
@@ -189,19 +276,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
         <?php else: ?>
             <p style="color: green;">Database configuration loaded from config.php.</p>
-            <h2>Step 2: Setup License Tables & Add Initial License</h2>
+            <h2>Step 2: Setup License Tables & Add Initial Data</h2>
             <form method="POST">
                 <input type="hidden" name="action" value="setup_tables">
-                <label for="initial_license_key">Initial License Key (Optional):</label>
-                <input type="text" id="initial_license_key" name="initial_license_key" placeholder="e.g., PRO-LICENSE-XYZ">
-
-                <label for="initial_max_devices">Max Devices (for initial license):</label>
-                <input type="number" id="initial_max_devices" name="initial_max_devices" value="10" min="1">
-
-                <label for="initial_expires_at">Expires At (YYYY-MM-DD, Optional):</label>
-                <input type="date" id="initial_expires_at" name="initial_expires_at">
-
-                <button type="submit">Setup Tables & Add License</button>
+                <p>This will create all necessary tables and add sample products and a default admin user for the portal.</p>
+                <button type="submit">Setup Tables & Initial Data</button>
             </form>
             <p style="margin-top: 20px;"><a href="verify_license.php" target="_blank">Test verify_license.php endpoint</a></p>
         <?php endif; ?>
