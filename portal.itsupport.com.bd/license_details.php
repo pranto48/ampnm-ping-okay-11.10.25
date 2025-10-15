@@ -53,12 +53,9 @@ portal_header("License Details - IT Support BD Portal");
     <h3 class="text-xl font-semibold text-white mb-4">Download AMPNM Docker Setup Files</h3>
     <p class="text-gray-200 mb-4">Download these files to quickly set up your AMPNM application using Docker. Your license key will be pre-filled in the `docker-compose.yml` file.</p>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <a href="generate_docker_compose.php?license_key=<?= urlencode($license['license_key']) ?>" class="btn-glass-primary flex items-center justify-center">
-            <i class="fas fa-file-code mr-2"></i>Download docker-compose.yml
-        </a>
-        <a href="download_dockerfile.php" class="btn-glass-secondary flex items-center justify-center">
-            <i class="fas fa-file-alt mr-2"></i>Download Dockerfile
+    <div class="grid grid-cols-1 gap-4 mb-6">
+        <a href="download_docker_setup.php?license_key=<?= urlencode($license['license_key']) ?>" class="btn-glass-primary flex items-center justify-center">
+            <i class="fas fa-file-archive mr-2"></i>Download All Docker Setup Files (.zip)
         </a>
     </div>
 
@@ -67,8 +64,8 @@ portal_header("License Details - IT Support BD Portal");
         <p>Follow these steps to get your AMPNM application running with Docker:</p>
         <ol class="list-decimal list-inside space-y-2 pl-4">
             <li>
-                <strong>Download Files:</strong> Download both `docker-compose.yml` and `Dockerfile` using the buttons above.
-                Place them in a new, empty directory on your server.
+                <strong>Download Files:</strong> Download the `ampnm-docker-setup-*.zip` file using the button above.
+                Extract its contents (`Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`) into a new, empty directory on your server.
             </li>
             <li>
                 <strong>Ensure Docker is Installed:</strong> Make sure Docker and Docker Compose are installed on your server.
