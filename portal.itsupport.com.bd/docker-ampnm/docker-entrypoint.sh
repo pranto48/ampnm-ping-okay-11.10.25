@@ -1,15 +1,20 @@
 #!/bin/bash
 set -e
 
-# This script is executed when the Docker container starts.
+# Check if the database is up and running
+/var/www/html/ampnm-app-source/includes/db_check.php
+while [ $? -ne 0 ]; do
+    echo "Waiting for database to be ready..."
+    sleep 5
+    /var/www/html/ampnm-app-source/includes/db_check.php
+done
 
-# 1. Modify Apache's configuration to listen on port 2266 instead of the default 80.
-echo "Configuring Apache to listen on port 2266..."
-sed -i 's/Listen 80/Listen 2266/g' /etc/apache2/ports.conf
-sed -i 's/<VirtualHost \*:80>/<VirtualHost \*:2266>/g' /etc/apache2/sites-available/000-default.conf
+echo "Database is ready. Running setup script..."
 
-# 2. Start the Apache web server.
-# 'exec' is used to replace the script process with the Apache process,
-# which is standard practice for container entrypoints.
-echo "Starting Apache web server..."
+# Run the database setup script
+php /var/www/html/ampnm-app-source/database_setup.php
+
+echo "Database setup script finished. Starting Apache..."
+
+# Start Apache in the foreground
 exec apache2-foreground
