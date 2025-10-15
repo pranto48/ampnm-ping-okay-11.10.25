@@ -101,6 +101,27 @@ body {
 .text-primary-light { @apply text-blue-300; }
 .text-secondary-light { @apply text-gray-300; }
 
+/* Page Load Animation */
+.page-content {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: page-fade-in 0.5s 0.1s ease-out forwards;
+}
+@keyframes page-fade-in {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Navigation Links */
+.nav-link {
+    @apply text-secondary-light hover:text-blue-300 px-3 py-2 rounded-md text-sm font-medium;
+    transition: all 0.2s ease-in-out;
+}
+.nav-link.active {
+    @apply text-blue-300 bg-white bg-opacity-10;
+    box-shadow: 0 0 10px rgba(74, 144, 226, 0.3);
+}
+
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .container {
@@ -137,6 +158,10 @@ body {
 .admin-nav-link {
     @apply text-gray-300 hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium;
     transition: all 0.2s ease-in-out;
+}
+.admin-nav-link.active {
+    @apply text-blue-400 bg-gray-600;
+    box-shadow: 0 0 10px rgba(66, 153, 225, 0.3);
 }
 
 .admin-card {

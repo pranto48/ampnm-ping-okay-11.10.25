@@ -100,6 +100,7 @@ function redirectToAdminDashboard() {
 
 // --- Basic HTML Header/Footer for the portal ---
 function portal_header($title = "IT Support BD Portal") {
+    $current_page = basename($_SERVER['PHP_SELF']);
     echo '<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -117,20 +118,34 @@ function portal_header($title = "IT Support BD Portal") {
                     <i class="fas fa-shield-alt mr-2 text-blue-400"></i>IT Support BD Portal
                 </a>
                 <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">';
+    
+    $nav_links = [
+        'products.php' => 'Products',
+        'dashboard.php' => 'Dashboard',
+        'cart.php' => '<i class="fas fa-shopping-cart mr-1"></i> Cart',
+    ];
+
     if (isCustomerLoggedIn()) {
-        echo '<a href="products.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors">Products</a>
-              <a href="dashboard.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors">Dashboard</a>
-              <a href="cart.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors"><i class="fas fa-shopping-cart mr-1"></i> Cart</a>
-              <a href="logout.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors"><i class="fas fa-sign-out-alt mr-1"></i> Logout (' . htmlspecialchars($_SESSION['customer_email']) . ')</a>';
+        foreach ($nav_links as $href => $text) {
+            $active_class = ($current_page === $href) ? 'active' : '';
+            echo '<a href="' . htmlspecialchars($href) . '" class="nav-link ' . $active_class . '">' . $text . '</a>';
+        }
+        echo '<a href="logout.php" class="nav-link"><i class="fas fa-sign-out-alt mr-1"></i> Logout (' . htmlspecialchars($_SESSION['customer_email']) . ')</a>';
     } else {
-        echo '<a href="products.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors">Products</a>
-              <a href="login.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors">Login</a>
-              <a href="registration.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors">Register</a>';
+        $public_nav_links = [
+            'products.php' => 'Products',
+            'login.php' => 'Login',
+            'registration.php' => 'Register',
+        ];
+        foreach ($public_nav_links as $href => $text) {
+            $active_class = ($current_page === $href) ? 'active' : '';
+            echo '<a href="' . htmlspecialchars($href) . '" class="nav-link ' . $active_class . '">' . $text . '</a>';
+        }
     }
     echo '</div>
             </div>
         </nav>
-        <main class="container mx-auto py-8 flex-grow">';
+        <main class="container mx-auto py-8 flex-grow page-content">'; // Added page-content class
 }
 
 function portal_footer() {
@@ -143,6 +158,7 @@ function portal_footer() {
 }
 
 function admin_header($title = "Admin Panel") {
+    $current_page = basename($_SERVER['PHP_SELF']);
     echo '<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -160,19 +176,33 @@ function admin_header($title = "Admin Panel") {
                     <i class="fas fa-user-shield mr-2"></i>Admin Panel
                 </a>
                 <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">';
+    
+    $admin_nav_links = [
+        'index.php' => 'Dashboard',
+        'users.php' => 'Customers',
+        'license-manager.php' => 'Licenses',
+        'products.php' => 'Products',
+    ];
+
     if (isAdminLoggedIn()) {
-        echo '<a href="index.php" class="admin-nav-link">Dashboard</a>
-              <a href="users.php" class="admin-nav-link">Customers</a>
-              <a href="license-manager.php" class="admin-nav-link">Licenses</a>
-              <a href="products.php" class="admin-nav-link">Products</a>
-              <a href="../logout.php?admin=true" class="admin-nav-link"><i class="fas fa-sign-out-alt mr-1"></i> Logout (' . htmlspecialchars($_SESSION['admin_username']) . ')</a>';
+        foreach ($admin_nav_links as $href => $text) {
+            $active_class = ($current_page === $href) ? 'active' : '';
+            echo '<a href="' . htmlspecialchars($href) . '" class="admin-nav-link ' . $active_class . '">' . $text . '</a>';
+        }
+        echo '<a href="../logout.php?admin=true" class="admin-nav-link"><i class="fas fa-sign-out-alt mr-1"></i> Logout (' . htmlspecialchars($_SESSION['admin_username']) . ')</a>';
     } else {
-        echo '<a href="adminpanel.php" class="admin-nav-link">Login</a>';
+        $admin_public_nav_links = [
+            'adminpanel.php' => 'Login',
+        ];
+        foreach ($admin_public_nav_links as $href => $text) {
+            $active_class = ($current_page === basename($href)) ? 'active' : ''; // Use basename for adminpanel.php
+            echo '<a href="' . htmlspecialchars($href) . '" class="admin-nav-link ' . $active_class . '">' . $text . '</a>';
+        }
     }
     echo '</div>
             </div>
         </nav>
-        <main class="container mx-auto py-8 flex-grow">';
+        <main class="container mx-auto py-8 flex-grow page-content">'; // Added page-content class
 }
 
 function admin_footer() {
