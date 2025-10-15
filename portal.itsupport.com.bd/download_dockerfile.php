@@ -67,4 +67,3 @@ header('Content-Type: text/plain');
 header('Content-Disposition: attachment; filename="Dockerfile"');
 echo trim($dockerfile_content);
 exit;
-?>
