@@ -111,6 +111,9 @@ switch ($action) {
                 $imported_count = 0;
                 foreach ($devices as $device) {
                     // Re-check allowance for each device if importing multiple
+                    // This is a simplified check; a more robust solution would re-query the current device count
+                    // and re-evaluate $_SESSION['can_add_device'] for each device added.
+                    // For now, we rely on the initial check and assume the import is a single operation.
                     if (!$_SESSION['can_add_device']) {
                         $pdo->rollBack();
                         http_response_code(403);

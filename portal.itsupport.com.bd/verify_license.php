@@ -8,11 +8,11 @@ $input = json_decode(file_get_contents('php://input'), true);
 
 $app_license_key = $input['app_license_key'] ?? null;
 $user_id = $input['user_id'] ?? null; // This is the user ID from your AMPNM app's local MySQL
+$current_device_count = $input['current_device_count'] ?? 0; // New: Receive current device count from AMPNM app
 
 if (!$app_license_key || !$user_id) {
     echo json_encode([
         'success' => false,
-        'can_add_device' => false,
         'message' => 'Missing application license key or user ID.'
     ]);
     exit;
@@ -22,7 +22,6 @@ try {
     $pdo = getLicenseDbConnection();
 
     // 1. Fetch the license from MySQL
-    // We now also check if the license is assigned to a customer, though not strictly necessary for verification
     $stmt = $pdo->prepare("SELECT * FROM `licenses` WHERE license_key = ?");
     $stmt->execute([$app_license_key]);
     $license = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -30,7 +29,6 @@ try {
     if (!$license) {
         echo json_encode([
             'success' => false,
-            'can_add_device' => false,
             'message' => 'Invalid or expired application license key.'
         ]);
         exit;
@@ -40,7 +38,6 @@ try {
     if ($license['status'] !== 'active' && $license['status'] !== 'free') {
         echo json_encode([
             'success' => false,
-            'can_add_device' => false,
             'message' => 'License is ' . $license['status'] . '.'
         ]);
         exit;
@@ -52,16 +49,19 @@ try {
         $stmt->execute([$license['id']]);
         echo json_encode([
             'success' => false,
-            'can_add_device' => false,
             'message' => 'License has expired.'
         ]);
         exit;
     }
 
-    // For this response, we'll just return the max_devices and let the AMPNM app enforce it.
+    // Update current_devices count in the license portal's database
+    // This is crucial for the portal to keep track of device usage
+    $stmt = $pdo->prepare("UPDATE `licenses` SET current_devices = ?, updated_at = NOW() WHERE id = ?");
+    $stmt->execute([$current_device_count, $license['id']]);
+
+    // Return max_devices to the AMPNM app, which will then calculate can_add_device
     echo json_encode([
         'success' => true,
-        'can_add_device' => true, // The AMPNM app will check its local count against max_devices
         'message' => 'License is active.',
         'max_devices' => $license['max_devices'] ?? 1 // Provide max_devices to the AMPNM app
     ]);
@@ -70,7 +70,6 @@ try {
     error_log("License verification error: " . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'can_add_device' => false,
         'message' => 'An internal error occurred during license verification.'
     ]);
 }
