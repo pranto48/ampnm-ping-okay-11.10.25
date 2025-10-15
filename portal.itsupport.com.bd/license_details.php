@@ -50,12 +50,12 @@ portal_header("License Details - IT Support BD Portal");
         <p class="text-sm text-gray-300 mt-2">Use this key when setting up your AMPNM Docker application.</p>
     </div>
 
-    <h3 class="text-xl font-semibold text-white mb-4">Download AMPNM Docker Setup Files</h3>
-    <p class="text-gray-200 mb-4">Download these files to quickly set up your AMPNM application using Docker. Your license key will be pre-filled in the `docker-compose.yml` file.</p>
+    <h3 class="text-xl font-semibold text-white mb-4">Download AMPNM Docker Project</h3>
+    <p class="text-gray-200 mb-4">Download the entire Docker project, pre-configured with your license key, to quickly set up your AMPNM application.</p>
 
     <div class="grid grid-cols-1 gap-4 mb-6">
-        <a href="download_docker_setup.php?license_key=<?= urlencode($license['license_key']) ?>" class="btn-glass-primary flex items-center justify-center">
-            <i class="fas fa-file-archive mr-2"></i>Download All Docker Setup Files (.zip)
+        <a href="download_ampnm_docker_project.php?license_key=<?= urlencode($license['license_key']) ?>" class="btn-glass-primary flex items-center justify-center">
+            <i class="fas fa-file-archive mr-2"></i>Download AMPNM Docker Project (.zip)
         </a>
     </div>
 
@@ -64,15 +64,15 @@ portal_header("License Details - IT Support BD Portal");
         <p>Follow these steps to get your AMPNM application running with Docker:</p>
         <ol class="list-decimal list-inside space-y-2 pl-4">
             <li>
-                <strong>Download Files:</strong> Download the `ampnm-docker-setup-*.zip` file using the button above.
-                Extract its contents (`Dockerfile`, `docker-compose.yml`, `docker-entrypoint.sh`) into a new, empty directory on your server.
+                <strong>Download & Extract:</strong> Download the `ampnm-docker-project-*.zip` file using the button above.
+                Extract its contents into a new, empty directory on your server. This will create a `docker-ampnm` folder containing all necessary files.
             </li>
             <li>
                 <strong>Ensure Docker is Installed:</strong> Make sure Docker and Docker Compose are installed on your server.
                 If not, follow the official Docker installation guides.
             </li>
             <li>
-                <strong>Open Terminal:</strong> Navigate to the directory where you saved the files using your terminal/command prompt.
+                <strong>Open Terminal:</strong> Navigate into the `docker-ampnm` directory using your terminal/command prompt.
             </li>
             <li>
                 <strong>Run Docker Compose:</strong> Execute the following command:

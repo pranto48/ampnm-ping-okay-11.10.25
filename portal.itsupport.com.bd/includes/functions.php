@@ -177,6 +177,30 @@ function getAllTickets($filter_status = null) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+/**
+ * Recursively adds a folder and its contents to a ZipArchive.
+ *
+ * @param ZipArchive $zip The ZipArchive object.
+ * @param string $folderPath The full path to the folder to add.
+ * @param string $zipPath The path inside the zip file (e.g., 'my-project/subfolder').
+ */
+function addFolderToZip(ZipArchive $zip, string $folderPath, string $zipPath) {
+    $files = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($folderPath, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::LEAVES_ONLY
+    );
+
+    foreach ($files as $name => $file) {
+        // Get real path for current file
+        $filePath = $file->getRealPath();
+        $relativePath = substr($filePath, strlen($folderPath) + 1);
+
+        // Add current file to zip
+        $zip->addFile($filePath, $zipPath . '/' . $relativePath);
+    }
+}
+
+
 // --- Functions to generate Docker setup file contents ---
 function getDockerfileContent() {
     $dockerfile_lines = [

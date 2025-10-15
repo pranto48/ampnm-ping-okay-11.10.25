@@ -16,12 +16,23 @@ if (!$license_key) {
     exit;
 }
 
+// Define the base directory for the Docker project files
+$docker_project_base_dir = __DIR__ . '/docker-ampnm/';
+$app_source_dir = $docker_project_base_dir . 'ampnm-app-source/';
+
+// Ensure the app source directory exists
+if (!is_dir($app_source_dir)) {
+    http_response_code(500);
+    echo "Error: Application source directory not found.";
+    exit;
+}
+
 // Get content for Dockerfile and docker-compose.yml
 $dockerfile_content = getDockerfileContent();
 $docker_compose_content = getDockerComposeContent($license_key);
 
 // Read docker-entrypoint.sh content
-$entrypoint_script_path = __DIR__ . '/docker-ampnm/docker-entrypoint.sh';
+$entrypoint_script_path = $docker_project_base_dir . 'docker-entrypoint.sh';
 if (!file_exists($entrypoint_script_path)) {
     http_response_code(500);
     echo "Error: docker-entrypoint.sh not found.";
@@ -30,7 +41,7 @@ if (!file_exists($entrypoint_script_path)) {
 $entrypoint_content = file_get_contents($entrypoint_script_path);
 
 // Create a temporary zip file
-$zip_file_name = 'ampnm-docker-setup-' . date('YmdHis') . '.zip';
+$zip_file_name = 'ampnm-docker-project-' . date('YmdHis') . '.zip';
 $zip_file_path = sys_get_temp_dir() . '/' . $zip_file_name;
 
 $zip = new ZipArchive();
@@ -40,10 +51,17 @@ if ($zip->open($zip_file_path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== T
     exit;
 }
 
-// Add files to the zip archive
-$zip->addFromString('Dockerfile', $dockerfile_content);
-$zip->addFromString('docker-compose.yml', $docker_compose_content);
-$zip->addFromString('docker-entrypoint.sh', $entrypoint_content);
+// Add the root directory for the project inside the zip
+$zip_root_folder = 'docker-ampnm/';
+$zip->addEmptyDir($zip_root_folder);
+
+// Add dynamically generated files to the zip
+$zip->addFromString($zip_root_folder . 'Dockerfile', $dockerfile_content);
+$zip->addFromString($zip_root_folder . 'docker-compose.yml', $docker_compose_content);
+$zip->addFromString($zip_root_folder . 'docker-entrypoint.sh', $entrypoint_content);
+
+// Add the entire ampnm-app-source directory recursively
+addFolderToZip($zip, $app_source_dir, $zip_root_folder . 'ampnm-app-source');
 
 $zip->close();
 
