@@ -3,11 +3,11 @@ version: '3.8'
 services:
   app:
     build:
-      context: .
+      context: . # Build context is the docker-ampnm folder
       dockerfile: Dockerfile
-    entrypoint: ["/bin/sh", "-c", "chmod +x /var/www/html/docker-entrypoint.sh && /var/www/html/docker-entrypoint.sh"]
+    # The entrypoint is now handled by the Dockerfile itself
     volumes:
-      - ./:/var/www/html/
+      - ./ampnm-app-source/:/var/www/html/ # Mount the application source into the container
     depends_on:
       db:
         condition: service_healthy

@@ -1,14 +1,3 @@
-<?php
-require_once 'includes/functions.php';
-
-// Ensure customer is logged in
-if (!isCustomerLoggedIn()) {
-    http_response_code(403);
-    echo "Unauthorized access.";
-    exit;
-}
-
-$dockerfile_content = <<<EOT
 FROM php:8.2-apache
 
 # Install system dependencies
@@ -60,9 +49,3 @@ RUN mkdir -p /var/www/html/uploads/icons \
 # Use the copied entrypoint script
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 EOT;
-
-header('Content-Type: text/plain');
-header('Content-Disposition: attachment; filename="Dockerfile"');
-echo $dockerfile_content;
-exit;
-?>
