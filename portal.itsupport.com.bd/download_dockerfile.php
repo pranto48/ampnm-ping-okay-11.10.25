@@ -63,6 +63,6 @@ EOT;
 
 header('Content-Type: text/plain');
 header('Content-Disposition: attachment; filename="Dockerfile"');
-echo $dockerfile_content;
+echo trim($dockerfile_content); // Added trim() to ensure no extra characters are outputted
 exit;
 ?>
