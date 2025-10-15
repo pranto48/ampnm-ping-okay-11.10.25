@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_license'])) 
         $expires_at = date('Y-m-d H:i:s', strtotime("+$license_duration_days days"));
 
         $license_key = generateLicenseKey();
-        $stmt = $pdo->prepare("INSERT INTO `licenses` (customer_id, product_id, license_key, status, max_devices, expires_at) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO `licenses` (customer_id, product_id, license_key, status, max_devices, expires_at, last_active_at) VALUES (?, ?, ?, ?, ?, ?, NOW())"); // Set last_active_at on generation
         $stmt->execute([$customer_id, $product_id, $license_key, $status, $max_devices, $expires_at]);
         $message = '<div class="alert-admin-success mb-4">License generated successfully: ' . htmlspecialchars($license_key) . '</div>';
     } catch (Exception $e) {
@@ -143,6 +143,7 @@ admin_header("Manage Licenses");
                         <th class="py-3 px-6 text-left">Status</th>
                         <th class="py-3 px-6 text-left">Max Devices</th>
                         <th class="py-3 px-6 text-left">Current Devices</th>
+                        <th class="py-3 px-6 text-left">Last Active</th>
                         <th class="py-3 px-6 text-left">Expires At</th>
                         <th class="py-3 px-6 text-center">Actions</th>
                     </tr>
@@ -160,7 +161,8 @@ admin_header("Manage Licenses");
                             </td>
                             <td class="py-3 px-6 text-left"><?= htmlspecialchars($license['max_devices']) ?></td>
                             <td class="py-3 px-6 text-left"><?= htmlspecialchars($license['current_devices']) ?></td>
-                            <td class="py-3 px-6 text-left"><?= date('Y-m-d', strtotime($license['expires_at'])) ?></td>
+                            <td class="py-3 px-6 text-left"><?= $license['last_active_at'] ? date('Y-m-d H:i', strtotime($license['last_active_at'])) : 'Never' ?></td>
+                            <td class="py-3 px-6 text-left"><?= $license['expires_at'] ? date('Y-m-d', strtotime($license['expires_at'])) : 'Never' ?></td>
                             <td class="py-3 px-6 text-center">
                                 <button onclick="openEditLicenseModal(<?= htmlspecialchars(json_encode($license)) ?>)" class="btn-admin-primary text-xs px-3 py-1 mr-2">
                                     <i class="fas fa-edit mr-1"></i>Edit

@@ -44,7 +44,7 @@ try {
     }
 
     if ($license['expires_at'] && strtotime($license['expires_at']) < time()) {
-        // Optionally update status to 'expired' in MySQL here
+        // Automatically update status to 'expired' if past due
         $stmt = $pdo->prepare("UPDATE `licenses` SET status = 'expired', updated_at = NOW() WHERE id = ?");
         $stmt->execute([$license['id']]);
         echo json_encode([
@@ -54,9 +54,8 @@ try {
         exit;
     }
 
-    // Update current_devices count in the license portal's database
-    // This is crucial for the portal to keep track of device usage
-    $stmt = $pdo->prepare("UPDATE `licenses` SET current_devices = ?, updated_at = NOW() WHERE id = ?");
+    // Update current_devices count and last_active_at timestamp in the license portal's database
+    $stmt = $pdo->prepare("UPDATE `licenses` SET current_devices = ?, last_active_at = NOW(), updated_at = NOW() WHERE id = ?");
     $stmt->execute([$current_device_count, $license['id']]);
 
     // Return max_devices to the AMPNM app, which will then calculate can_add_device

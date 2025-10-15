@@ -227,6 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     `expires_at` TIMESTAMP NULL,
                     `max_devices` INT(11) DEFAULT 1,
                     `current_devices` INT(11) DEFAULT 0,
+                    `last_active_at` TIMESTAMP NULL, -- New column for last check-in
                     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE SET NULL,
@@ -319,6 +320,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $setup_message .= '<p class="text-orange-500">Sample product already exists: ' . htmlspecialchars($product_data['name']) . '</p>';
                     }
                 }
+
+                // Migration: Add last_active_at if it doesn't exist
+                function columnExists($pdo, $db, $table, $column) {
+                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+                    $stmt->execute([$db, $table, $column]);
+                    return $stmt->fetchColumn() > 0;
+                }
+                if (!columnExists($pdo, 'license_db', 'licenses', 'last_active_at')) { // Assuming 'license_db' is the DB name
+                    $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `last_active_at` TIMESTAMP NULL AFTER `current_devices`;");
+                    $setup_message .= '<p class="text-green-500">Migrated `licenses` table: added `last_active_at` column.</p>';
+                }
+
 
                 $setup_message .= '<p class="text-blue-500">Database setup for license service completed!</p>';
                 $step = 4; // Move to final step

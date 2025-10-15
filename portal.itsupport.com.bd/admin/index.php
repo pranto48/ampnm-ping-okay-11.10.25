@@ -93,6 +93,14 @@ admin_header("Admin Dashboard");
     </div>
 </div>
 
+<div class="admin-card mt-8 p-6">
+    <h2 class="text-2xl font-semibold text-blue-400 mb-4">License Automation</h2>
+    <p class="text-gray-300 mb-4">Manually trigger the script to deactivate licenses that haven't checked in for over a year. This can also be set up as a cron job on your server.</p>
+    <a href="deactivate_old_licenses.php" target="_blank" class="btn-admin-primary w-full">
+        <i class="fas fa-clock mr-2"></i>Run Auto-Deactivation Script
+    </a>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const messagesDiv = document.getElementById('db-management-messages');
