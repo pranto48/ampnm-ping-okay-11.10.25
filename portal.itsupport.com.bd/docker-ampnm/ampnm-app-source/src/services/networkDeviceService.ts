@@ -1,4 +1,4 @@
-const PHP_API_URL = 'http://localhost:2266/api.php'; // Assuming your PHP API is accessible here
+const PHP_API_URL = '/api.php'; // Changed to relative path
 
 export interface NetworkDevice {
   id?: string;

@@ -32,7 +32,7 @@ const NetworkScanner = () => {
     setScanMessage("Scanning network... This may take a moment.");
 
     try {
-      const response = await fetch('http://localhost:2266/api.php?action=scan_network', {
+      const response = await fetch('/api.php?action=scan_network', { // Changed to relative path
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subnet })

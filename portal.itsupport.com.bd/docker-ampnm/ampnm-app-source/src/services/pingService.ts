@@ -7,7 +7,7 @@ export interface PingResult {
   statusCode: number;
 }
 
-const LOCAL_API_URL = 'http://localhost:2266/api.php';
+const LOCAL_API_URL = '/api.php'; // Changed to relative path
 
 export const performServerPing = async (host: string, count: number = 4): Promise<PingResult> => {
   try {

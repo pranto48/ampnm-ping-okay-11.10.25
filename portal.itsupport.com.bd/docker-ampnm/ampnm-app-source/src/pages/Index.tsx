@@ -55,7 +55,7 @@ const Index = () => {
 
   const fetchMaps = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:2266/api.php?action=get_maps');
+      const response = await fetch('/api.php?action=get_maps'); // Changed to relative path
       if (!response.ok) throw new Error('Failed to fetch maps');
       const data = await response.json();
       const phpMaps = data.map((m: any) => ({ id: String(m.id), name: m.name }));
@@ -95,7 +95,7 @@ const Index = () => {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:2266/api.php?action=get_dashboard_data&map_id=${currentMapId}`);
+      const response = await fetch(`/api.php?action=get_dashboard_data&map_id=${currentMapId}`); // Changed to relative path
       if (!response.ok) throw new Error('Failed to fetch dashboard data');
       const data = await response.json();
       setDashboardStats(data.stats);
@@ -163,7 +163,7 @@ const Index = () => {
     setIsCheckingDevices(true);
     const toastId = showLoading(`Pinging ${devices.length} devices...`);
     try {
-      const response = await fetch('http://localhost:2266/api.php?action=ping_all_devices', {
+      const response = await fetch('/api.php?action=ping_all_devices', { // Changed to relative path
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ map_id: currentMapId })
