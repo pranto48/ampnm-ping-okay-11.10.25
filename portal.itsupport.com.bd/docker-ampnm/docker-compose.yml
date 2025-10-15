@@ -12,7 +12,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      - DB_HOST=127.0.0.1
+      - DB_HOST=db # Changed from 127.0.0.1 to 'db' (the service name)
       - DB_NAME=network_monitor
       - DB_USER=user
       - DB_PASSWORD=password

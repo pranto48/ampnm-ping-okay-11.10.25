@@ -5,7 +5,7 @@
 // Suppress warnings for failed connection attempts during startup
 error_reporting(0);
 
-$host = getenv('DB_HOST');
+$host = getenv('DB_HOST'); // Use the DB_HOST environment variable
 $user = 'root'; // The entrypoint script needs root to ensure the DB is up, before setup runs.
 $pass = getenv('MYSQL_ROOT_PASSWORD');
 
@@ -16,4 +16,3 @@ try {
 } catch (PDOException $e) {
     exit(1); // Failure
 }
-?>
