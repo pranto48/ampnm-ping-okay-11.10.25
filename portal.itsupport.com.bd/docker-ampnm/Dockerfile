@@ -3,6 +3,7 @@ FROM php:8.2-apache
 # Install system dependencies
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* \
     && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    curl \
     git \
     unzip \
     libzip-dev \
@@ -16,6 +17,9 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/* \
     mysql-client \
     apt-transport-https \
     && rm -rf /var/lib/apt/lists/*
+
+# Test internet connectivity before apt-get update
+RUN curl -sS -o /dev/null --connect-timeout 5 http://8.8.8.8 || curl -sS -o /dev/null --connect-timeout 5 https://www.google.com
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
