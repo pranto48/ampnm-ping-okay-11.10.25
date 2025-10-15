@@ -2,6 +2,10 @@
 // This is the new central bootstrap file.
 // It handles basic setup like loading functions and checking database integrity.
 
+// Load main application configuration first
+require_once __DIR__ . '/../config.php';
+
+// Then load general utility functions
 require_once __DIR__ . '/functions.php';
 
 // This script should not run on the setup page itself to avoid a redirect loop.

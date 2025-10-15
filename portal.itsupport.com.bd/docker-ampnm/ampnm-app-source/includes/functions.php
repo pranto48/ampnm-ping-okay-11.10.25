@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Include database configuration
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../config.php'; // Adjusted path to config.php
 
 // Function to get database connection (defined in config.php)
 // function getLicenseDbConnection() is already defined in config.php

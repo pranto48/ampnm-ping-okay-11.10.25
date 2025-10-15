@@ -5,6 +5,11 @@ $username = 'root'; // Setup script needs root privileges to create DB and table
 $password = getenv('MYSQL_ROOT_PASSWORD') ? getenv('MYSQL_ROOT_PASSWORD') : '';
 $dbname = getenv('DB_NAME') ? getenv('DB_NAME') : 'network_monitor';
 
+// Load the main application's config.php for getDbConnection if needed later,
+// but for initial setup, we use direct PDO connection.
+// The functions.php is not needed here as DB connection is direct.
+require_once __DIR__ . '/config.php';
+
 function message($text, $is_error = false) {
     $color = $is_error ? '#ef4444' : '#22c55e';
     echo "<p style='color: $color; margin: 4px 0; font-family: monospace;'>$text</p>";
@@ -306,7 +311,7 @@ try {
     // Step 6: Indexing for Performance
     function indexExists($pdo, $db, $table, $index) {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?");
-        $stmt->execute([$db, $table, $index]);
+        $stmt->execute([$db, $table, $column]);
         return $stmt->fetchColumn() > 0;
     }
 
