@@ -1,11 +1,9 @@
 <?php
-require_once 'includes/auth_check.php';
-// require_once __DIR__ . '/new-php-app/includes/supabase_client.php'; // Removed Supabase client inclusion
+require_once __DIR__ . '/includes/auth_check.php';
 
 header('Content-Type: application/json');
 
 $pdo = getDbConnection();
-// $supabaseClient = getSupabaseClient(); // Removed Supabase client instantiation
 $action = $_GET['action'] ?? '';
 $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
