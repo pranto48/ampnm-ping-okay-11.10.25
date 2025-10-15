@@ -35,7 +35,7 @@ import DeviceNode from './DeviceNode';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 // import { supabase } from '@/integrations/supabase/client'; // No longer directly used for device/edge management
 
-const NetworkMap = ({ devices, onMapUpdate, mapId }: { devices: NetworkDevice[]; onMapUpdate: () => void; mapId: string | null }) => {
+const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage }: { devices: NetworkDevice[]; onMapUpdate: () => void; mapId: string | null; canAddDevice: boolean; licenseMessage: string }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -68,7 +68,7 @@ const NetworkMap = ({ devices, onMapUpdate, mapId }: { devices: NetworkDevice[];
         showError('Failed to update device status.');
         // Revert UI update on failure
         setNodes((nds) =>
-          nds.map((node) => (node.id === nodeId ? { ...node, data: { ...node.data, status: device?.status || 'unknown' } } : node))
+          nds.map((node) => (node.id === nodeId ? { ...node, data: { ...node.data, status: device?.status || 'unknown' } : node))
         );
       }
     },
@@ -206,6 +206,10 @@ const NetworkMap = ({ devices, onMapUpdate, mapId }: { devices: NetworkDevice[];
   );
 
   const handleAddDevice = () => {
+    if (!canAddDevice) {
+      showError(licenseMessage || 'You have reached your device limit.');
+      return;
+    }
     setEditingDevice(undefined);
     setIsEditorOpen(true);
   };
@@ -410,7 +414,7 @@ const NetworkMap = ({ devices, onMapUpdate, mapId }: { devices: NetworkDevice[];
         <Background gap={16} size={1} color="#444" />
       </ReactFlow>
       <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-        <Button onClick={handleAddDevice} size="sm" disabled={!mapId}>
+        <Button onClick={handleAddDevice} size="sm" disabled={!mapId || !canAddDevice} title={!canAddDevice ? licenseMessage : ''}>
           <PlusCircle className="h-4 w-4 mr-2" />Add Device
         </Button>
         <Button onClick={handleExport} variant="outline" size="sm" disabled={!mapId}>

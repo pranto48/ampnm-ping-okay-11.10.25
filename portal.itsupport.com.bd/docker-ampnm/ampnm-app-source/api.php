@@ -17,6 +17,7 @@ $dashboardActions = ['get_dashboard_data'];
 $userActions = ['get_users', 'create_user', 'delete_user', 'get_supabase_users']; 
 $logActions = ['get_status_logs'];
 $notificationActions = ['get_smtp_settings', 'save_smtp_settings', 'get_device_subscriptions', 'save_device_subscription', 'delete_device_subscription', 'get_all_devices_for_subscriptions'];
+$authActions = ['get_license_status']; // New: Auth actions
 
 
 if (in_array($action, $pingActions)) {
@@ -33,6 +34,8 @@ if (in_array($action, $pingActions)) {
     require __DIR__ . '/api/handlers/log_handler.php';
 } elseif (in_array($action, $notificationActions)) {
     require __DIR__ . '/api/handlers/notification_handler.php';
+} elseif (in_array($action, $authActions)) { // New: Include auth handler
+    require __DIR__ . '/api/handlers/auth_handler.php';
 } elseif ($action === 'health') {
     echo json_encode(['status' => 'ok', 'timestamp' => date('c')]);
 } else {

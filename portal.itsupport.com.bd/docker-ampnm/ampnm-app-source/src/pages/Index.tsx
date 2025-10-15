@@ -16,6 +16,8 @@ import {
   getDevices,
   NetworkDevice,
   updateDeviceStatusByIp,
+  getLicenseStatus,
+  LicenseStatus,
 } from "@/services/networkDeviceService";
 import { performServerPing } from "@/services/pingService";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,6 +54,7 @@ const Index = () => {
   const [currentMapId, setCurrentMapId] = useState<string | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({ can_add_device: false, max_devices: 0, license_message: 'Loading license status...' });
 
   const fetchMaps = useCallback(async () => {
     try {
@@ -106,9 +109,21 @@ const Index = () => {
     }
   }, [currentMapId]);
 
+  const fetchLicenseStatus = useCallback(async () => {
+    try {
+      const status = await getLicenseStatus();
+      setLicenseStatus(status);
+    } catch (error) {
+      showError("Failed to load license status.");
+      console.error("Failed to load license status:", error);
+      setLicenseStatus({ can_add_device: false, max_devices: 0, license_message: 'Error loading license status.' });
+    }
+  }, []);
+
   useEffect(() => {
     fetchMaps();
-  }, [fetchMaps]);
+    fetchLicenseStatus(); // Fetch license status on initial load
+  }, [fetchMaps, fetchLicenseStatus]);
 
   useEffect(() => {
     fetchDevices();
@@ -336,8 +351,13 @@ const Index = () => {
 
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Network className="h-5 w-5" />Quick Actions
+                <CardTitle className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Network className="h-5 w-5" />Quick Actions
+                  </div>
+                  <Badge variant={licenseStatus.can_add_device ? "default" : "destructive"} className="text-sm">
+                    {licenseStatus.can_add_device ? `Devices: ${devices.length}/${licenseStatus.max_devices}` : licenseStatus.license_message}
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-4">
@@ -500,7 +520,13 @@ const Index = () => {
               </Button>
             </div>
             {currentMapId ? (
-              <NetworkMap devices={devices} onMapUpdate={fetchDevices} mapId={currentMapId} />
+              <NetworkMap 
+                devices={devices} 
+                onMapUpdate={fetchDevices} 
+                mapId={currentMapId} 
+                canAddDevice={licenseStatus.can_add_device}
+                licenseMessage={licenseStatus.license_message}
+              />
             ) : (
               <Card className="h-[70vh] flex items-center justify-center">
                 <CardContent className="text-center">

@@ -42,6 +42,12 @@ export interface MapData {
   edges: { source: string; target: string; connection_type: string }[];
 }
 
+export interface LicenseStatus {
+  can_add_device: boolean;
+  max_devices: number;
+  license_message: string;
+}
+
 const callPhpApi = async (action: string, method: 'GET' | 'POST', body?: any) => {
   const options: RequestInit = {
     method: method,
@@ -169,8 +175,7 @@ export const deleteDevice = async (id: string) => {
 };
 
 export const getEdges = async (map_id?: string | null) => {
-  const params = map_id ? { map_id } : {};
-  const data = await callPhpApi('get_edges', 'GET', params);
+  const data = await callPhpApi('get_edges', 'GET', { map_id });
   return data.map((e: any) => ({
     id: String(e.id),
     source: String(e.source_id),
@@ -218,6 +223,10 @@ export const importMap = async (mapData: MapData, map_id: string) => {
     })),
   };
   await callPhpApi('import_map', 'POST', payload);
+};
+
+export const getLicenseStatus = async (): Promise<LicenseStatus> => {
+  return await callPhpApi('get_license_status', 'GET');
 };
 
 // Real-time subscription for device changes - NOT USED WITH PHP BACKEND
