@@ -1,4 +1,6 @@
 <?php
+session_start(); // Start session to manage steps
+
 $setup_message = '';
 $config_file_path = __DIR__ . '/config.php';
 
@@ -51,175 +53,262 @@ EOT;
     return file_put_contents($config_file_path, $content);
 }
 
-// Check if config.php exists and is configured
-$is_configured = false;
-if (file_exists($config_file_path)) {
+// Helper to check if config is present and valid
+function isConfiguredAndDbConnects($config_file_path) {
+    if (!file_exists($config_file_path)) return false;
     require_once $config_file_path;
-    if (defined('LICENSE_DB_SERVER') && defined('LICENSE_DB_NAME')) {
-        $is_configured = true;
+    if (!defined('LICENSE_DB_SERVER') || !defined('LICENSE_DB_NAME')) return false;
+    try {
+        getLicenseDbConnection(); // Attempt connection
+        return true;
+    } catch (PDOException $e) {
+        return false;
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action']) && $_POST['action'] === 'configure_db') {
-        $db_server = $_POST['db_server'] ?? '';
-        $db_name = $_POST['db_name'] ?? '';
-        $db_username = $_POST['db_username'] ?? '';
-        $db_password = $_POST['db_password'] ?? '';
+// Helper to check if admin_users table exists and has an admin
+function isAdminUserSetup($pdo) {
+    try {
+        $stmt = $pdo->query("SELECT 1 FROM `admin_users` LIMIT 1");
+        // Table exists, check for admin user
+        $stmt = $pdo->prepare("SELECT id FROM `admin_users` WHERE username = 'admin'"); // Assuming 'admin' is the default
+        $stmt->execute();
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        // Table does not exist or other error
+        return false;
+    }
+}
 
-        if (empty($db_server) || empty($db_name) || empty($db_username)) {
-            $setup_message = '<p style="color: red;">All database fields except password are required.</p>';
+// Helper to check if all other tables exist (products, customers, orders, order_items, licenses)
+function areAllTablesSetup($pdo) {
+    $tables_to_check = ['products', 'customers', 'orders', 'order_items', 'licenses'];
+    foreach ($tables_to_check as $table) {
+        try {
+            $pdo->query("SELECT 1 FROM `$table` LIMIT 1");
+        } catch (PDOException $e) {
+            return false; // Table doesn't exist
+        }
+    }
+    return true;
+}
+
+// Determine current step
+$step = 1;
+if (isConfiguredAndDbConnects($config_file_path)) {
+    require_once $config_file_path; // Ensure config is loaded for getLicenseDbConnection
+    $pdo = getLicenseDbConnection();
+    if (isAdminUserSetup($pdo)) {
+        if (areAllTablesSetup($pdo)) {
+            $step = 4; // All done
         } else {
-            try {
-                // Attempt to connect to MySQL server (without selecting a database)
-                $pdo_root = new PDO("mysql:host=$db_server", $db_username, $db_password);
-                $pdo_root->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $step = 3; // Admin exists, but other tables are missing
+        }
+    } else {
+        $step = 2; // DB configured, but admin user is missing
+    }
+}
 
-                // Create database if it doesn't exist
-                $pdo_root->exec("CREATE DATABASE IF NOT EXISTS `{$db_name}`");
-                $setup_message .= '<p style="color: green;">Database ' . htmlspecialchars($db_name) . ' checked/created successfully.</p>';
+// Handle POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action'])) {
+        if ($_POST['action'] === 'configure_db' && $step === 1) {
+            $db_server = $_POST['db_server'] ?? '';
+            $db_name = $_POST['db_name'] ?? '';
+            $db_username = $_POST['db_username'] ?? '';
+            $db_password = $_POST['db_password'] ?? '';
 
-                // Update config.php
-                if (updateConfigFile($db_server, $db_name, $db_username, $db_password)) {
-                    $setup_message .= '<p style="color: green;">Configuration saved to config.php.</p>';
-                    $is_configured = true;
-                    // Reload config to use new settings
-                    require_once $config_file_path;
-                } else {
-                    $setup_message .= '<p style="color: red;">Failed to write to config.php. Check file permissions.</p>';
+            if (empty($db_server) || empty($db_name) || empty($db_username)) {
+                $setup_message = '<p class="text-red-500">All database fields except password are required.</p>';
+            } else {
+                try {
+                    // Attempt to connect to MySQL server (without selecting a database)
+                    $pdo_root = new PDO("mysql:host=$db_server", $db_username, $db_password);
+                    $pdo_root->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                    // Create database if it doesn't exist
+                    $pdo_root->exec("CREATE DATABASE IF NOT EXISTS `{$db_name}`");
+                    $setup_message .= '<p class="text-green-500">Database ' . htmlspecialchars($db_name) . ' checked/created successfully.</p>';
+
+                    // Update config.php
+                    if (updateConfigFile($db_server, $db_name, $db_username, $db_password)) {
+                        $setup_message .= '<p class="text-green-500">Configuration saved to config.php.</p>';
+                        $step = 2; // Move to next step
+                        // Reload config to use new settings for subsequent checks
+                        require_once $config_file_path;
+                    } else {
+                        $setup_message .= '<p class="text-red-500">Failed to write to config.php. Check file permissions.</p>';
+                    }
+
+                } catch (PDOException $e) {
+                    $setup_message .= '<p class="text-red-500">Database connection or creation failed: ' . htmlspecialchars($e->getMessage()) . '</p>';
                 }
+            }
+        } elseif ($_POST['action'] === 'setup_admin' && $step === 2) {
+            $admin_username = trim($_POST['admin_username'] ?? '');
+            $admin_password = $_POST['admin_password'] ?? '';
+
+            if (empty($admin_username) || empty($admin_password)) {
+                $setup_message = '<p class="text-red-500">Admin username and password are required.</p>';
+            } else {
+                try {
+                    require_once $config_file_path; // Ensure config is loaded
+                    $pdo = getLicenseDbConnection();
+
+                    // Create admin_users table if it doesn't exist
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS `admin_users` (
+                        `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                        `username` VARCHAR(255) NOT NULL UNIQUE,
+                        `password` VARCHAR(255) NOT NULL,
+                        `email` VARCHAR(255) NOT NULL UNIQUE,
+                        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                    $setup_message .= '<p class="text-green-500">Table `admin_users` checked/created successfully.</p>';
+
+                    // Insert or update admin user
+                    $hashed_password = password_hash($admin_password, PASSWORD_DEFAULT);
+                    $admin_email = $admin_username . '@portal.itsupport.com.bd'; // Default email
+
+                    $stmt = $pdo->prepare("SELECT id FROM `admin_users` WHERE username = ?");
+                    $stmt->execute([$admin_username]);
+                    if (!$stmt->fetch()) {
+                        $stmt = $pdo->prepare("INSERT INTO `admin_users` (username, password, email) VALUES (?, ?, ?)");
+                        $stmt->execute([$admin_username, $hashed_password, $admin_email]);
+                        $setup_message .= '<p class="text-green-500">Admin user ' . htmlspecialchars($admin_username) . ' created.</p>';
+                    } else {
+                        $stmt = $pdo->prepare("UPDATE `admin_users` SET password = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?");
+                        $stmt->execute([$hashed_password, $admin_email, $admin_username]);
+                        $setup_message .= '<p class="text-orange-500">Admin user ' . htmlspecialchars($admin_username) . ' password updated.</p>';
+                    }
+                    $step = 3; // Move to next step
+                } catch (PDOException $e) {
+                    $setup_message .= '<p class="text-red-500">Admin user setup failed: ' . htmlspecialchars($e->getMessage()) . '</p>';
+                }
+            }
+        } elseif ($_POST['action'] === 'setup_tables' && $step === 3) {
+            try {
+                require_once $config_file_path; // Ensure config is loaded
+                $pdo = getLicenseDbConnection();
+
+                // Create products table
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `products` (
+                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `name` VARCHAR(255) NOT NULL,
+                    `description` TEXT,
+                    `price` DECIMAL(10, 2) NOT NULL,
+                    `max_devices` INT(11) DEFAULT 1,
+                    `license_duration_days` INT(11) DEFAULT 365, -- e.g., 365 for 1 year
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                $setup_message .= '<p class="text-green-500">Table `products` checked/created successfully.</p>';
+
+                // Create customers table
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `customers` (
+                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `email` VARCHAR(255) NOT NULL UNIQUE,
+                    `password` VARCHAR(255) NOT NULL,
+                    `first_name` VARCHAR(255),
+                    `last_name` VARCHAR(255),
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                $setup_message .= '<p class="text-green-500">Table `customers` checked/created successfully.</p>';
+
+                // Create orders table
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `orders` (
+                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `customer_id` INT(11) UNSIGNED NOT NULL,
+                    `order_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `total_amount` DECIMAL(10, 2) NOT NULL,
+                    `status` ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+                    `payment_intent_id` VARCHAR(255) NULL, -- For Stripe/PayPal integration
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                $setup_message .= '<p class="text-green-500">Table `orders` checked/created successfully.</p>';
+
+                // Create order_items table
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `order_items` (
+                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `order_id` INT(11) UNSIGNED NOT NULL,
+                    `product_id` INT(11) UNSIGNED NOT NULL,
+                    `quantity` INT(11) NOT NULL DEFAULT 1,
+                    `price` DECIMAL(10, 2) NOT NULL,
+                    `license_key_generated` VARCHAR(255) NULL, -- Store the generated license key here
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+                    FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE RESTRICT
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                $setup_message .= '<p class="text-green-500">Table `order_items` checked/created successfully.</p>';
+
+                // Modify licenses table to link to customers and products
+                // Add customer_id and product_id if they don't exist
+                function columnExists($pdo, $table, $column) {
+                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+                    $stmt->execute([$table, $column]);
+                    return $stmt->fetchColumn() > 0;
+                }
+
+                if (!columnExists($pdo, 'licenses', 'customer_id')) {
+                    $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `customer_id` INT(11) UNSIGNED NULL AFTER `id`;");
+                    $pdo->exec("ALTER TABLE `licenses` ADD CONSTRAINT `fk_licenses_customer_id` FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE SET NULL;");
+                    $setup_message .= '<p class="text-green-500">Added `customer_id` to `licenses` table.</p>';
+                }
+                if (!columnExists($pdo, 'licenses', 'product_id')) {
+                    $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `product_id` INT(11) UNSIGNED NULL AFTER `customer_id`;");
+                    $pdo->exec("ALTER TABLE `licenses` ADD CONSTRAINT `fk_licenses_product_id` FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE SET NULL;");
+                    $setup_message .= '<p class="text-green-500">Added `product_id` to `licenses` table.</p>';
+                }
+                
+                // Create licenses table (if not exists, it will be created by the above ALTER statements if columns were added)
+                // Ensure it has the basic structure if it's a fresh install
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `licenses` (
+                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `customer_id` INT(11) UNSIGNED NULL,
+                    `product_id` INT(11) UNSIGNED NULL,
+                    `license_key` VARCHAR(255) NOT NULL UNIQUE,
+                    `status` ENUM('active', 'expired', 'revoked', 'free') DEFAULT 'active',
+                    `issued_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `expires_at` TIMESTAMP NULL,
+                    `max_devices` INT(11) DEFAULT 1,
+                    `current_devices` INT(11) DEFAULT 0,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE SET NULL,
+                    FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                $setup_message .= '<p class="text-green-500">Table `licenses` checked/created successfully.</p>';
+
+
+                // Insert some sample products if they don't exist
+                $sample_products = [
+                    ['name' => 'AMPNM Basic License (10 Devices / 1 Year)', 'description' => 'Basic license for up to 10 devices, valid for 1 year.', 'price' => 99.00, 'max_devices' => 10, 'license_duration_days' => 365],
+                    ['name' => 'AMPNM Pro License (50 Devices / 1 Year)', 'description' => 'Pro license for up to 50 devices, valid for 1 year.', 'price' => 299.00, 'max_devices' => 50, 'license_duration_days' => 365],
+                    ['name' => 'AMPNM Enterprise License (Unlimited Devices / 1 Year)', 'description' => 'Enterprise license for unlimited devices, valid for 1 year.', 'price' => 999.00, 'max_devices' => 99999, 'license_duration_days' => 365],
+                ];
+
+                foreach ($sample_products as $product_data) {
+                    $stmt = $pdo->prepare("SELECT id FROM `products` WHERE name = ?");
+                    $stmt->execute([$product_data['name']]);
+                    if (!$stmt->fetch()) {
+                        $sql = "INSERT INTO `products` (name, description, price, max_devices, license_duration_days) VALUES (?, ?, ?, ?, ?)";
+                        $stmt = $pdo->prepare($sql);
+                        $stmt->execute([$product_data['name'], $product_data['description'], $product_data['price'], $product_data['max_devices'], $product_data['license_duration_days']]);
+                        $setup_message .= '<p class="text-green-500">Added sample product: ' . htmlspecialchars($product_data['name']) . '</p>';
+                    } else {
+                        $setup_message .= '<p class="text-orange-500">Sample product already exists: ' . htmlspecialchars($product_data['name']) . '</p>';
+                    }
+                }
+
+                $setup_message .= '<p class="text-blue-500">Database setup for license service completed!</p>';
+                $step = 4; // Move to final step
 
             } catch (PDOException $e) {
-                $setup_message .= '<p style="color: red;">Database connection or creation failed: ' . htmlspecialchars($e->getMessage()) . '</p>';
+                $setup_message .= '<p class="text-red-500">Table creation or license insertion failed: ' . htmlspecialchars($e->getMessage()) . '</p>';
             }
-        }
-    } elseif (isset($_POST['action']) && $_POST['action'] === 'setup_tables' && $is_configured) {
-        try {
-            $pdo = getLicenseDbConnection();
-
-            // Create products table
-            $pdo->exec("CREATE TABLE IF NOT EXISTS `products` (
-                `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `name` VARCHAR(255) NOT NULL,
-                `description` TEXT,
-                `price` DECIMAL(10, 2) NOT NULL,
-                `max_devices` INT(11) DEFAULT 1,
-                `license_duration_days` INT(11) DEFAULT 365, -- e.g., 365 for 1 year
-                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-            $setup_message .= '<p style="color: green;">Table `products` checked/created successfully.</p>';
-
-            // Create customers table
-            $pdo->exec("CREATE TABLE IF NOT EXISTS `customers` (
-                `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `email` VARCHAR(255) NOT NULL UNIQUE,
-                `password` VARCHAR(255) NOT NULL,
-                `first_name` VARCHAR(255),
-                `last_name` VARCHAR(255),
-                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-            $setup_message .= '<p style="color: green;">Table `customers` checked/created successfully.</p>';
-
-            // Create orders table
-            $pdo->exec("CREATE TABLE IF NOT EXISTS `orders` (
-                `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `customer_id` INT(11) UNSIGNED NOT NULL,
-                `order_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `total_amount` DECIMAL(10, 2) NOT NULL,
-                `status` ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
-                `payment_intent_id` VARCHAR(255) NULL, -- For Stripe/PayPal integration
-                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-            $setup_message .= '<p style="color: green;">Table `orders` checked/created successfully.</p>';
-
-            // Create order_items table
-            $pdo->exec("CREATE TABLE IF NOT EXISTS `order_items` (
-                `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `order_id` INT(11) UNSIGNED NOT NULL,
-                `product_id` INT(11) UNSIGNED NOT NULL,
-                `quantity` INT(11) NOT NULL DEFAULT 1,
-                `price` DECIMAL(10, 2) NOT NULL,
-                `license_key_generated` VARCHAR(255) NULL, -- Store the generated license key here
-                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
-                FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE RESTRICT
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-            $setup_message .= '<p style="color: green;">Table `order_items` checked/created successfully.</p>';
-
-            // Modify licenses table to link to customers and products
-            // Add customer_id and product_id if they don't exist
-            function columnExists($pdo, $table, $column) {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
-                $stmt->execute([$table, $column]);
-                return $stmt->fetchColumn() > 0;
-            }
-
-            if (!columnExists($pdo, 'licenses', 'customer_id')) {
-                $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `customer_id` INT(11) UNSIGNED NULL AFTER `id`;");
-                $pdo->exec("ALTER TABLE `licenses` ADD CONSTRAINT `fk_licenses_customer_id` FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE SET NULL;");
-                $setup_message .= '<p style="color: green;">Added `customer_id` to `licenses` table.</p>';
-            }
-            if (!columnExists($pdo, 'licenses', 'product_id')) {
-                $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `product_id` INT(11) UNSIGNED NULL AFTER `customer_id`;");
-                $pdo->exec("ALTER TABLE `licenses` ADD CONSTRAINT `fk_licenses_product_id` FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE SET NULL;");
-                $setup_message .= '<p style="color: green;">Added `product_id` to `licenses` table.</p>';
-            }
-
-            // Create admin_users table for the portal's admin panel
-            $pdo->exec("CREATE TABLE IF NOT EXISTS `admin_users` (
-                `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `username` VARCHAR(255) NOT NULL UNIQUE,
-                `password` VARCHAR(255) NOT NULL,
-                `email` VARCHAR(255) NOT NULL UNIQUE,
-                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-            $setup_message .= '<p style="color: green;">Table `admin_users` checked/created successfully.</p>';
-
-            // Insert default admin user for the portal if not exists
-            $admin_username = 'admin';
-            $admin_email = 'admin@portal.itsupport.com.bd';
-            $admin_password = 'adminpassword'; // Default password for portal admin
-
-            $stmt = $pdo->prepare("SELECT id FROM `admin_users` WHERE username = ?");
-            $stmt->execute([$admin_username]);
-            if (!$stmt->fetch()) {
-                $hashed_password = password_hash($admin_password, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("INSERT INTO `admin_users` (username, password, email) VALUES (?, ?, ?)");
-                $stmt->execute([$admin_username, $hashed_password, $admin_email]);
-                $setup_message .= '<p style="color: green;">Default admin user for portal created: ' . htmlspecialchars($admin_username) . ' with password: ' . htmlspecialchars($admin_password) . '</p>';
-            } else {
-                $setup_message .= '<p style="color: orange;">Portal admin user already exists.</p>';
-            }
-
-            // Insert some sample products if they don't exist
-            $sample_products = [
-                ['name' => 'AMPNM Basic License (10 Devices / 1 Year)', 'description' => 'Basic license for up to 10 devices, valid for 1 year.', 'price' => 99.00, 'max_devices' => 10, 'license_duration_days' => 365],
-                ['name' => 'AMPNM Pro License (50 Devices / 1 Year)', 'description' => 'Pro license for up to 50 devices, valid for 1 year.', 'price' => 299.00, 'max_devices' => 50, 'license_duration_days' => 365],
-                ['name' => 'AMPNM Enterprise License (Unlimited Devices / 1 Year)', 'description' => 'Enterprise license for unlimited devices, valid for 1 year.', 'price' => 999.00, 'max_devices' => 99999, 'license_duration_days' => 365],
-            ];
-
-            foreach ($sample_products as $product_data) {
-                $stmt = $pdo->prepare("SELECT id FROM `products` WHERE name = ?");
-                $stmt->execute([$product_data['name']]);
-                if (!$stmt->fetch()) {
-                    $sql = "INSERT INTO `products` (name, description, price, max_devices, license_duration_days) VALUES (?, ?, ?, ?, ?)";
-                    $stmt = $pdo->prepare($sql);
-                    $stmt->execute([$product_data['name'], $product_data['description'], $product_data['price'], $product_data['max_devices'], $product_data['license_duration_days']]);
-                    $setup_message .= '<p style="color: green;">Added sample product: ' . htmlspecialchars($product_data['name']) . '</p>';
-                } else {
-                    $setup_message .= '<p style="color: orange;">Sample product already exists: ' . htmlspecialchars($product_data['name']) . '</p>';
-                }
-            }
-
-            $setup_message .= '<p style="color: blue;">Database setup for license service completed!</p>';
-
-        } catch (PDOException $e) {
-            $setup_message .= '<p style="color: red;">Table creation or license insertion failed: ' . htmlspecialchars($e->getMessage()) . '</p>';
         }
     }
 }
@@ -230,59 +319,134 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>License Service Setup</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1, h2 { color: #0056b3; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="password"], input[type="email"], input[type="number"], input[type="date"] {
-            width: calc(100% - 22px); padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e0e0e0;
         }
-        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-        button:hover { background-color: #0056b3; }
-        .message { margin-top: 20px; padding: 10px; border-radius: 4px; }
-        .message p { margin: 0; }
-        .success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
-        .error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
-        .warning { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
+        .setup-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+        }
+        .form-input {
+            @apply w-full py-2 px-4 rounded-lg text-white placeholder-gray-300;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.5);
+        }
+        .btn-primary {
+            @apply bg-blue-500 text-white font-semibold py-2 px-6 rounded-full shadow-lg;
+            background: linear-gradient(45deg, #4a90e2, #50e3c2);
+            transition: all 0.3s ease-in-out;
+            border: none;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            opacity: 0.9;
+        }
+        .loader { border: 4px solid #334155; border-top: 4px solid #22d3ee; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; margin-right: 10px; vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>License Service Setup</h1>
+    <div class="setup-card">
+        <h1 class="text-3xl font-bold text-white mb-6 text-center">License Service Setup</h1>
+        
+        <div class="mb-6 text-center">
+            <?php if ($step === 1): ?>
+                <span class="inline-block px-4 py-2 rounded-full bg-blue-500 text-white font-semibold">Step 1 of 3: Database Configuration</span>
+            <?php elseif ($step === 2): ?>
+                <span class="inline-block px-4 py-2 rounded-full bg-blue-500 text-white font-semibold">Step 2 of 3: Admin User Setup</span>
+            <?php elseif ($step === 3): ?>
+                <span class="inline-block px-4 py-2 rounded-full bg-blue-500 text-white font-semibold">Step 3 of 3: Finalizing Tables</span>
+            <?php elseif ($step === 4): ?>
+                <span class="inline-block px-4 py-2 rounded-full bg-green-500 text-white font-semibold">Setup Complete!</span>
+            <?php endif; ?>
+        </div>
+
         <?php if (!empty($setup_message)): ?>
-            <div class="message">
+            <div class="bg-gray-800 p-4 rounded-lg mb-6 text-sm">
                 <?= $setup_message ?>
             </div>
         <?php endif; ?>
 
-        <?php if (!$is_configured): ?>
-            <h2>Step 1: Configure Database Connection</h2>
-            <form method="POST">
+        <?php if ($step === 1): ?>
+            <form method="POST" class="space-y-4">
                 <input type="hidden" name="action" value="configure_db">
-                <label for="db_server">Database Host:</label>
-                <input type="text" id="db_server" name="db_server" value="localhost" required>
-
-                <label for="db_name">Database Name:</label>
-                <input type="text" id="db_name" name="db_name" value="license_db" required>
-
-                <label for="db_username">Database Username:</label>
-                <input type="text" id="db_username" name="db_username" value="root" required>
-
-                <label for="db_password">Database Password:</label>
-                <input type="password" id="db_password" name="db_password">
-
-                <button type="submit">Save Configuration & Create DB</button>
+                <div>
+                    <label for="db_server" class="block text-gray-200 text-sm font-bold mb-2">Database Host:</label>
+                    <input type="text" id="db_server" name="db_server" class="form-input" value="localhost" required>
+                </div>
+                <div>
+                    <label for="db_name" class="block text-gray-200 text-sm font-bold mb-2">Database Name:</label>
+                    <input type="text" id="db_name" name="db_name" class="form-input" value="license_db" required>
+                </div>
+                <div>
+                    <label for="db_username" class="block text-gray-200 text-sm font-bold mb-2">Database Username:</label>
+                    <input type="text" id="db_username" name="db_username" class="form-input" value="root" required>
+                </div>
+                <div>
+                    <label for="db_password" class="block text-gray-200 text-sm font-bold mb-2">Database Password:</label>
+                    <input type="password" id="db_password" name="db_password" class="form-input">
+                </div>
+                <button type="submit" class="btn-primary w-full">
+                    <i class="fas fa-database mr-2"></i>Configure Database
+                </button>
             </form>
-        <?php else: ?>
-            <p style="color: green;">Database configuration loaded from config.php.</p>
-            <h2>Step 2: Setup License Tables & Add Initial Data</h2>
-            <form method="POST">
+        <?php elseif ($step === 2): ?>
+            <form method="POST" class="space-y-4">
+                <input type="hidden" name="action" value="setup_admin">
+                <div>
+                    <label for="admin_username" class="block text-gray-200 text-sm font-bold mb-2">Admin Username:</label>
+                    <input type="text" id="admin_username" name="admin_username" class="form-input" value="admin" required>
+                </div>
+                <div>
+                    <label for="admin_password" class="block text-gray-200 text-sm font-bold mb-2">Admin Password:</label>
+                    <input type="password" id="admin_password" name="admin_password" class="form-input" required>
+                </div>
+                <button type="submit" class="btn-primary w-full">
+                    <i class="fas fa-user-shield mr-2"></i>Setup Admin User
+                </button>
+            </form>
+        <?php elseif ($step === 3): ?>
+            <form method="POST" class="space-y-4">
                 <input type="hidden" name="action" value="setup_tables">
-                <p>This will create all necessary tables and add sample products and a default admin user for the portal.</p>
-                <button type="submit">Setup Tables & Initial Data</button>
+                <p class="text-gray-200 mb-4">Click "Finalize Installation" to create all remaining tables and add sample products.</p>
+                <button type="submit" class="btn-primary w-full">
+                    <i class="fas fa-check-circle mr-2"></i>Finalize Installation
+                </button>
             </form>
-            <p style="margin-top: 20px;"><a href="verify_license.php" target="_blank">Test verify_license.php endpoint</a></p>
+        <?php elseif ($step === 4): ?>
+            <div class="text-center space-y-4">
+                <i class="fas fa-check-double text-6xl text-green-400 mb-4"></i>
+                <h2 class="text-2xl font-bold text-white">Installation Complete!</h2>
+                <p class="text-gray-200">Your License Portal is now ready.</p>
+                <a href="adminpanel.php" class="btn-primary inline-block mt-4">
+                    <i class="fas fa-user-shield mr-2"></i>Go to Admin Panel
+                </a>
+                <a href="index.php" class="btn-primary inline-block mt-4 ml-4">
+                    <i class="fas fa-home mr-2"></i>Go to Portal Home
+                </a>
+            </div>
         <?php endif; ?>
     </div>
 </body>
