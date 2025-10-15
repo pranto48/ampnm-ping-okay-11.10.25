@@ -216,55 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
                 $setup_message .= '<p class="text-green-500">Table `customers` checked/created successfully.</p>';
 
-                // Create orders table
-                $pdo->exec("CREATE TABLE IF NOT EXISTS `orders` (
-                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                    `customer_id` INT(11) UNSIGNED NOT NULL,
-                    `order_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    `total_amount` DECIMAL(10, 2) NOT NULL,
-                    `status` ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
-                    `payment_intent_id` VARCHAR(255) NULL, -- For Stripe/PayPal integration
-                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE CASCADE
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-                $setup_message .= '<p class="text-green-500">Table `orders` checked/created successfully.</p>';
-
-                // Create order_items table
-                $pdo->exec("CREATE TABLE IF NOT EXISTS `order_items` (
-                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                    `order_id` INT(11) UNSIGNED NOT NULL,
-                    `product_id` INT(11) UNSIGNED NOT NULL,
-                    `quantity` INT(11) NOT NULL DEFAULT 1,
-                    `price` DECIMAL(10, 2) NOT NULL,
-                    `license_key_generated` VARCHAR(255) NULL, -- Store the generated license key here
-                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
-                    FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE RESTRICT
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-                $setup_message .= '<p class="text-green-500">Table `order_items` checked/created successfully.</p>';
-
-                // Modify licenses table to link to customers and products
-                // Add customer_id and product_id if they don't exist
-                function columnExists($pdo, $table, $column) {
-                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
-                    $stmt->execute([$table, $column]);
-                    return $stmt->fetchColumn() > 0;
-                }
-
-                if (!columnExists($pdo, 'licenses', 'customer_id')) {
-                    $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `customer_id` INT(11) UNSIGNED NULL AFTER `id`;");
-                    $pdo->exec("ALTER TABLE `licenses` ADD CONSTRAINT `fk_licenses_customer_id` FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE SET NULL;");
-                    $setup_message .= '<p class="text-green-500">Added `customer_id` to `licenses` table.</p>';
-                }
-                if (!columnExists($pdo, 'licenses', 'product_id')) {
-                    $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `product_id` INT(11) UNSIGNED NULL AFTER `customer_id`;");
-                    $pdo->exec("ALTER TABLE `licenses` ADD CONSTRAINT `fk_licenses_product_id` FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE SET NULL;");
-                    $setup_message .= '<p class="text-green-500">Added `product_id` to `licenses` table.</p>';
-                }
-                
-                // Create licenses table (if not exists, it will be created by the above ALTER statements if columns were added)
-                // Ensure it has the basic structure if it's a fresh install
+                // Create licenses table (depends on customers and products)
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `licenses` (
                     `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                     `customer_id` INT(11) UNSIGNED NULL,
@@ -281,6 +233,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE SET NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
                 $setup_message .= '<p class="text-green-500">Table `licenses` checked/created successfully.</p>';
+
+                // Create orders table (depends on customers)
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `orders` (
+                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `customer_id` INT(11) UNSIGNED NOT NULL,
+                    `order_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `total_amount` DECIMAL(10, 2) NOT NULL,
+                    `status` ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+                    `payment_intent_id` VARCHAR(255) NULL, -- For Stripe/PayPal integration
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                $setup_message .= '<p class="text-green-500">Table `orders` checked/created successfully.</p>';
+
+                // Create order_items table (depends on orders and products)
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `order_items` (
+                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `order_id` INT(11) UNSIGNED NOT NULL,
+                    `product_id` INT(11) UNSIGNED NOT NULL,
+                    `quantity` INT(11) NOT NULL DEFAULT 1,
+                    `price` DECIMAL(10, 2) NOT NULL,
+                    `license_key_generated` VARCHAR(255) NULL, -- Store the generated license key here
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (`order_id`) REFERENCES `orders`(`id`) ON DELETE CASCADE,
+                    FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE RESTRICT
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                $setup_message .= '<p class="text-green-500">Table `order_items` checked/created successfully.</p>';
 
                 // NEW TABLES FOR SUPPORT TICKET SYSTEM
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `support_tickets` (
