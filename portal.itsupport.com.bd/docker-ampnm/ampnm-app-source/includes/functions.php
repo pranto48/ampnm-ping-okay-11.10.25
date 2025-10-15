@@ -22,6 +22,21 @@ function checkLicenseDbConnection() {
     }
 }
 
+// Helper function to check if a table exists in the current database connection
+function tableExists($pdo, $tableName) {
+    try {
+        $result = $pdo->query("SELECT 1 FROM `$tableName` LIMIT 1");
+    } catch (PDOException $e) {
+        // We only care about "table not found" errors
+        if (strpos($e->getMessage(), 'Base table or view not found') !== false) {
+            return false;
+        }
+        // For other errors, re-throw or log
+        throw $e;
+    }
+    return $result !== false;
+}
+
 // Function to generate a unique license key
 function generateLicenseKey($prefix = 'AMPNM') {
     // Generate a UUID (Universally Unique Identifier)
@@ -36,6 +51,10 @@ function generateLicenseKey($prefix = 'AMPNM') {
 // --- Application Settings Functions ---
 function getAppLicenseKey() {
     $pdo = getDbConnection();
+    // Check if app_settings table exists before querying
+    if (!tableExists($pdo, 'app_settings')) {
+        return null;
+    }
     $stmt = $pdo->prepare("SELECT setting_value FROM `app_settings` WHERE setting_key = 'app_license_key'");
     $stmt->execute();
     $result = $stmt->fetch(PDO::FETCH_ASSOC);

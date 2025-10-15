@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { NetworkDevice } from '@/services/networkDeviceService';
 import { Textarea } from '@/components/ui/textarea'; // Import Textarea
+import { useEffect } from 'react'; // Import useEffect
 
 const deviceSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -95,7 +96,7 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[90vh]"> {/* Added flex-col here */}
         <DialogHeader>
           <DialogTitle>{device?.id ? 'Edit Device' : 'Add Device'}</DialogTitle>
           <DialogDescription>
@@ -103,7 +104,7 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto space-y-4 p-1"> {/* Added flex-1 and overflow-y-auto here */}
             <FormField
               control={form.control}
               name="name"

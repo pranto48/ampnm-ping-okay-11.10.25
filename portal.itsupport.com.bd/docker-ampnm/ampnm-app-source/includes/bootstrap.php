@@ -16,9 +16,18 @@ if ($current_page !== 'database_setup.php') {
         $pdo = getDbConnection();
         // A simple query to check if the main 'users' table exists.
         // If this fails, we assume the database has not been initialized.
-        $pdo->query("SELECT 1 FROM `users` LIMIT 1");
+        if (!tableExists($pdo, 'users')) {
+            header('Location: database_setup.php');
+            exit;
+        }
 
-        // After initial database setup, check for the application license key
+        // After initial database setup, check for the app_settings table
+        if (!tableExists($pdo, 'app_settings')) {
+            header('Location: database_setup.php'); // Redirect to setup to create missing tables
+            exit;
+        }
+
+        // If app_settings table exists, then check for the application license key
         if ($current_page !== 'license_setup.php') {
             $app_license_key = getAppLicenseKey();
             if (!$app_license_key) {
@@ -28,15 +37,9 @@ if ($current_page !== 'database_setup.php') {
         }
 
     } catch (PDOException $e) {
-        // Check for the specific "table not found" error.
-        if (strpos($e->getMessage(), 'Base table or view not found') !== false) {
-            // The database is connected, but tables are missing. Redirect to setup.
-            header('Location: database_setup.php');
-            exit;
-        } else {
-            // A different, more serious database error occurred.
-            die("A critical database error occurred: " . $e->getMessage());
-        }
+        // A critical database error occurred (e.g., connection failed).
+        // This is distinct from "table not found" which is handled by tableExists.
+        die("A critical database error occurred: " . $e->getMessage());
     }
 }
 
