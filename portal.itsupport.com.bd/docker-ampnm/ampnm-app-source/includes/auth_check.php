@@ -9,12 +9,22 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // --- External License Validation ---
-// This application's license key is defined in config.php (APP_LICENSE_KEY)
+// This application's license key is now retrieved dynamically from the database.
 // The external verification service URL is defined in config.php (LICENSE_API_URL)
 
 $_SESSION['can_add_device'] = false; // Default to false
 $_SESSION['license_message'] = 'License validation failed.';
 $_SESSION['max_devices'] = 0; // Default max devices
+
+// Retrieve the application license key dynamically
+$app_license_key = getAppLicenseKey();
+
+if (!$app_license_key) {
+    $_SESSION['license_message'] = 'Application license key not configured.';
+    // Redirect to license setup if key is missing, even if logged in (shouldn't happen if bootstrap works)
+    header('Location: license_setup.php');
+    exit;
+}
 
 try {
     $pdo = getDbConnection(); // Get DB connection for the AMPNM app
@@ -24,11 +34,11 @@ try {
     $stmt->execute([$_SESSION['user_id']]);
     $current_device_count = $stmt->fetchColumn();
 
-    $ch = curl_init(APP_LICENSE_KEY); // Changed to APP_LICENSE_KEY as it holds the URL
+    $ch = curl_init(LICENSE_API_URL); // Use the defined LICENSE_API_URL
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-        'app_license_key' => APP_LICENSE_KEY,
+        'app_license_key' => $app_license_key,
         'user_id' => $_SESSION['user_id'], // Pass the logged-in user's ID for user-specific checks
         'current_device_count' => $current_device_count // Pass the current device count
     ]));

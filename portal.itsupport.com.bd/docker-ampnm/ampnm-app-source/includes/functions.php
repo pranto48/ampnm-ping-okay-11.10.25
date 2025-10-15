@@ -33,6 +33,22 @@ function generateLicenseKey($prefix = 'AMPNM') {
     return strtoupper($prefix . '-' . $uuid);
 }
 
+// --- Application Settings Functions ---
+function getAppLicenseKey() {
+    $pdo = getDbConnection();
+    $stmt = $pdo->prepare("SELECT setting_value FROM `app_settings` WHERE setting_key = 'app_license_key'");
+    $stmt->execute();
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result ? $result['setting_value'] : null;
+}
+
+function setAppLicenseKey($license_key) {
+    $pdo = getDbConnection();
+    // Use UPSERT (INSERT ... ON DUPLICATE KEY UPDATE) to either insert or update the key
+    $stmt = $pdo->prepare("INSERT INTO `app_settings` (setting_key, setting_value) VALUES ('app_license_key', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+    return $stmt->execute([$license_key, $license_key]);
+}
+
 // --- Customer Authentication Functions ---
 function authenticateCustomer($email, $password) {
     $pdo = getLicenseDbConnection();
@@ -299,7 +315,7 @@ services:
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
       - LICENSE_API_URL={$license_api_url}
-      - APP_LICENSE_KEY={$license_key}
+      # APP_LICENSE_KEY is no longer hardcoded here; it's set via web UI
     ports:
       - "2266:2266" # Main app will now run on port 2266
     restart: unless-stopped
