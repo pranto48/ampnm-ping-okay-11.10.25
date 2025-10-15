@@ -1,7 +1,8 @@
 FROM php:8.2-apache
 
 # Install system dependencies
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     git \
     unzip \
     libzip-dev \
