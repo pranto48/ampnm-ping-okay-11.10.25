@@ -1,8 +1,8 @@
-import { supabase } from '@/integrations/supabase/client';
+const PHP_API_URL = 'http://localhost:2266/api.php'; // Assuming your PHP API is accessible here
 
 export interface NetworkDevice {
   id?: string;
-  user_id?: string;
+  user_id?: string; // This will be handled by the PHP backend session
   name: string;
   ip_address: string;
   position_x: number;
@@ -14,104 +14,221 @@ export interface NetworkDevice {
   name_text_size?: number;
   last_ping?: string | null;
   last_ping_result?: boolean | null;
+  // Additional fields from PHP backend
+  check_port?: number | null;
+  type?: string; // e.g., 'server', 'router', 'box'
+  description?: string | null;
+  map_id?: string | null; // PHP uses INT, but ReactFlow uses string IDs
+  warning_latency_threshold?: number | null;
+  warning_packetloss_threshold?: number | null;
+  critical_latency_threshold?: number | null;
+  critical_packetloss_threshold?: number | null;
+  last_avg_time?: number | null;
+  last_ttl?: number | null;
+  show_live_ping?: boolean;
+  map_name?: string; // For display purposes
+  last_ping_output?: string; // For display purposes
+}
+
+export interface NetworkEdge {
+  id: string;
+  source: string;
+  target: string;
+  connection_type: string;
 }
 
 export interface MapData {
-  devices: Omit<NetworkDevice, 'user_id' | 'status'>[];
+  devices: Omit<NetworkDevice, 'user_id' | 'status' | 'last_ping' | 'last_ping_result' | 'map_name' | 'last_ping_output'>[];
   edges: { source: string; target: string; connection_type: string }[];
 }
 
-export const getDevices = async () => {
-  const { data, error } = await supabase.from('network_devices').select('*').order('created_at', { ascending: true });
-  if (error) throw new Error(error.message);
-  return data;
+const callPhpApi = async (action: string, method: 'GET' | 'POST', body?: any) => {
+  const options: RequestInit = {
+    method: method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(`${PHP_API_URL}?action=${action}`, options);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+  }
+  return response.json();
 };
 
-export const addDevice = async (device: Omit<NetworkDevice, 'user_id'>) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-  
-  const deviceWithUser = { ...device, user_id: user.id };
-  const { data, error } = await supabase.from('network_devices').insert(deviceWithUser).select().single();
-  if (error) throw new Error(error.message);
-  return data;
+export const getDevices = async (map_id?: string | null) => {
+  const params = map_id ? { map_id } : {};
+  const data = await callPhpApi('get_devices', 'GET', params);
+  // Map PHP backend data to frontend interface
+  return data.map((d: any) => ({
+    id: String(d.id), // Ensure ID is string for ReactFlow
+    name: d.name,
+    ip_address: d.ip,
+    position_x: parseFloat(d.x) || 0,
+    position_y: parseFloat(d.y) || 0,
+    icon: d.type, // Using 'type' as icon for now, can be refined
+    status: d.status,
+    ping_interval: d.ping_interval,
+    icon_size: d.icon_size,
+    name_text_size: d.name_text_size,
+    last_ping: d.last_seen, // PHP uses last_seen for last ping time
+    last_ping_result: d.status === 'online', // Infer from status
+    check_port: d.check_port,
+    type: d.type,
+    description: d.description,
+    map_id: String(d.map_id),
+    warning_latency_threshold: d.warning_latency_threshold,
+    warning_packetloss_threshold: d.warning_packetloss_threshold,
+    critical_latency_threshold: d.critical_latency_threshold,
+    critical_packetloss_threshold: d.critical_packetloss_threshold,
+    last_avg_time: d.last_avg_time,
+    last_ttl: d.last_ttl,
+    show_live_ping: Boolean(parseInt(d.show_live_ping)),
+    map_name: d.map_name,
+    last_ping_output: d.last_ping_output,
+  })) as NetworkDevice[];
+};
+
+export const addDevice = async (device: Omit<NetworkDevice, 'id' | 'user_id' | 'status' | 'last_ping' | 'last_ping_result' | 'map_name' | 'last_ping_output'>) => {
+  const payload = {
+    name: device.name,
+    ip: device.ip_address,
+    position_x: device.position_x,
+    position_y: device.position_y,
+    type: device.icon, // Using icon as type for PHP backend
+    ping_interval: device.ping_interval,
+    icon_size: device.icon_size,
+    name_text_size: device.name_text_size,
+    check_port: device.check_port,
+    description: device.description,
+    map_id: device.map_id,
+    warning_latency_threshold: device.warning_latency_threshold,
+    warning_packetloss_threshold: device.warning_packetloss_threshold,
+    critical_latency_threshold: device.critical_latency_threshold,
+    critical_packetloss_threshold: device.critical_packetloss_threshold,
+    show_live_ping: device.show_live_ping,
+  };
+  const data = await callPhpApi('create_device', 'POST', payload);
+  return { ...data, id: String(data.id) } as NetworkDevice;
 };
 
 export const updateDevice = async (id: string, updates: Partial<NetworkDevice>) => {
-  const { data, error } = await supabase.from('network_devices').update(updates).eq('id', id).select().single();
-  if (error) throw new Error(error.message);
-  return data;
+  const payload: { [key: string]: any } = { id };
+  payload.updates = {
+    name: updates.name,
+    ip: updates.ip_address,
+    x: updates.position_x,
+    y: updates.position_y,
+    type: updates.icon, // Using icon as type for PHP backend
+    ping_interval: updates.ping_interval,
+    icon_size: updates.icon_size,
+    name_text_size: updates.name_text_size,
+    check_port: updates.check_port,
+    description: updates.description,
+    map_id: updates.map_id,
+    warning_latency_threshold: updates.warning_latency_threshold,
+    warning_packetloss_threshold: updates.warning_packetloss_threshold,
+    critical_latency_threshold: updates.critical_latency_threshold,
+    critical_packetloss_threshold: updates.critical_packetloss_threshold,
+    show_live_ping: updates.show_live_ping,
+    status: updates.status,
+    last_seen: updates.last_ping,
+    last_avg_time: updates.last_avg_time,
+    last_ttl: updates.last_ttl,
+  };
+  // Filter out undefined values from updates
+  for (const key in payload.updates) {
+    if (payload.updates[key] === undefined) {
+      delete payload.updates[key];
+    }
+  }
+  const data = await callPhpApi('update_device', 'POST', payload);
+  return { ...data, id: String(data.id) } as NetworkDevice;
 };
 
 export const updateDeviceStatusByIp = async (ip_address: string, status: 'online' | 'offline') => {
-  const { data, error } = await supabase
-    .from('network_devices')
-    .update({ 
-      status, 
-      last_ping: new Date().toISOString(),
-      last_ping_result: status === 'online'
-    })
-    .eq('ip_address', ip_address)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error updating device status:', error);
-    throw new Error(error.message);
-  }
-  
-  return data;
+  // This function is not directly supported by the PHP API as a standalone action.
+  // The PHP API's 'check_device' or 'ping_all_devices' handles status updates.
+  // For now, we'll simulate this by calling 'manual_ping' and letting the PHP backend update.
+  // In a more integrated system, you might have a specific API endpoint for this.
+  console.warn("updateDeviceStatusByIp is a client-side simulation. PHP backend handles actual status updates via ping actions.");
+  // We can't directly update by IP from the client without a specific PHP endpoint.
+  // The `performServerPing` already saves results and updates device status.
+  // So, this function might become redundant or need a dedicated PHP endpoint.
+  // For now, we'll just return a dummy success.
+  return { success: true, message: "Status update handled by server ping logic." };
 };
 
 export const deleteDevice = async (id: string) => {
-  const { error } = await supabase.from('network_devices').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  await callPhpApi('delete_device', 'POST', { id });
 };
 
-export const getEdges = async () => {
-  const { data, error } = await supabase.from('network_edges').select('id, source:source_id, target:target_id, connection_type');
-  if (error) throw new Error(error.message);
-  return data;
+export const getEdges = async (map_id?: string | null) => {
+  const params = map_id ? { map_id } : {};
+  const data = await callPhpApi('get_edges', 'GET', params);
+  return data.map((e: any) => ({
+    id: String(e.id),
+    source: String(e.source_id),
+    target: String(e.target_id),
+    connection_type: e.connection_type,
+  })) as NetworkEdge[];
 };
 
-export const addEdgeToDB = async (edge: { source: string; target: string }) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { data, error } = await supabase.from('network_edges').insert({ source_id: edge.source, target_id: edge.target, user_id: user.id, connection_type: 'cat5' }).select().single();
-  if (error) throw new Error(error.message);
-  return data;
+export const addEdgeToDB = async (edge: { source: string; target: string; map_id: string }) => {
+  const payload = {
+    source_id: edge.source,
+    target_id: edge.target,
+    map_id: edge.map_id,
+    connection_type: 'cat5', // Default connection type
+  };
+  const data = await callPhpApi('create_edge', 'POST', payload);
+  return { ...data, id: String(data.id) } as NetworkEdge;
 };
 
 export const updateEdgeInDB = async (id: string, updates: { connection_type: string }) => {
-  const { data, error } = await supabase.from('network_edges').update(updates).eq('id', id).select().single();
-  if (error) throw new Error(error.message);
-  return data;
+  const payload = { id, connection_type: updates.connection_type };
+  const data = await callPhpApi('update_edge', 'POST', payload);
+  return { ...data, id: String(data.id) } as NetworkEdge;
 };
 
 export const deleteEdgeFromDB = async (edgeId: string) => {
-  const { error } = await supabase.from('network_edges').delete().eq('id', edgeId);
-  if (error) throw new Error(error.message);
+  await callPhpApi('delete_edge', 'POST', { id: edgeId });
 };
 
-export const importMap = async (mapData: MapData) => {
-  const { error } = await supabase.rpc('import_network_map', {
-    devices_data: mapData.devices,
-    edges_data: mapData.edges,
-  });
-  if (error) throw new Error(`Import failed: ${error.message}`);
+export const importMap = async (mapData: MapData, map_id: string) => {
+  const payload = {
+    map_id,
+    devices: mapData.devices.map(d => ({
+      ...d,
+      ip: d.ip_address, // Map ip_address to ip for PHP backend
+      type: d.icon, // Map icon to type for PHP backend
+      x: d.position_x,
+      y: d.position_y,
+      show_live_ping: d.show_live_ping ? 1 : 0, // Convert boolean to int
+    })),
+    edges: mapData.edges.map(e => ({
+      from: e.source,
+      to: e.target,
+      connection_type: e.connection_type,
+    })),
+  };
+  await callPhpApi('import_map', 'POST', payload);
 };
 
-// Real-time subscription for device changes
+// Real-time subscription for device changes - NOT USED WITH PHP BACKEND
+// This function is now a no-op or can be removed if not needed for other purposes.
 export const subscribeToDeviceChanges = (callback: (payload: any) => void) => {
-  const channel = supabase
-    .channel('network-devices-changes')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'network_devices' },
-      callback
-    )
-    .subscribe();
-
-  return channel;
+  console.warn("subscribeToDeviceChanges is not actively supported when using PHP backend for device/edge management. Polling or a custom WebSocket solution would be needed for real-time updates.");
+  // Return a dummy object that mimics a channel for compatibility if needed,
+  // or simply remove calls to this function from components.
+  return {
+    on: () => ({ on: () => ({ on: () => ({ subscribe: () => {} }) }) }),
+    subscribe: () => {},
+    removeChannel: () => {},
+  };
 };

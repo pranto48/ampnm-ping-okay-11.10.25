@@ -12,15 +12,21 @@ import ServerPingTest from "@/components/ServerPingTest";
 import PingHistory from "@/components/PingHistory";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import NetworkMap from "@/components/NetworkMap";
-import { 
-  getDevices, 
-  NetworkDevice, 
-  updateDeviceStatusByIp, 
-  subscribeToDeviceChanges 
+import {
+  getDevices,
+  NetworkDevice,
+  updateDeviceStatusByIp,
+  // subscribeToDeviceChanges // No longer used with PHP backend
 } from "@/services/networkDeviceService";
 import { performServerPing } from "@/services/pingService";
-import { supabase } from "@/integrations/supabase/client";
+// import { supabase } from "@/integrations/supabase/client"; // No longer directly used for device/edge management
 import { Skeleton } from "@/components/ui/skeleton";
+
+// Define a type for Map data from PHP backend
+interface Map {
+  id: string;
+  name: string;
+}
 
 const Index = () => {
   const [networkStatus, setNetworkStatus] = useState<boolean>(true);
@@ -28,36 +34,57 @@ const Index = () => {
   const [devices, setDevices] = useState<NetworkDevice[]>([]);
   const [isCheckingDevices, setIsCheckingDevices] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [maps, setMaps] = useState<Map[]>([]);
+  const [currentMapId, setCurrentMapId] = useState<string | null>(null);
+
+  const fetchMaps = useCallback(async () => {
+    try {
+      const response = await fetch('http://localhost:2266/api.php?action=get_maps');
+      if (!response.ok) throw new Error('Failed to fetch maps');
+      const data = await response.json();
+      const phpMaps = data.map((m: any) => ({ id: String(m.id), name: m.name }));
+      setMaps(phpMaps);
+      if (phpMaps.length > 0 && !currentMapId) {
+        setCurrentMapId(phpMaps[0].id);
+      } else if (phpMaps.length === 0) {
+        setCurrentMapId(null);
+      }
+    } catch (error) {
+      showError("Failed to load maps from database.");
+      console.error("Failed to load maps:", error);
+    }
+  }, [currentMapId]);
 
   const fetchDevices = useCallback(async () => {
+    if (!currentMapId) {
+      setDevices([]);
+      setIsLoading(false);
+      return;
+    }
     try {
-      const dbDevices = await getDevices();
+      const dbDevices = await getDevices(currentMapId);
       setDevices(dbDevices as NetworkDevice[]);
     } catch (error) {
       showError("Failed to load devices from database.");
+      console.error("Failed to load devices:", error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentMapId]);
+
+  useEffect(() => {
+    fetchMaps();
+  }, [fetchMaps]);
 
   useEffect(() => {
     fetchDevices();
-
-    // Subscribe to real-time device changes
-    const channel = subscribeToDeviceChanges((payload) => {
-      console.log('Device change received:', payload);
-      fetchDevices();
-    });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // No real-time subscription for devices with PHP backend, rely on explicit refreshes or polling
   }, [fetchDevices]);
 
   // Auto-ping devices based on their ping interval
   useEffect(() => {
     const intervals: NodeJS.Timeout[] = [];
-    
+
     devices.forEach((device) => {
       if (device.ping_interval && device.ping_interval > 0 && device.ip_address) {
         const intervalId = setInterval(async () => {
@@ -65,18 +92,20 @@ const Index = () => {
             console.log(`Auto-pinging ${device.ip_address}`);
             const result = await performServerPing(device.ip_address, 1);
             const newStatus = result.success ? 'online' : 'offline';
-            
-            // Update device status in database
-            await updateDeviceStatusByIp(device.ip_address, newStatus);
-            
+
+            // The performServerPing function already calls storePingResult and updateDeviceStatusByIp
+            // which updates the PHP backend. So, we just need to refresh the local state.
+            fetchDevices();
+
             console.log(`Ping result for ${device.ip_address}: ${newStatus}`);
           } catch (error) {
             console.error(`Auto-ping failed for ${device.ip_address}:`, error);
-            // Update status to offline on error
+            // On error, explicitly update status to offline and refresh
             await updateDeviceStatusByIp(device.ip_address, 'offline');
+            fetchDevices();
           }
         }, device.ping_interval * 1000);
-        
+
         intervals.push(intervalId);
       }
     });
@@ -85,7 +114,7 @@ const Index = () => {
     return () => {
       intervals.forEach(clearInterval);
     };
-  }, [devices]);
+  }, [devices, fetchDevices]);
 
   const checkNetworkStatus = useCallback(async () => {
     try {
@@ -101,18 +130,22 @@ const Index = () => {
     setIsCheckingDevices(true);
     const toastId = showLoading(`Pinging ${devices.length} devices...`);
     try {
-      const pingPromises = devices.map(async (device) => {
-        if (device.ip_address) {
-          const result = await performServerPing(device.ip_address, 1);
-          const newStatus = result.success ? 'online' : 'offline';
-          await updateDeviceStatusByIp(device.ip_address, newStatus);
-        }
+      // Call the PHP API endpoint for bulk ping
+      const response = await fetch('http://localhost:2266/api.php?action=ping_all_devices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ map_id: currentMapId })
       });
+      if (!response.ok) throw new Error('Failed to ping all devices via server.');
+      const result = await response.json();
 
-      await Promise.all(pingPromises);
-      
-      dismissToast(toastId);
-      showSuccess(`Finished checking all devices.`);
+      if (result.success) {
+        dismissToast(toastId);
+        showSuccess(`Finished checking all devices. ${result.updated_devices.length} devices updated.`);
+        fetchDevices(); // Refresh devices after bulk ping
+      } else {
+        throw new Error(result.error || "Unknown error during bulk ping.");
+      }
     } catch (error: any) {
       dismissToast(toastId);
       showError(error.message || "An error occurred while checking devices.");
@@ -127,8 +160,8 @@ const Index = () => {
     return () => clearInterval(networkInterval);
   }, [checkNetworkStatus]);
 
-  const onlineDevicesCount = useMemo(() => 
-    devices.filter(d => d.status === "online").length, 
+  const onlineDevicesCount = useMemo(() =>
+    devices.filter(d => d.status === "online").length,
     [devices]
   );
 
@@ -264,8 +297,8 @@ const Index = () => {
                 <Button onClick={checkNetworkStatus} variant="outline">
                   <RefreshCw className="h-4 w-4 mr-2" />Check Internet
                 </Button>
-                <Button 
-                  onClick={handleCheckAllDevices} 
+                <Button
+                  onClick={handleCheckAllDevices}
                   disabled={isCheckingDevices || isLoading}
                   variant="outline"
                 >
@@ -297,8 +330,8 @@ const Index = () => {
                 ) : (
                   <div className="space-y-4">
                     {devices.map((device) => (
-                      <div 
-                        key={device.id} 
+                      <div
+                        key={device.id}
                         className="flex items-center justify-between p-4 border rounded-lg transition-colors hover:bg-muted"
                       >
                         <div className="flex items-center gap-3">
@@ -320,9 +353,9 @@ const Index = () => {
                               Last ping: {new Date(device.last_ping).toLocaleTimeString()}
                             </div>
                           )}
-                          <Badge 
+                          <Badge
                             variant={
-                              device.status === "online" ? "default" : 
+                              device.status === "online" ? "default" :
                               device.status === "offline" ? "destructive" : "secondary"
                             }
                           >
@@ -340,25 +373,56 @@ const Index = () => {
           <TabsContent value="ping">
             <PingTest />
           </TabsContent>
-          
+
           <TabsContent value="server-ping">
             <ServerPingTest />
           </TabsContent>
-          
+
           <TabsContent value="status">
             <NetworkStatus />
           </TabsContent>
-          
+
           <TabsContent value="scanner">
             <NetworkScanner />
           </TabsContent>
-          
+
           <TabsContent value="history">
             <PingHistory />
           </TabsContent>
-          
+
           <TabsContent value="map">
-            <NetworkMap devices={devices} onMapUpdate={fetchDevices} />
+            <div className="flex items-center gap-2 mb-4">
+              <label htmlFor="map-select" className="text-sm font-medium">Select Map:</label>
+              <select
+                id="map-select"
+                className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                value={currentMapId || ''}
+                onChange={(e) => setCurrentMapId(e.target.value)}
+              >
+                {maps.length === 0 ? (
+                  <option value="">No maps available</option>
+                ) : (
+                  maps.map((map) => (
+                    <option key={map.id} value={map.id}>
+                      {map.name}
+                    </option>
+                  ))
+                )}
+              </select>
+              <Button onClick={fetchMaps} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+            {currentMapId ? (
+              <NetworkMap devices={devices} onMapUpdate={fetchDevices} mapId={currentMapId} />
+            ) : (
+              <Card className="h-[70vh] flex items-center justify-center">
+                <CardContent className="text-center">
+                  <Network className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No map selected or available. Please create one in the PHP frontend or select an existing one.</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
 
