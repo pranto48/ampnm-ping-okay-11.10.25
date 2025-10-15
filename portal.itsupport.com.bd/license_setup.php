@@ -82,7 +82,7 @@ function isAdminUserSetup($pdo) {
 
 // Helper to check if all other tables exist (products, customers, orders, order_items, licenses)
 function areAllTablesSetup($pdo) {
-    $tables_to_check = ['products', 'customers', 'orders', 'order_items', 'licenses', 'support_tickets', 'ticket_replies'];
+    $tables_to_check = ['products', 'customers', 'orders', 'order_items', 'licenses', 'support_tickets', 'ticket_replies', 'profiles']; // Added 'profiles'
     foreach ($tables_to_check as $table) {
         try {
             $pdo->query("SELECT 1 FROM `$table` LIMIT 1");
@@ -285,6 +285,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     FOREIGN KEY (`ticket_id`) REFERENCES `support_tickets`(`id`) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
                 $setup_message .= '<p class="text-green-500">Table `ticket_replies` checked/created successfully.</p>';
+
+                // NEW TABLE FOR USER PROFILES
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `profiles` (
+                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `customer_id` INT(11) UNSIGNED NOT NULL UNIQUE,
+                    `avatar_url` VARCHAR(255) NULL,
+                    `address` VARCHAR(255) NULL,
+                    `phone` VARCHAR(50) NULL,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                $setup_message .= '<p class="text-green-500">Table `profiles` checked/created successfully.</p>';
 
 
                 // Insert some sample products if they don't exist

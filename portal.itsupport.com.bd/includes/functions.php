@@ -315,6 +315,57 @@ EOT;
     return $docker_compose_content;
 }
 
+// --- Profile Management Functions ---
+
+// Fetches basic customer data from the 'customers' table
+function getCustomerData($customer_id) {
+    $pdo = getLicenseDbConnection();
+    $stmt = $pdo->prepare("SELECT id, first_name, last_name, email FROM `customers` WHERE id = ?");
+    $stmt->execute([$customer_id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+// Fetches additional profile data from the 'profiles' table
+function getProfileData($customer_id) {
+    $pdo = getLicenseDbConnection();
+    $stmt = $pdo->prepare("SELECT avatar_url, address, phone FROM `profiles` WHERE customer_id = ?");
+    $stmt->execute([$customer_id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: []; // Return empty array if no profile exists
+}
+
+// Updates customer and profile data
+function updateCustomerProfile($customer_id, $first_name, $last_name, $address, $phone, $avatar_url) {
+    $pdo = getLicenseDbConnection();
+    $pdo->beginTransaction();
+    try {
+        // Update customers table
+        $stmt = $pdo->prepare("UPDATE `customers` SET first_name = ?, last_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+        $stmt->execute([$first_name, $last_name, $customer_id]);
+
+        // Check if a profile entry exists
+        $stmt = $pdo->prepare("SELECT id FROM `profiles` WHERE customer_id = ?");
+        $stmt->execute([$customer_id]);
+        $profile_exists = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($profile_exists) {
+            // Update existing profile
+            $stmt = $pdo->prepare("UPDATE `profiles` SET avatar_url = ?, address = ?, phone = ?, updated_at = CURRENT_TIMESTAMP WHERE customer_id = ?");
+            $stmt->execute([$avatar_url, $address, $phone, $customer_id]);
+        } else {
+            // Create new profile
+            $stmt = $pdo->prepare("INSERT INTO `profiles` (customer_id, avatar_url, address, phone) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$customer_id, $avatar_url, $address, $phone]);
+        }
+
+        $pdo->commit();
+        return true;
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Error updating customer profile: " . $e->getMessage());
+        return false;
+    }
+}
+
 
 // --- Basic HTML Header/Footer for the portal ---
 function portal_header($title = "IT Support BD Portal") {
@@ -340,7 +391,8 @@ function portal_header($title = "IT Support BD Portal") {
     $nav_links = [
         'products.php' => 'Products',
         'dashboard.php' => 'Dashboard',
-        'support.php' => '<i class="fas fa-headset mr-1"></i> Support', // New Support link
+        'support.php' => '<i class="fas fa-headset mr-1"></i> Support',
+        'profile.php' => '<i class="fas fa-user-circle mr-1"></i> Profile', // Added Profile link
         'cart.php' => '<i class="fas fa-shopping-cart mr-1"></i> Cart',
     ];
 
