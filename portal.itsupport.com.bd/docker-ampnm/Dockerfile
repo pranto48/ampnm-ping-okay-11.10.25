@@ -12,11 +12,12 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     nmap \
+    mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j\$(nproc) gd pdo_mysql zip intl opcache bcmath exif
+    && docker-php-ext-install -j$(nproc) gd pdo_mysql zip intl opcache bcmath exif
 
 # Enable Apache modules
 RUN a2enmod rewrite
@@ -43,9 +44,9 @@ RUN echo "Listen 2266" >> /etc/apache2/ports.conf \
 # Ensure the uploads directory exists and has correct permissions
 RUN mkdir -p /var/www/html/uploads/icons \
     mkdir -p /var/www/html/uploads/map_backgrounds \
+    mkdir -p /var/www/html/uploads/backups \
     && chown -R www-data:www-data /var/www/html/uploads \
     && chmod -R 775 /var/www/html/uploads
 
 # Use the copied entrypoint script
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-EOT;

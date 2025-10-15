@@ -10,6 +10,18 @@ require_once __DIR__ . '/../config.php';
 // Function to get database connection (defined in config.php)
 // function getLicenseDbConnection() is already defined in config.php
 
+// Function to check if the license database connection is active
+function checkLicenseDbConnection() {
+    try {
+        $pdo = getLicenseDbConnection();
+        $pdo->query("SELECT 1"); // A simple query to check connection
+        return true;
+    } catch (PDOException $e) {
+        error_log("License DB connection check failed: " . $e->getMessage());
+        return false;
+    }
+}
+
 // Function to generate a unique license key
 function generateLicenseKey($prefix = 'AMPNM') {
     // Generate a UUID (Universally Unique Identifier)
@@ -218,6 +230,7 @@ function getDockerfileContent() {
         "    libonig-dev \\",
         "    libxml2-dev \\",
         "    nmap \\",
+        "    mysql-client \\", # Added mysql-client for mysqldump/mysql commands
         "    && rm -rf /var/lib/apt/lists/*",
         "",
         "# Install PHP extensions",
@@ -249,6 +262,7 @@ function getDockerfileContent() {
         "# Ensure the uploads directory exists and has correct permissions",
         "RUN mkdir -p /var/www/html/uploads/icons \\",
         "    mkdir -p /var/www/html/uploads/map_backgrounds \\",
+        "    mkdir -p /var/www/html/uploads/backups \\", # Added backups directory
         "    && chown -R www-data:www-data /var/www/html/uploads \\",
         "    && chmod -R 775 /var/www/html/uploads",
         "",
@@ -278,7 +292,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      - DB_HOST=127.0.0.1
+      - DB_HOST=db # Changed from 127.0.0.1 to 'db' (the service name)
       - DB_NAME=network_monitor
       - DB_USER=user
       - DB_PASSWORD=password
@@ -287,7 +301,7 @@ services:
       - LICENSE_API_URL={$license_api_url}
       - APP_LICENSE_KEY={$license_key}
     ports:
-      - "2266:2266"
+      - "2266:2266" # Main app will now run on port 2266
     restart: unless-stopped
 
   db:
