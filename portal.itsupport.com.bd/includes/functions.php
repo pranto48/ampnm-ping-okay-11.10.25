@@ -16,7 +16,7 @@ function generateLicenseKey($prefix = 'AMPNM') {
     // This is a simple way to get a unique string. For stronger keys, consider more complex algorithms.
     $data = random_bytes(16);
     $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // set version to 0100
-    $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // set bits 6-7 to 10
+    $data[8] = chr(ord(ord($data[8]) & 0x3f | 0x80)); // set bits 6-7 to 10
     $uuid = vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     return strtoupper($prefix . '-' . $uuid);
 }
@@ -98,6 +98,86 @@ function redirectToAdminDashboard() {
     exit;
 }
 
+// --- Support Ticket System Functions ---
+
+function createSupportTicket($customer_id, $subject, $message) {
+    $pdo = getLicenseDbConnection();
+    $stmt = $pdo->prepare("INSERT INTO `support_tickets` (customer_id, subject, message) VALUES (?, ?, ?)");
+    return $stmt->execute([$customer_id, $subject, $message]);
+}
+
+function getCustomerTickets($customer_id) {
+    $pdo = getLicenseDbConnection();
+    $stmt = $pdo->prepare("SELECT * FROM `support_tickets` WHERE customer_id = ? ORDER BY created_at DESC");
+    $stmt->execute([$customer_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function getTicketDetails($ticket_id, $customer_id = null) {
+    $pdo = getLicenseDbConnection();
+    $sql = "SELECT st.*, c.first_name, c.last_name, c.email FROM `support_tickets` st JOIN `customers` c ON st.customer_id = c.id WHERE st.id = ?";
+    $params = [$ticket_id];
+    if ($customer_id !== null) { // Restrict by customer_id if provided (for customer view)
+        $sql .= " AND st.customer_id = ?";
+        $params[] = $customer_id;
+    }
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+function getTicketReplies($ticket_id) {
+    $pdo = getLicenseDbConnection();
+    $stmt = $pdo->prepare("SELECT * FROM `ticket_replies` WHERE ticket_id = ? ORDER BY created_at ASC");
+    $stmt->execute([$ticket_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function addTicketReply($ticket_id, $sender_id, $sender_type, $message) {
+    $pdo = getLicenseDbConnection();
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("INSERT INTO `ticket_replies` (ticket_id, sender_id, sender_type, message) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$ticket_id, $sender_id, $sender_type, $message]);
+        
+        // Update ticket's updated_at timestamp and status if it's a customer reply
+        if ($sender_type === 'customer') {
+            $stmt = $pdo->prepare("UPDATE `support_tickets` SET updated_at = CURRENT_TIMESTAMP, status = 'in progress' WHERE id = ?");
+            $stmt->execute([$ticket_id]);
+        } else if ($sender_type === 'admin') {
+             $stmt = $pdo->prepare("UPDATE `support_tickets` SET updated_at = CURRENT_TIMESTAMP, status = 'in progress' WHERE id = ?");
+            $stmt->execute([$ticket_id]);
+        }
+        $pdo->commit();
+        return true;
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Error adding ticket reply: " . $e->getMessage());
+        return false;
+    }
+}
+
+function updateTicketStatus($ticket_id, $status) {
+    $pdo = getLicenseDbConnection();
+    $stmt = $pdo->prepare("UPDATE `support_tickets` SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+    return $stmt->execute([$status, $ticket_id]);
+}
+
+function getAllTickets($filter_status = null) {
+    $pdo = getLicenseDbConnection();
+    $sql = "SELECT st.*, c.first_name, c.last_name, c.email FROM `support_tickets` st JOIN `customers` c ON st.customer_id = c.id";
+    $params = [];
+    if ($filter_status && $filter_status !== 'all') {
+        $sql .= " WHERE st.status = ?";
+        $params[] = $filter_status;
+    }
+    $sql .= " ORDER BY st.updated_at DESC";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+
 // --- Basic HTML Header/Footer for the portal ---
 function portal_header($title = "IT Support BD Portal") {
     $current_page = basename($_SERVER['PHP_SELF']);
@@ -122,6 +202,7 @@ function portal_header($title = "IT Support BD Portal") {
     $nav_links = [
         'products.php' => 'Products',
         'dashboard.php' => 'Dashboard',
+        'support.php' => '<i class="fas fa-headset mr-1"></i> Support', // New Support link
         'cart.php' => '<i class="fas fa-shopping-cart mr-1"></i> Cart',
     ];
 
@@ -182,11 +263,12 @@ function admin_header($title = "Admin Panel") {
         'users.php' => 'Customers',
         'license-manager.php' => 'Licenses',
         'products.php' => 'Products',
+        'tickets.php' => '<i class="fas fa-headset mr-1"></i> Tickets', // New Admin Tickets link
     ];
 
     if (isAdminLoggedIn()) {
         foreach ($admin_nav_links as $href => $text) {
-            $active_class = ($current_page === $href) ? 'active' : '';
+            $active_class = (basename($current_page) === $href) ? 'active' : '';
             echo '<a href="' . htmlspecialchars($href) . '" class="admin-nav-link ' . $active_class . '">' . $text . '</a>';
         }
         echo '<a href="../logout.php?admin=true" class="admin-nav-link"><i class="fas fa-sign-out-alt mr-1"></i> Logout (' . htmlspecialchars($_SESSION['admin_username']) . ')</a>';
@@ -195,7 +277,7 @@ function admin_header($title = "Admin Panel") {
             'adminpanel.php' => 'Login',
         ];
         foreach ($admin_public_nav_links as $href => $text) {
-            $active_class = ($current_page === basename($href)) ? 'active' : ''; // Use basename for adminpanel.php
+            $active_class = (basename($current_page) === basename($href)) ? 'active' : ''; // Use basename for adminpanel.php
             echo '<a href="' . htmlspecialchars($href) . '" class="admin-nav-link ' . $active_class . '">' . $text . '</a>';
         }
     }
