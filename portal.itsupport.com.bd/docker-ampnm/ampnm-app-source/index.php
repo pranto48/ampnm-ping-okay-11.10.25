@@ -1,6 +1,6 @@
 <?php
-require_once 'includes/auth_check.php';
-include 'header.php';
+require_once __DIR__ . '/includes/auth_check.php';
+include __DIR__ . '/header.php';
 ?>
 
 <main id="app">
@@ -80,4 +80,4 @@ include 'header.php';
     </div>
 </main>
 
-<?php include 'footer.php'; ?>
+<?php include __DIR__ . '/footer.php'; ?>
