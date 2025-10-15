@@ -63,6 +63,12 @@ $zip->addFromString($zip_root_folder . 'docker-entrypoint.sh', $entrypoint_conte
 // Add the entire ampnm-app-source directory recursively
 addFolderToZip($zip, $app_source_dir, $zip_root_folder . 'ampnm-app-source');
 
+// Add the .gitkeep file if it exists
+$gitkeep_path = $docker_project_base_dir . '.gitkeep';
+if (file_exists($gitkeep_path)) {
+    $zip->addFile($gitkeep_path, $zip_root_folder . '.gitkeep');
+}
+
 $zip->close();
 
 // Set headers for download
