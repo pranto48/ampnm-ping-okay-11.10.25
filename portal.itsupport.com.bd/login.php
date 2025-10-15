@@ -26,28 +26,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 portal_header("Login - IT Support BD Portal");
 ?>
 
-<div class="max-w-md mx-auto card">
-    <h1 class="text-3xl font-bold text-gray-900 mb-6 text-center">Login to Your Account</h1>
+<div class="max-w-md mx-auto glass-card p-8">
+    <h1 class="text-3xl font-bold text-white mb-6 text-center">Login to Your Account</h1>
 
     <?php if ($error_message): ?>
-        <div class="alert-error mb-4">
+        <div class="alert-glass-error mb-4">
             <?= htmlspecialchars($error_message) ?>
         </div>
     <?php endif; ?>
 
     <form action="login.php" method="POST" class="space-y-4">
         <div>
-            <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email:</label>
-            <input type="email" id="email" name="email" class="form-input" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+            <label for="email" class="block text-gray-200 text-sm font-bold mb-2">Email:</label>
+            <input type="email" id="email" name="email" class="form-glass-input" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
         </div>
         <div>
-            <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Password:</label>
-            <input type="password" id="password" name="password" class="form-input" required>
+            <label for="password" class="block text-gray-200 text-sm font-bold mb-2">Password:</label>
+            <input type="password" id="password" name="password" class="form-glass-input" required>
         </div>
-        <button type="submit" class="btn-primary w-full">Login</button>
+        <button type="submit" class="btn-glass-primary w-full">Login</button>
     </form>
-    <p class="text-center text-gray-600 text-sm mt-4">
-        Don't have an account? <a href="registration.php" class="text-blue-600 hover:underline">Register here</a>.
+    <p class="text-center text-gray-200 text-sm mt-4">
+        Don't have an account? <a href="registration.php" class="text-blue-300 hover:underline">Register here</a>.
     </p>
 </div>
 

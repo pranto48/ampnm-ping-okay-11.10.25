@@ -108,43 +108,34 @@ function portal_header($title = "IT Support BD Portal") {
         <title>' . htmlspecialchars($title) . '</title>
         <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-        <style>
-            body { @apply bg-gray-100 text-gray-800; }
-            .container { @apply mx-auto p-4; }
-            .navbar { @apply bg-white shadow-md; }
-            .nav-link { @apply text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium; }
-            .btn-primary { @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded; }
-            .btn-secondary { @apply bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded; }
-            .card { @apply bg-white shadow-md rounded-lg p-6; }
-            .form-input { @apply shadow-sm appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline; }
-            .alert-success { @apply bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative; }
-            .alert-error { @apply bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative; }
-        </style>
+        <link rel="stylesheet" href="assets/css/portal-style.css">
     </head>
-    <body>
-        <nav class="navbar">
-            <div class="container flex justify-between items-center">
-                <a href="index.php" class="text-xl font-bold text-blue-600">IT Support BD Portal</a>
-                <div class="flex space-x-4">';
+    <body class="flex flex-col min-h-screen">
+        <nav class="glass-navbar py-4 shadow-lg sticky top-0 z-50">
+            <div class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
+                <a href="index.php" class="text-2xl font-bold text-primary-light mb-3 md:mb-0">
+                    <i class="fas fa-shield-alt mr-2 text-blue-400"></i>IT Support BD Portal
+                </a>
+                <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">';
     if (isCustomerLoggedIn()) {
-        echo '<a href="products.php" class="nav-link">Products</a>
-              <a href="dashboard.php" class="nav-link">Dashboard</a>
-              <a href="cart.php" class="nav-link"><i class="fas fa-shopping-cart"></i> Cart</a>
-              <a href="logout.php" class="nav-link">Logout (' . htmlspecialchars($_SESSION['customer_email']) . ')</a>';
+        echo '<a href="products.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors">Products</a>
+              <a href="dashboard.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors">Dashboard</a>
+              <a href="cart.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors"><i class="fas fa-shopping-cart mr-1"></i> Cart</a>
+              <a href="logout.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors"><i class="fas fa-sign-out-alt mr-1"></i> Logout (' . htmlspecialchars($_SESSION['customer_email']) . ')</a>';
     } else {
-        echo '<a href="products.php" class="nav-link">Products</a>
-              <a href="login.php" class="nav-link">Login</a>
-              <a href="registration.php" class="nav-link">Register</a>';
+        echo '<a href="products.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors">Products</a>
+              <a href="login.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors">Login</a>
+              <a href="registration.php" class="nav-link text-secondary-light hover:text-blue-300 transition-colors">Register</a>';
     }
     echo '</div>
             </div>
         </nav>
-        <main class="container py-8">';
+        <main class="container mx-auto py-8 flex-grow">';
 }
 
 function portal_footer() {
     echo '</main>
-        <footer class="text-center py-4 text-gray-600 text-sm">
+        <footer class="text-center py-6 text-gray-300 text-sm mt-auto">
             <p>&copy; ' . date("Y") . ' IT Support BD. All rights reserved.</p>
         </footer>
     </body>
@@ -160,41 +151,33 @@ function admin_header($title = "Admin Panel") {
         <title>' . htmlspecialchars($title) . '</title>
         <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-        <style>
-            body { @apply bg-gray-800 text-gray-100; }
-            .container { @apply mx-auto p-4; }
-            .admin-navbar { @apply bg-gray-900 shadow-md; }
-            .admin-nav-link { @apply text-gray-300 hover:text-blue-400 px-3 py-2 rounded-md text-sm font-medium; }
-            .btn-admin-primary { @apply bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded; }
-            .btn-admin-danger { @apply bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded; }
-            .admin-card { @apply bg-gray-700 shadow-md rounded-lg p-6; }
-            .form-admin-input { @apply shadow-sm appearance-none border rounded w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:shadow-outline bg-gray-600 border-gray-500; }
-            .alert-admin-success { @apply bg-green-700 text-white px-4 py-3 rounded relative; }
-            .alert-admin-error { @apply bg-red-700 text-white px-4 py-3 rounded relative; }
-        </style>
+        <link rel="stylesheet" href="../assets/css/portal-style.css">
     </head>
-    <body>
-        <nav class="admin-navbar">
-            <div class="container flex justify-between items-center">
-                <a href="adminpanel.php" class="text-xl font-bold text-blue-400">Admin Panel</a>
-                <div class="flex space-x-4">';
+    <body class="admin-body flex flex-col min-h-screen">
+        <nav class="admin-navbar py-4 shadow-md sticky top-0 z-50">
+            <div class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
+                <a href="adminpanel.php" class="text-2xl font-bold text-blue-400 mb-3 md:mb-0">
+                    <i class="fas fa-user-shield mr-2"></i>Admin Panel
+                </a>
+                <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">';
     if (isAdminLoggedIn()) {
-        echo '<a href="adminpanel.php" class="admin-nav-link">Dashboard</a>
+        echo '<a href="index.php" class="admin-nav-link">Dashboard</a>
               <a href="users.php" class="admin-nav-link">Customers</a>
               <a href="license-manager.php" class="admin-nav-link">Licenses</a>
-              <a href="logout.php?admin=true" class="admin-nav-link">Logout (' . htmlspecialchars($_SESSION['admin_username']) . ')</a>';
+              <a href="products.php" class="admin-nav-link">Products</a>
+              <a href="../logout.php?admin=true" class="admin-nav-link"><i class="fas fa-sign-out-alt mr-1"></i> Logout (' . htmlspecialchars($_SESSION['admin_username']) . ')</a>';
     } else {
         echo '<a href="adminpanel.php" class="admin-nav-link">Login</a>';
     }
     echo '</div>
             </div>
         </nav>
-        <main class="container py-8">';
+        <main class="container mx-auto py-8 flex-grow">';
 }
 
 function admin_footer() {
     echo '</main>
-        <footer class="text-center py-4 text-gray-400 text-sm">
+        <footer class="text-center py-6 text-gray-400 text-sm mt-auto">
             <p>&copy; ' . date("Y") . ' IT Support BD Admin. All rights reserved.</p>
         </footer>
     </body>

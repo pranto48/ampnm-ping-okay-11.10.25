@@ -92,7 +92,7 @@ admin_header("Manage Licenses");
 
 <?= $message ?>
 
-<div class="admin-card mb-8">
+<div class="admin-card mb-8 p-6">
     <h2 class="text-2xl font-semibold text-blue-400 mb-4">Generate New License</h2>
     <form action="license-manager.php" method="POST" class="space-y-4">
         <div>
@@ -128,7 +128,7 @@ admin_header("Manage Licenses");
     </form>
 </div>
 
-<div class="admin-card">
+<div class="admin-card p-6">
     <h2 class="text-2xl font-semibold text-blue-400 mb-4">All Licenses</h2>
     <?php if (empty($licenses)): ?>
         <p class="text-center text-gray-400 py-8">No licenses generated yet.</p>

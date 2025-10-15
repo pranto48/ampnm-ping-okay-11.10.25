@@ -11,7 +11,7 @@ $customer_id = $_SESSION['customer_id'];
 $message = '';
 
 if (isset($_GET['order_success'])) {
-    $message = '<div class="alert-success mb-4">Your order #' . htmlspecialchars($_GET['order_success']) . ' has been placed successfully! Your licenses are now available below.</div>';
+    $message = '<div class="alert-glass-success mb-4">Your order #' . htmlspecialchars($_GET['order_success']) . ' has been placed successfully! Your licenses are now available below.</div>';
 }
 
 // Fetch customer's licenses
@@ -40,33 +40,33 @@ $orders = $stmt_orders->fetchAll(PDO::FETCH_ASSOC);
 portal_header("My Dashboard - IT Support BD Portal");
 ?>
 
-<h1 class="text-4xl font-bold text-gray-900 mb-8 text-center">Welcome, <?= htmlspecialchars($_SESSION['customer_name']) ?>!</h1>
+<h1 class="text-4xl font-bold text-white mb-8 text-center">Welcome, <?= htmlspecialchars($_SESSION['customer_name']) ?>!</h1>
 
 <?= $message ?>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <div class="card">
-        <h2 class="text-2xl font-semibold text-gray-900 mb-4">My Licenses</h2>
+    <div class="glass-card p-6">
+        <h2 class="text-2xl font-semibold text-white mb-4">My Licenses</h2>
         <?php if (empty($licenses)): ?>
-            <div class="text-center py-8 text-gray-600">
+            <div class="text-center py-8 text-gray-200">
                 <i class="fas fa-ticket-alt text-6xl text-gray-400 mb-4"></i>
                 <p class="text-xl">You don't have any active licenses yet.</p>
-                <a href="products.php" class="btn-primary mt-4">Buy Licenses</a>
+                <a href="products.php" class="btn-glass-primary mt-4">Buy Licenses</a>
             </div>
         <?php else: ?>
             <div class="space-y-4">
                 <?php foreach ($licenses as $license): ?>
-                    <div class="border border-gray-200 rounded-lg p-4 shadow-sm">
-                        <h3 class="text-xl font-semibold text-blue-600"><?= htmlspecialchars($license['product_name']) ?></h3>
-                        <p class="text-gray-700 text-sm mb-2"><?= htmlspecialchars($license['product_description']) ?></p>
-                        <div class="bg-gray-100 p-3 rounded-md font-mono text-sm break-all mb-2">
-                            <strong>License Key:</strong> <span id="license-key-<?= htmlspecialchars($license['id']) ?>"><?= htmlspecialchars($license['license_key']) ?></span>
-                            <button class="ml-2 text-blue-600 hover:text-blue-800" onclick="copyToClipboard('license-key-<?= htmlspecialchars($license['id']) ?>')">
+                    <div class="glass-card p-4 shadow-sm">
+                        <h3 class="text-xl font-semibold text-blue-300"><?= htmlspecialchars($license['product_name']) ?></h3>
+                        <p class="text-gray-200 text-sm mb-2"><?= htmlspecialchars($license['product_description']) ?></p>
+                        <div class="bg-gray-800 p-3 rounded-md font-mono text-sm break-all mb-2 flex items-center justify-between">
+                            <strong class="text-gray-300">License Key:</strong> <span id="license-key-<?= htmlspecialchars($license['id']) ?>" class="text-white"><?= htmlspecialchars($license['license_key']) ?></span>
+                            <button class="ml-2 text-blue-400 hover:text-blue-300 transition-colors" onclick="copyToClipboard('license-key-<?= htmlspecialchars($license['id']) ?>')">
                                 <i class="fas fa-copy"></i> Copy
                             </button>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                            <span><strong>Status:</strong> <span class="font-semibold <?= $license['status'] == 'active' ? 'text-green-600' : 'text-red-600' ?>"><?= htmlspecialchars(ucfirst($license['status'])) ?></span></span>
+                        <div class="grid grid-cols-2 gap-2 text-sm text-gray-200">
+                            <span><strong>Status:</strong> <span class="font-semibold <?= $license['status'] == 'active' ? 'text-green-400' : 'text-red-400' ?>"><?= htmlspecialchars(ucfirst($license['status'])) ?></span></span>
                             <span><strong>Max Devices:</strong> <?= htmlspecialchars($license['max_devices']) ?></span>
                             <span><strong>Issued:</strong> <?= date('Y-m-d', strtotime($license['issued_at'])) ?></span>
                             <span><strong>Expires:</strong> <?= date('Y-m-d', strtotime($license['expires_at'])) ?></span>
@@ -74,7 +74,7 @@ portal_header("My Dashboard - IT Support BD Portal");
                         </div>
                         <?php if ($license['status'] == 'active' || $license['status'] == 'free'): ?>
                             <div class="mt-4">
-                                <a href="license_details.php?license_id=<?= htmlspecialchars($license['id']) ?>" class="btn-primary text-center inline-block">
+                                <a href="license_details.php?license_id=<?= htmlspecialchars($license['id']) ?>" class="btn-glass-primary text-center inline-block">
                                     <i class="fas fa-download mr-2"></i>Download Setup Files
                                 </a>
                             </div>
@@ -85,26 +85,26 @@ portal_header("My Dashboard - IT Support BD Portal");
         <?php endif; ?>
     </div>
 
-    <div class="card">
-        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Order History</h2>
+    <div class="glass-card p-6">
+        <h2 class="text-2xl font-semibold text-white mb-4">Order History</h2>
         <?php if (empty($orders)): ?>
-            <div class="text-center py-8 text-gray-600">
+            <div class="text-center py-8 text-gray-200">
                 <i class="fas fa-box-open text-6xl text-gray-400 mb-4"></i>
                 <p class="text-xl">You haven't placed any orders yet.</p>
-                <a href="products.php" class="btn-primary mt-4">Start Shopping</a>
+                <a href="products.php" class="btn-glass-primary mt-4">Start Shopping</a>
             </div>
         <?php else: ?>
             <div class="space-y-4">
                 <?php foreach ($orders as $order): ?>
-                    <div class="border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <div class="glass-card p-4 shadow-sm">
                         <div class="flex justify-between items-center mb-2">
-                            <h3 class="text-xl font-semibold">Order #<?= htmlspecialchars($order['id']) ?></h3>
-                            <span class="text-sm text-gray-600"><?= date('Y-m-d H:i', strtotime($order['order_date'])) ?></span>
+                            <h3 class="text-xl font-semibold text-white">Order #<?= htmlspecialchars($order['id']) ?></h3>
+                            <span class="text-sm text-gray-300"><?= date('Y-m-d H:i', strtotime($order['order_date'])) ?></span>
                         </div>
-                        <p class="text-gray-700 mb-2"><strong>Total:</strong> $<?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></p>
-                        <p class="text-gray-700 mb-2"><strong>Status:</strong> <span class="font-semibold <?= $order['status'] == 'completed' ? 'text-green-600' : 'text-red-600' ?>"><?= htmlspecialchars(ucfirst($order['status'])) ?></span></p>
+                        <p class="text-gray-200 mb-2"><strong>Total:</strong> $<?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></p>
+                        <p class="text-gray-200 mb-2"><strong>Status:</strong> <span class="font-semibold <?= $order['status'] == 'completed' ? 'text-green-400' : 'text-red-400' ?>"><?= htmlspecialchars(ucfirst($order['status'])) ?></span></p>
                         <?php if (!empty($order['license_keys'])): ?>
-                            <p class="text-gray-700 text-sm"><strong>Licenses:</strong> <span class="font-mono break-all"><?= htmlspecialchars($order['license_keys']) ?></span></p>
+                            <p class="text-gray-200 text-sm"><strong>Licenses:</strong> <span class="font-mono break-all"><?= htmlspecialchars($order['license_keys']) ?></span></p>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>

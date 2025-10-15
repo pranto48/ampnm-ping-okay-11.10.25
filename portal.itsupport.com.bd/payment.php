@@ -88,42 +88,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
 portal_header("Checkout - IT Support BD Portal");
 ?>
 
-<h1 class="text-4xl font-bold text-gray-900 mb-8 text-center">Checkout</h1>
+<h1 class="text-4xl font-bold text-white mb-8 text-center">Checkout</h1>
 
 <?php if ($payment_status === 'error'): ?>
-    <div class="alert-error mb-4">
+    <div class="alert-glass-error mb-4">
         Payment failed due to an internal error. Please try again or contact support.
     </div>
 <?php elseif ($payment_status === 'failed'): ?>
-    <div class="alert-error mb-4">
+    <div class="alert-glass-error mb-4">
         Your payment could not be processed. Please check your details and try again.
     </div>
 <?php endif; ?>
 
-<div class="max-w-2xl mx-auto card">
-    <h2 class="text-2xl font-semibold mb-4">Order Details</h2>
+<div class="max-w-2xl mx-auto glass-card p-8">
+    <h2 class="text-2xl font-semibold text-white mb-4">Order Details</h2>
     <div class="space-y-3 mb-6">
         <?php foreach ($cart_items as $item): ?>
-            <div class="flex justify-between items-center border-b pb-2">
+            <div class="flex justify-between items-center border-b border-gray-600 pb-2 text-gray-200">
                 <span class="text-lg"><?= htmlspecialchars($item['name']) ?></span>
                 <span class="font-bold">$<?= htmlspecialchars(number_format($item['price'] * $item['quantity'], 2)) ?></span>
             </div>
         <?php endforeach; ?>
     </div>
-    <div class="flex justify-between text-xl font-bold mb-6 border-t pt-4">
+    <div class="flex justify-between text-xl font-bold mb-6 border-t border-gray-600 pt-4 text-white">
         <span>Total Amount:</span>
         <span>$<?= htmlspecialchars(number_format($total_amount, 2)) ?></span>
     </div>
 
-    <h2 class="text-2xl font-semibold mb-4">Payment Information</h2>
-    <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative mb-6">
+    <h2 class="text-2xl font-semibold text-white mb-4">Payment Information</h2>
+    <div class="alert-glass-warning mb-6">
         <p class="font-bold">Payment Gateway Placeholder</p>
         <p class="text-sm">In a real application, you would integrate with a payment provider like Stripe or PayPal here.</p>
         <p class="text-sm">For this demo, clicking "Confirm Payment" will simulate a successful transaction.</p>
     </div>
 
     <form action="payment.php" method="POST">
-        <button type="submit" name="confirm_payment" class="btn-primary w-full">
+        <button type="submit" name="confirm_payment" class="btn-glass-primary w-full">
             <i class="fas fa-credit-card mr-2"></i>Confirm Payment
         </button>
     </form>

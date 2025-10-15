@@ -60,7 +60,7 @@ admin_header("Manage Products");
 
 <?= $message ?>
 
-<div class="admin-card mb-8">
+<div class="admin-card mb-8 p-6">
     <h2 class="text-2xl font-semibold text-blue-400 mb-4">Add New Product</h2>
     <form action="products.php" method="POST" class="space-y-4">
         <input type="hidden" name="product_id" value="0">
@@ -90,7 +90,7 @@ admin_header("Manage Products");
     </form>
 </div>
 
-<div class="admin-card">
+<div class="admin-card p-6">
     <h2 class="text-2xl font-semibold text-blue-400 mb-4">All Products</h2>
     <?php if (empty($products)): ?>
         <p class="text-center text-gray-400 py-8">No products defined yet.</p>
@@ -108,6 +108,25 @@ admin_header("Manage Products");
                     </tr>
                 </thead>
                 <tbody class="text-gray-300 text-sm font-light">
+                    <?php foreach ($products as $product): ?>
+                        <tr class="border-b border-gray-600 hover:bg-gray-600">
+                            <td class="py-3 px-6 text-left whitespace-nowrap"><?= htmlspecialchars($product['id']) ?></td>
+                            <td class="py-3 px-6 text-left"><?= htmlspecialchars($product['name']) ?></td>
+                            <td class="py-3 px-6 text-left">$<?= htmlspecialchars(number_format($product['price'], 2)) ?></td>
+                            <td class="py-3 px-6 text-left"><?= htmlspecialchars($product['max_devices']) ?></td>
+                            <td class="py-3 px-6 text-left"><?= htmlspecialchars($product['license_duration_days']) ?></td>
+                            <td class="py-3 px-6 text-center">
+                                <button onclick="openEditProductModal(<?= htmlspecialchars(json_encode($product)) ?>)" class="btn-admin-primary text-xs px-3 py-1 mr-2">
+                                    <i class="fas fa-edit mr-1"></i>Edit
+                                </button>
+                                <form action="products.php" method="POST" onsubmit="return confirm('Are you sure you want to delete this product? This will fail if licenses are linked.');" class="inline-block">
+                                    <input type="hidden" name="product_id" value="<?= htmlspecialchars($product['id']) ?>">
+                                    <button type="submit" name="delete_product" class="btn-admin-danger text-xs px-3 py-1">
+                                        <i class="fas fa-trash-alt mr-1"></i>Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
                     <?php foreach ($products as $product): ?>
                         <tr class="border-b border-gray-600 hover:bg-gray-600">
                             <td class="py-3 px-6 text-left whitespace-nowrap"><?= htmlspecialchars($product['id']) ?></td>

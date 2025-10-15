@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 admin_header("Admin Login");
 ?>
 
-<div class="max-w-md mx-auto admin-card">
+<div class="max-w-md mx-auto admin-card p-8">
     <h1 class="text-3xl font-bold text-blue-400 mb-6 text-center">Admin Login</h1>
 
     <?php if ($error_message): ?>

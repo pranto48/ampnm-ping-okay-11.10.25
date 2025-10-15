@@ -32,7 +32,7 @@ admin_header("Manage Customers");
 
 <?= $message ?>
 
-<div class="admin-card">
+<div class="admin-card p-6">
     <h2 class="text-2xl font-semibold text-blue-400 mb-4">All Customers</h2>
     <?php if (empty($customers)): ?>
         <p class="text-center text-gray-400 py-8">No customers registered yet.</p>
