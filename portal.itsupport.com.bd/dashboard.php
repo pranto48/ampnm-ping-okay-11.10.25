@@ -60,7 +60,10 @@ portal_header("My Dashboard - IT Support BD Portal");
                         <h3 class="text-xl font-semibold text-blue-600"><?= htmlspecialchars($license['product_name']) ?></h3>
                         <p class="text-gray-700 text-sm mb-2"><?= htmlspecialchars($license['product_description']) ?></p>
                         <div class="bg-gray-100 p-3 rounded-md font-mono text-sm break-all mb-2">
-                            <strong>License Key:</strong> <?= htmlspecialchars($license['license_key']) ?>
+                            <strong>License Key:</strong> <span id="license-key-<?= htmlspecialchars($license['id']) ?>"><?= htmlspecialchars($license['license_key']) ?></span>
+                            <button class="ml-2 text-blue-600 hover:text-blue-800" onclick="copyToClipboard('license-key-<?= htmlspecialchars($license['id']) ?>')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
                         </div>
                         <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
                             <span><strong>Status:</strong> <span class="font-semibold <?= $license['status'] == 'active' ? 'text-green-600' : 'text-red-600' ?>"><?= htmlspecialchars(ucfirst($license['status'])) ?></span></span>
@@ -69,6 +72,13 @@ portal_header("My Dashboard - IT Support BD Portal");
                             <span><strong>Expires:</strong> <?= date('Y-m-d', strtotime($license['expires_at'])) ?></span>
                             <span><strong>Current Devices:</strong> <?= htmlspecialchars($license['current_devices']) ?></span>
                         </div>
+                        <?php if ($license['status'] == 'active' || $license['status'] == 'free'): ?>
+                            <div class="mt-4">
+                                <a href="license_details.php?license_id=<?= htmlspecialchars($license['id']) ?>" class="btn-primary text-center inline-block">
+                                    <i class="fas fa-download mr-2"></i>Download Setup Files
+                                </a>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -102,5 +112,18 @@ portal_header("My Dashboard - IT Support BD Portal");
         <?php endif; ?>
     </div>
 </div>
+
+<script>
+    function copyToClipboard(elementId) {
+        const element = document.getElementById(elementId);
+        const text = element.textContent || element.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('License key copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy license key.');
+        });
+    }
+</script>
 
 <?php portal_footer(); ?>
