@@ -1,9 +1,11 @@
 <?php
 // Database configuration using environment variables for Docker compatibility
-$servername = '127.0.0.1'; // Forcing 127.0.0.1 to resolve connection issues in Docker
-$username = 'root'; // Setup script needs root privileges to create DB and tables
-$password = getenv('MYSQL_ROOT_PASSWORD') ? getenv('MYSQL_ROOT_PASSWORD') : '';
-$dbname = getenv('DB_NAME') ? getenv('DB_NAME') : 'network_monitor';
+$servername = getenv('DB_HOST') ?: 'db'; // Use DB_HOST env var, fallback to 'db' service name
+$root_username = 'root'; // Setup script needs root privileges to create DB and tables
+$root_password = getenv('MYSQL_ROOT_PASSWORD') ?: '';
+$app_username = getenv('DB_USER') ?: 'user';
+$app_password = getenv('DB_PASSWORD') ?: '';
+$dbname = getenv('DB_NAME') ?: 'network_monitor';
 
 // Load the main application's config.php for getDbConnection if needed later,
 // but for initial setup, we use direct PDO connection.
@@ -29,16 +31,16 @@ function message($text, $is_error = false) {
 <body>
 <?php
 try {
-    // Connect to MySQL server (without selecting a database)
-    $pdo = new PDO("mysql:host=$servername", $username, $password);
+    // Connect to MySQL server (without selecting a database) using root credentials
+    $pdo = new PDO("mysql:host=$servername", $root_username, $root_password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // Create database if it doesn't exist
     $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbname`");
     message("Database '$dbname' checked/created successfully.");
 
-    // Reconnect, this time selecting the new database
-    $pdo = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+    // Reconnect, this time selecting the new database and using the application user credentials
+    $pdo = new PDO("mysql:host=$servername;dbname=$dbname", $app_username, $app_password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // Step 1: Ensure users table exists first
