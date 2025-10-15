@@ -92,11 +92,10 @@ function logStatusChange($pdo, $deviceId, $oldStatus, $newStatus, $details) {
 switch ($action) {
     case 'import_devices':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Check license allowance before importing
-            $allowance = checkDeviceAllowance($pdo, $current_user_id);
-            if (!$allowance['can_add_device']) {
+            // Check license allowance from session
+            if (!$_SESSION['can_add_device']) {
                 http_response_code(403);
-                echo json_encode(['error' => $allowance['message']]);
+                echo json_encode(['error' => $_SESSION['license_message'] ?? 'You are not allowed to add more devices.']);
                 exit;
             }
 
@@ -112,11 +111,10 @@ switch ($action) {
                 $imported_count = 0;
                 foreach ($devices as $device) {
                     // Re-check allowance for each device if importing multiple
-                    $allowance = checkDeviceAllowance($pdo, $current_user_id);
-                    if (!$allowance['can_add_device']) {
+                    if (!$_SESSION['can_add_device']) {
                         $pdo->rollBack();
                         http_response_code(403);
-                        echo json_encode(['error' => $allowance['message'] . " (Stopped at device #{$imported_count})"]);
+                        echo json_encode(['error' => ($_SESSION['license_message'] ?? 'You are not allowed to add more devices.') . " (Stopped at device #{$imported_count})"]);
                         exit;
                     }
 
@@ -149,7 +147,7 @@ switch ($action) {
                     $imported_count++;
                 }
 
-                updateLicenseDeviceCount($pdo, $current_user_id); // Update count after successful import
+                // No local license count update needed, external service handles it
                 $pdo->commit();
                 echo json_encode(['success' => true, 'message' => "Successfully imported {$imported_count} devices."]);
 
@@ -348,7 +346,7 @@ switch ($action) {
         $stats7d = $stmt->fetch(PDO::FETCH_ASSOC);
         $uptime7d = ($stats7d['total'] > 0) ? round(($stats7d['successful'] / $stats7d['total']) * 100, 2) : null;
 
-        echo json_encode(['uptime_24h' => $uptime24h, 'uptime_7d' => $uptime7d, 'outages_24h' => $outages7d]);
+        echo json_encode(['uptime_24h' => $uptime24h, 'uptime_7d' => $uptime7d, 'outages_24h' => $outages24h]);
         break;
 
     case 'get_device_details':
@@ -407,11 +405,10 @@ switch ($action) {
 
     case 'create_device':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Check license allowance before creating
-            $allowance = checkDeviceAllowance($pdo, $current_user_id);
-            if (!$allowance['can_add_device']) {
+            // Check license allowance from session
+            if (!$_SESSION['can_add_device']) {
                 http_response_code(403);
-                echo json_encode(['error' => $allowance['message']]);
+                echo json_encode(['error' => $_SESSION['license_message'] ?? 'You are not allowed to add more devices.']);
                 exit;
             }
 
@@ -427,7 +424,7 @@ switch ($action) {
             ]);
             $lastId = $pdo->lastInsertId();
             
-            updateLicenseDeviceCount($pdo, $current_user_id); // Update count after creation
+            // No local license count update needed, external service handles it
 
             $stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ? AND user_id = ?");
             $stmt->execute([$lastId, $current_user_id]);
@@ -458,10 +455,7 @@ switch ($action) {
             $sql = "UPDATE devices SET " . implode(', ', $fields) . " WHERE id = ? AND user_id = ?";
             $stmt = $pdo->prepare($sql); $stmt->execute($params);
             
-            // If map_id was updated, the device count for the license might change
-            if (isset($updates['map_id'])) {
-                updateLicenseDeviceCount($pdo, $current_user_id);
-            }
+            // No local license count update needed, external service handles it
 
             $stmt = $pdo->prepare("SELECT d.*, m.name as map_name FROM devices d LEFT JOIN maps m ON d.map_id = m.id WHERE d.id = ? AND d.user_id = ?"); $stmt->execute([$id, $current_user_id]);
             $device = $stmt->fetch(PDO::FETCH_ASSOC); echo json_encode($device);
@@ -474,7 +468,7 @@ switch ($action) {
             if (!$id) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
             $stmt = $pdo->prepare("DELETE FROM devices WHERE id = ? AND user_id = ?"); $stmt->execute([$id, $current_user_id]);
             
-            updateLicenseDeviceCount($pdo, $current_user_id); // Update count after deletion
+            // No local license count update needed, external service handles it
 
             echo json_encode(['success' => true, 'message' => 'Device deleted successfully']);
         }

@@ -1,7 +1,6 @@
 <?php
 // Include the main bootstrap file which handles DB checks and starts the session.
 require_once __DIR__ . '/bootstrap.php';
-require_once __DIR__ . '/license_check.php'; // Include the new license check utility
 
 // If the user is not logged in, redirect to the login page.
 if (!isset($_SESSION['user_id'])) {
@@ -9,11 +8,49 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Fetch and store license information in the session
-$pdo = getDbConnection();
-$_SESSION['user_license'] = getUserLicense($pdo, $_SESSION['user_id']);
-$_SESSION['can_add_device'] = checkDeviceAllowance($pdo, $_SESSION['user_id'])['can_add_device'];
+// --- External License Validation ---
+// This application's license key is defined in config.php (APP_LICENSE_KEY)
+// The external verification service URL is defined in config.php (LICENSE_API_URL)
 
-// License check is now handled by the separate sales_licensing_app.
-// The main application will query that service for license validation.
+$_SESSION['can_add_device'] = false; // Default to false
+$_SESSION['license_message'] = 'License validation failed.';
+
+try {
+    $ch = curl_init(LICENSE_API_URL);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+        'app_license_key' => APP_LICENSE_KEY,
+        'user_id' => $_SESSION['user_id'] // Pass the logged-in user's ID for user-specific checks
+    ]));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5-second timeout for the external API call
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($response === false) {
+        error_log("License API cURL Error: " . $curlError);
+        $_SESSION['license_message'] = 'Failed to connect to license verification service.';
+    } elseif ($httpCode !== 200) {
+        error_log("License API HTTP Error: " . $httpCode . " - Response: " . $response);
+        $_SESSION['license_message'] = 'License verification service returned an error.';
+    } else {
+        $licenseData = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("License API JSON Parse Error: " . json_last_error_msg() . " - Response: " . $response);
+            $_SESSION['license_message'] = 'Invalid response from license verification service.';
+        } elseif (isset($licenseData['success']) && $licenseData['success'] === true) {
+            $_SESSION['can_add_device'] = $licenseData['can_add_device'] ?? false;
+            $_SESSION['license_message'] = $licenseData['message'] ?? 'License validated successfully.';
+        } else {
+            $_SESSION['license_message'] = $licenseData['message'] ?? 'License validation failed.';
+        }
+    }
+} catch (Exception $e) {
+    error_log("License API Exception: " . $e->getMessage());
+    $_SESSION['license_message'] = 'An unexpected error occurred during license validation.';
+}
 ?>
