@@ -8,21 +8,14 @@
 
 ## Installation Steps (Local XAMPP)
 
+### Main AMPNM Application
 1.  **Start XAMPP**
     -   Open XAMPP Control Panel
     -   Start Apache and MySQL services
 
 2.  **Place Files in htdocs**
     -   Create a new folder in `C:\xampp\htdocs\network-monitor\`
-    -   Copy all files to this folder:
-        -   `index.php` (main dashboard)
-        -   `devices.php` (device management)
-        -   `history.php` (ping history with filtering)
-        -   `api.php` (AJAX API endpoints)
-        -   `export.php` (CSV export functionality)
-        -   `config.php` (configuration file)
-        -   `database_setup.php` (database setup script)
-        -   `README.md` (this file)
+    -   Copy all main application files (everything *except* the `license-service` folder) to this folder.
 
 3.  **Setup Database**
     -   Open your browser and go to: `http://localhost/network-monitor/database_setup.php`
@@ -32,12 +25,22 @@
     -   Open your browser and go to: `http://localhost/network-monitor/`
     -   The network monitor application will load
 
+### External License Service (for `license-service` folder)
+1.  **Place Files on External Hosting:**
+    -   Upload the entire `license-service` folder to your external web hosting (e.g., cPanel).
+    -   Ensure it's accessible via a URL like `http://your-external-domain.com/license-service/`.
+
+2.  **Run Setup Script:**
+    -   Open your browser and navigate to `http://your-external-domain.com/license-service/license_setup.php`.
+    -   Follow the on-screen instructions to configure its MySQL database and add initial license keys.
+
 ## Installation Steps (Docker Compose)
 
+### Main AMPNM Application (Docker)
 1.  **Ensure Docker and Docker Compose are installed.**
 2.  **Configure Environment Variables:**
     -   **For the `app` service (Network Monitor):**
-        -   `LICENSE_API_URL`: This should point to the external URL of your license verification service (e.g., `http://portal.itsupport.com.bd/verify_license.php`).
+        -   `LICENSE_API_URL`: This should point to the external URL of your license verification service (e.g., `http://your-external-domain.com/license-service/verify_license.php`). **Remember to replace `http://your-external-domain.com` with your actual domain.**
         -   `APP_LICENSE_KEY`: This is the unique license key for this deployment, which will be verified by your external license service.
     -   **For the `db` service:**
         -   `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` for the main AMPNM app's database.
@@ -45,26 +48,23 @@
     ```bash
     docker-compose up --build -d
     ```
-4.  **Access Applications:**
-    -   **Network Monitor:** Open your browser and go to: `http://localhost:2266`
-    -   **External License Service:** This will be hosted separately (e.g., `http://portal.itsupport.com.bd`).
+4.  **Access Application:**
+    -   Open your browser and go to: `http://localhost:2266`
 
-## External License Verification Service Setup (portal.itsupport.com.bd)
-
+### External License Service (Separate Deployment)
 This service will run on a separate server (e.g., your cPanel hosting) and use its own MySQL database to manage licenses.
 
 1.  **Upload Files:**
-    -   Create a directory (e.g., `license-service`) on your cPanel hosting.
-    -   Upload `portal.itsupport.com.bd/config.php`, `portal.itsupport.com.bd/license_setup.php`, and `portal.itsupport.com.bd/verify_license.php` to this directory.
-    -   Ensure these files are accessible via a URL like `http://portal.itsupport.com.bd/license-service/`.
+    -   Upload the entire `license-service` folder to your external web hosting (e.g., cPanel).
+    -   Ensure these files are accessible via a URL like `http://your-external-domain.com/license-service/`.
 
 2.  **Run Setup Script:**
-    -   Open your browser and navigate to `http://portal.itsupport.com.bd/license-service/license_setup.php`.
+    -   Open your browser and navigate to `http://your-external-domain.com/license-service/license_setup.php`.
     -   **Step 1: Configure Database Connection:** Enter your MySQL database host, name, username, and password for the *license service's database*. This will create the database (if it doesn't exist) and save the credentials to `config.php`.
     -   **Step 2: Setup License Tables & Add Initial License:** After configuring the database, you can create the `licenses` table and optionally add an initial license key with its `max_devices` and `expires_at` date.
 
 3.  **Verify Endpoint:**
-    -   You can test the verification endpoint by visiting `http://portal.itsupport.com.bd/license-service/verify_license.php` (though it expects POST data, so a direct browser visit will likely show an error).
+    -   You can test the verification endpoint by visiting `http://your-external-domain.com/license-service/verify_license.php` (though it expects POST data, so a direct browser visit will likely show an error).
 
 ## Features
 - Ping any host or IP address
