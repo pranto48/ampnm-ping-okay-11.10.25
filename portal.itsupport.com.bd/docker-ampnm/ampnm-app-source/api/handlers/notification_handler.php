@@ -9,7 +9,9 @@ switch ($action) {
         $settings = $stmt->fetch(PDO::FETCH_ASSOC);
         // Mask password for security, or don't send it at all if not needed by frontend
         if ($settings && isset($settings['password'])) {
-            $settings['password'] = '********'; // Mask password
+            // We store hashed passwords, so we can't unhash them here.
+            // Always send a masked password to the frontend.
+            $settings['password'] = '********'; 
         }
         echo json_encode($settings ?: []);
         break;
@@ -19,7 +21,7 @@ switch ($action) {
             $host = $input['host'] ?? '';
             $port = $input['port'] ?? '';
             $username = $input['username'] ?? '';
-            $password = $input['password'] ?? ''; // This might be masked, handle carefully
+            $password = $input['password'] ?? ''; 
             $encryption = $input['encryption'] ?? 'tls';
             $from_email = $input['from_email'] ?? '';
             $from_name = $input['from_name'] ?? null;
@@ -35,18 +37,28 @@ switch ($action) {
             $stmt->execute([$current_user_id]);
             $existingSettings = $stmt->fetch(PDO::FETCH_ASSOC);
 
+            $hashed_password = null;
+            if ($password !== '********' && !empty($password)) {
+                // Only hash and update password if it's not the masked value and not empty
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            } elseif ($existingSettings) {
+                // If password is '********' (masked), keep the existing hashed password
+                $hashed_password = $existingSettings['password'];
+            } else {
+                // New settings, but empty password provided (should be caught by frontend or required)
+                http_response_code(400);
+                echo json_encode(['error' => 'Password is required for new SMTP settings.']);
+                exit;
+            }
+
             if ($existingSettings) {
-                // If password is '********', it means it wasn't changed, so keep the old one
-                if ($password === '********') {
-                    $password = $existingSettings['password'];
-                }
                 $sql = "UPDATE smtp_settings SET host = ?, port = ?, username = ?, password = ?, encryption = ?, from_email = ?, from_name = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$host, $port, $username, $password, $encryption, $from_email, $from_name, $current_user_id]);
+                $stmt->execute([$host, $port, $username, $hashed_password, $encryption, $from_email, $from_name, $current_user_id]);
             } else {
                 $sql = "INSERT INTO smtp_settings (user_id, host, port, username, password, encryption, from_email, from_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$current_user_id, $host, $port, $username, $password, $encryption, $from_email, $from_name]);
+                $stmt->execute([$current_user_id, $host, $port, $username, $hashed_password, $encryption, $from_email, $from_name]);
             }
             echo json_encode(['success' => true, 'message' => 'SMTP settings saved successfully.']);
         }
@@ -119,4 +131,3 @@ switch ($action) {
         }
         break;
 }
-?>
