@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client'
+// import { supabase } from '@/integrations/supabase/client' // No longer needed
 
 export interface PingStorageResult {
   host: string;
@@ -11,68 +11,34 @@ export interface PingStorageResult {
   created_at?: string;
 }
 
+const PHP_API_URL = 'http://localhost:2266/api.php'; // Assuming your PHP API is accessible here
+
+// This function is now redundant as performServerPing already saves to MySQL via PHP.
+// It's kept as a placeholder if direct client-side storage to PHP is ever needed.
 export const storePingResult = async (result: PingStorageResult) => {
-  try {
-    const { data, error } = await supabase
-      .from('ping_results')
-      .insert([result])
-      .select()
-
-    if (error) {
-      console.error('Error storing ping result:', error)
-      return null
-    }
-
-    return data[0]
-  } catch (error) {
-    console.error('Failed to store ping result:', error)
-    return null
-  }
-}
+  console.warn("storePingResult is currently a no-op. Ping results are saved via performServerPing -> PHP API.");
+  return null;
+};
 
 export const getPingHistory = async (host?: string, limit: number = 50) => {
   try {
-    let query = supabase
-      .from('ping_results')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit)
-
+    const params = new URLSearchParams();
     if (host) {
-      query = query.eq('host', host)
+      params.append('host', host);
+    }
+    params.append('limit', String(limit));
+
+    const response = await fetch(`${PHP_API_URL}?action=get_ping_history&${params.toString()}`);
+    if (!response.ok) {
+      throw new Error(`Network response was not ok: ${response.statusText}`);
     }
 
-    const { data, error } = await query
-
-    if (error) {
-      console.error('Error fetching ping history:', error)
-      return []
-    }
-
-    return data
+    const data = await response.json();
+    return data as PingStorageResult[];
   } catch (error) {
-    console.error('Failed to fetch ping history:', error)
-    return []
+    console.error('Failed to fetch ping history from PHP API:', error);
+    return [];
   }
-}
+};
 
-export const getPingStats = async (host: string, hours: number = 24) => {
-  try {
-    const { data, error } = await supabase
-      .from('ping_results')
-      .select('*')
-      .eq('host', host)
-      .gte('created_at', new Date(Date.now() - hours * 60 * 60 * 1000).toISOString())
-      .order('created_at', { ascending: true })
-
-    if (error) {
-      console.error('Error fetching ping stats:', error)
-      return []
-    }
-
-    return data
-  } catch (error) {
-    console.error('Failed to fetch ping stats:', error)
-    return []
-  }
-}
+// getPingStats is removed as it was Supabase-specific and not currently used.

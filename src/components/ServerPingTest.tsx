@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Network, Clock, Server, Wifi, WifiOff, AlertCircle } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { performServerPing, parsePingOutput, type PingResult } from "@/services/pingService";
-import { storePingResult } from "@/services/pingStorage";
+// import { storePingResult } from "@/services/pingStorage"; // No longer needed, PHP backend handles storage
 import { updateDeviceStatusByIp } from "@/services/networkDeviceService";
 
 interface ServerPingResult extends PingResult {
@@ -44,15 +44,8 @@ const ServerPingTest = () => {
 
       setPingResults(prev => [enhancedResult, ...prev.slice(0, 9)]);
       
-      await storePingResult({
-        host: result.host,
-        packet_loss: parsedStats.packetLoss,
-        avg_time: parsedStats.avgTime,
-        min_time: parsedStats.minTime,
-        max_time: parsedStats.maxTime,
-        success: result.success,
-        output: result.output
-      });
+      // The performServerPing function already triggers saving to MySQL via PHP backend.
+      // No need to call storePingResult here.
 
       const newStatus = result.success ? 'online' : 'offline';
       await updateDeviceStatusByIp(result.host, newStatus);
