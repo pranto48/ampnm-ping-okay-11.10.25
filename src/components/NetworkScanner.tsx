@@ -5,117 +5,63 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { RefreshCw, Server, Wifi, WifiOff, Scan } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
+import { Input } from "@/components/ui/input";
 
-interface NetworkDevice {
+interface ScannedDevice {
   ip: string;
-  status: "online" | "offline";
-  responseTime?: number;
-  lastSeen: Date;
+  hostname?: string;
+  mac?: string;
+  vendor?: string;
+  alive: boolean;
 }
 
 const NetworkScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
-  const [devices, setDevices] = useState<NetworkDevice[]>([]);
-
-  // Generate common local IP ranges to scan
-  const generateIPRange = (base: string, start: number, end: number): string[] => {
-    const ips: string[] = [];
-    for (let i = start; i <= end; i++) {
-      ips.push(`${base}.${i}`);
-    }
-    return ips;
-  };
+  const [subnet, setSubnet] = useState("192.168.1.0/24"); // Default subnet
+  const [scannedDevices, setScannedDevices] = useState<ScannedDevice[]>([]);
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
 
   const scanNetwork = async () => {
-    setIsScanning(true);
-    setScanProgress(0);
-    setDevices([]);
-
-    // Common local network ranges to scan
-    const ipRanges = [
-      ...generateIPRange("192.168.1", 1, 254),
-      ...generateIPRange("192.168.0", 1, 254),
-      ...generateIPRange("192.168.9", 1, 254),
-      ...generateIPRange("10.0.0", 1, 254),
-    ];
-
-    const foundDevices: NetworkDevice[] = [];
-    const totalIPs = ipRanges.length;
-
-    for (let i = 0; i < ipRanges.length; i++) {
-      const ip = ipRanges[i];
-      setScanProgress(Math.round((i / totalIPs) * 100));
-
-      try {
-        // Try to ping the device using multiple methods
-        const startTime = performance.now();
-        
-        // Method 1: Try to load a favicon or common endpoint
-        const img = new Image();
-        const pingPromise = new Promise<void>((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          
-          // Try common endpoints
-          const endpoints = [
-            `http://${ip}/favicon.ico?t=${Date.now()}`,
-            `http://${ip}:80/favicon.ico?t=${Date.now()}`,
-            `http://${ip}:8080/favicon.ico?t=${Date.now()}`,
-            `http://${ip}:3000/favicon.ico?t=${Date.now()}`,
-          ];
-          
-          let currentIndex = 0;
-          const tryNextEndpoint = () => {
-            if (currentIndex >= endpoints.length) {
-              reject(new Error("No response"));
-              return;
-            }
-            
-            img.src = endpoints[currentIndex];
-            currentIndex++;
-            
-            setTimeout(tryNextEndpoint, 100);
-          };
-          
-          tryNextEndpoint();
-        });
-
-        // Set timeout for the ping attempt
-        await Promise.race([
-          pingPromise,
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Timeout")), 1000)
-          )
-        ]);
-
-        const responseTime = Math.round(performance.now() - startTime);
-        
-        foundDevices.push({
-          ip,
-          status: "online",
-          responseTime,
-          lastSeen: new Date()
-        });
-
-        showSuccess(`Found device at ${ip} (${responseTime}ms)`);
-      } catch (error) {
-        // Device not found or not responding - this is expected for most IPs
-        continue;
-      }
-
-      // Small delay to avoid overwhelming the network
-      await new Promise(resolve => setTimeout(resolve, 10));
+    if (!subnet.trim()) {
+      showError("Please enter a subnet to scan.");
+      return;
     }
 
-    setDevices(foundDevices);
-    setIsScanning(false);
-    setScanProgress(100);
-    
-    if (foundDevices.length > 0) {
-      showSuccess(`Found ${foundDevices.length} devices on the network`);
-    } else {
-      showError("No devices found on the network");
+    setIsScanning(true);
+    setScannedDevices([]);
+    setScanMessage("Scanning network... This may take a moment.");
+
+    try {
+      const response = await fetch('http://localhost:2266/api.php?action=scan_network', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subnet })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.devices && Array.isArray(result.devices)) {
+        setScannedDevices(result.devices);
+        if (result.devices.length > 0) {
+          showSuccess(`Found ${result.devices.length} devices on the network.`);
+          setScanMessage(null);
+        } else {
+          showError("No devices found on the network.");
+          setScanMessage("No devices found on the network.");
+        }
+      } else {
+        throw new Error("Invalid response format from server.");
+      }
+    } catch (error: any) {
+      console.error("Network scan failed:", error);
+      showError(`Network scan failed: ${error.message}. Ensure nmap is installed on the server.`);
+      setScanMessage(`Scan failed: ${error.message}. Ensure nmap is installed on the server.`);
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -125,59 +71,64 @@ const NetworkScanner = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Scan className="h-5 w-5" />
-            Network Scanner
+            Network Scanner (Server-side)
           </CardTitle>
           <CardDescription>
-            Discover devices on your local network
+            Discover devices on your local network using the server's capabilities (requires nmap)
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Button 
-              onClick={scanNetwork} 
-              disabled={isScanning}
-              className="w-full"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isScanning ? 'animate-spin' : ''}`} />
-              {isScanning ? "Scanning Network..." : "Scan Network"}
-            </Button>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter subnet (e.g., 192.168.1.0/24)"
+                value={subnet}
+                onChange={(e) => setSubnet(e.target.value)}
+                className="flex-1"
+              />
+              <Button 
+                onClick={scanNetwork} 
+                disabled={isScanning}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isScanning ? 'animate-spin' : ''}`} />
+                {isScanning ? "Scanning..." : "Scan Network"}
+              </Button>
+            </div>
 
-            {isScanning && (
-              <div className="space-y-2">
-                <Progress value={scanProgress} className="w-full" />
-                <p className="text-sm text-muted-foreground text-center">
-                  Scanning... {scanProgress}% complete
-                </p>
-              </div>
+            {scanMessage && (
+              <p className="text-sm text-muted-foreground text-center">
+                {scanMessage}
+              </p>
             )}
 
-            {devices.length > 0 && (
+            {scannedDevices.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-medium">Found Devices ({devices.length})</h3>
-                {devices.map((device, index) => (
+                <h3 className="text-sm font-medium">Found Devices ({scannedDevices.length})</h3>
+                {scannedDevices.map((device, index) => (
                   <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <Server className="h-5 w-5 text-green-500" />
                       <div>
                         <span className="font-mono text-sm font-medium">{device.ip}</span>
-                        <p className="text-xs text-muted-foreground">
-                          Last seen: {device.lastSeen.toLocaleTimeString()}
-                        </p>
+                        {device.hostname && <p className="text-xs text-muted-foreground">Hostname: {device.hostname}</p>}
                       </div>
                     </div>
-                    <Badge variant="default" className="ml-2">
-                      {device.responseTime}ms
+                    <Badge variant={device.alive ? "default" : "destructive"}>
+                      {device.alive ? "Online" : "Offline"}
                     </Badge>
                   </div>
                 ))}
               </div>
             )}
 
-            {!isScanning && devices.length === 0 && (
+            {!isScanning && scannedDevices.length === 0 && !scanMessage && (
               <div className="text-center p-6 border rounded-lg bg-muted">
                 <WifiOff className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-sm text-muted-foreground">
-                  No devices scanned yet. Click "Scan Network" to discover devices on your local network.
+                  Enter a subnet and click "Scan Network" to discover devices.
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  (Requires <a href="https://nmap.org/" target="_blank" className="text-blue-500 hover:underline">nmap</a> to be installed on the server)
                 </p>
               </div>
             )}

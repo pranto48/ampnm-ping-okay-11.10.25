@@ -16,16 +16,30 @@ import {
   getDevices,
   NetworkDevice,
   updateDeviceStatusByIp,
-  // subscribeToDeviceChanges // No longer used with PHP backend
 } from "@/services/networkDeviceService";
 import { performServerPing } from "@/services/pingService";
-// import { supabase } from "@/integrations/supabase/client"; // No longer directly used for device/edge management
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Define a type for Map data from PHP backend
 interface Map {
   id: string;
   name: string;
+}
+
+interface DashboardStats {
+  total: number;
+  online: number;
+  warning: number;
+  critical: number;
+  offline: number;
+}
+
+interface RecentActivity {
+  created_at: string;
+  status: string;
+  details: string;
+  device_name: string;
+  device_ip: string;
 }
 
 const Index = () => {
@@ -36,6 +50,8 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [maps, setMaps] = useState<Map[]>([]);
   const [currentMapId, setCurrentMapId] = useState<string | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
 
   const fetchMaps = useCallback(async () => {
     try {
@@ -72,14 +88,32 @@ const Index = () => {
     }
   }, [currentMapId]);
 
+  const fetchDashboardData = useCallback(async () => {
+    if (!currentMapId) {
+      setDashboardStats(null);
+      setRecentActivity([]);
+      return;
+    }
+    try {
+      const response = await fetch(`http://localhost:2266/api.php?action=get_dashboard_data&map_id=${currentMapId}`);
+      if (!response.ok) throw new Error('Failed to fetch dashboard data');
+      const data = await response.json();
+      setDashboardStats(data.stats);
+      setRecentActivity(data.recent_activity);
+    } catch (error) {
+      showError("Failed to load dashboard data.");
+      console.error("Failed to load dashboard data:", error);
+    }
+  }, [currentMapId]);
+
   useEffect(() => {
     fetchMaps();
   }, [fetchMaps]);
 
   useEffect(() => {
     fetchDevices();
-    // No real-time subscription for devices with PHP backend, rely on explicit refreshes or polling
-  }, [fetchDevices]);
+    fetchDashboardData();
+  }, [fetchDevices, fetchDashboardData]);
 
   // Auto-ping devices based on their ping interval
   useEffect(() => {
@@ -93,16 +127,15 @@ const Index = () => {
             const result = await performServerPing(device.ip_address, 1);
             const newStatus = result.success ? 'online' : 'offline';
 
-            // The performServerPing function already calls storePingResult and updateDeviceStatusByIp
-            // which updates the PHP backend. So, we just need to refresh the local state.
             fetchDevices();
+            fetchDashboardData(); // Refresh dashboard data after auto-ping
 
             console.log(`Ping result for ${device.ip_address}: ${newStatus}`);
           } catch (error) {
             console.error(`Auto-ping failed for ${device.ip_address}:`, error);
-            // On error, explicitly update status to offline and refresh
             await updateDeviceStatusByIp(device.ip_address, 'offline');
             fetchDevices();
+            fetchDashboardData(); // Refresh dashboard data after auto-ping
           }
         }, device.ping_interval * 1000);
 
@@ -114,7 +147,7 @@ const Index = () => {
     return () => {
       intervals.forEach(clearInterval);
     };
-  }, [devices, fetchDevices]);
+  }, [devices, fetchDevices, fetchDashboardData]);
 
   const checkNetworkStatus = useCallback(async () => {
     try {
@@ -130,7 +163,6 @@ const Index = () => {
     setIsCheckingDevices(true);
     const toastId = showLoading(`Pinging ${devices.length} devices...`);
     try {
-      // Call the PHP API endpoint for bulk ping
       const response = await fetch('http://localhost:2266/api.php?action=ping_all_devices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -142,7 +174,8 @@ const Index = () => {
       if (result.success) {
         dismissToast(toastId);
         showSuccess(`Finished checking all devices. ${result.updated_devices.length} devices updated.`);
-        fetchDevices(); // Refresh devices after bulk ping
+        fetchDevices();
+        fetchDashboardData(); // Refresh dashboard data after bulk ping
       } else {
         throw new Error(result.error || "Unknown error during bulk ping.");
       }
@@ -172,6 +205,14 @@ const Index = () => {
       return acc;
     }, {} as Record<string, number>);
   }, [devices]);
+
+  const statusColorMap: Record<string, string> = {
+    online: 'text-green-500',
+    warning: 'text-yellow-500',
+    critical: 'text-red-500',
+    offline: 'text-gray-500',
+    unknown: 'text-gray-500',
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -223,7 +264,7 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="dashboard">
-            {isLoading ? (
+            {isLoading || !dashboardStats ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {[...Array(4)].map((_, i) => (
                   <Card key={i}>
@@ -264,7 +305,7 @@ const Index = () => {
                     <Wifi className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{onlineDevicesCount}/{devices.length}</div>
+                    <div className="text-2xl font-bold">{dashboardStats.online}/{dashboardStats.total}</div>
                     <p className="text-xs text-muted-foreground">Devices online</p>
                   </CardContent>
                 </Card>
@@ -274,12 +315,18 @@ const Index = () => {
                     <Server className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Badge variant="default" className="text-xs">
-                        Online {deviceStatusCounts.online || 0}
+                        Online {dashboardStats.online}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Warning {dashboardStats.warning}
                       </Badge>
                       <Badge variant="destructive" className="text-xs">
-                        Offline {deviceStatusCounts.offline || 0}
+                        Critical {dashboardStats.critical}
+                      </Badge>
+                      <Badge variant="destructive" className="text-xs">
+                        Offline {dashboardStats.offline}
                       </Badge>
                     </div>
                   </CardContent>
@@ -299,12 +346,51 @@ const Index = () => {
                 </Button>
                 <Button
                   onClick={handleCheckAllDevices}
-                  disabled={isCheckingDevices || isLoading}
+                  disabled={isCheckingDevices || isLoading || !currentMapId}
                   variant="outline"
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${isCheckingDevices ? 'animate-spin' : ''}`} />
                   {isCheckingDevices ? 'Checking...' : 'Check All Devices'}
                 </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />Recent Activity
+                </CardTitle>
+                <CardDescription>Latest status changes and events across your network.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Server className="h-12 w-12 mx-auto mb-4" />
+                    <p>No recent activity for this map.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {recentActivity.map((activity, index) => (
+                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg transition-colors hover:bg-muted">
+                        <div className="flex items-center gap-3">
+                          <Server className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <span className="font-medium">{activity.device_name}</span>
+                            <p className="text-sm text-muted-foreground">{activity.device_ip || 'N/A'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Badge variant="secondary" className={`${statusColorMap[activity.status]}`}>
+                            {activity.status}
+                          </Badge>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(activity.created_at).toLocaleTimeString()}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
