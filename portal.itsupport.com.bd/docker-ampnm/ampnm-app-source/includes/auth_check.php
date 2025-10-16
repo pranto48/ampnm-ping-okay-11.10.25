@@ -22,6 +22,8 @@ $_SESSION['license_grace_period_end'] = null; // Timestamp when grace period end
 $app_license_key = getAppLicenseKey();
 $installation_id = getInstallationId(); // Retrieve the installation ID
 
+error_log("DEBUG: auth_check.php - Retrieved app_license_key: " . (empty($app_license_key) ? 'EMPTY' : 'PRESENT') . ", Installation ID: " . (empty($installation_id) ? 'EMPTY' : $installation_id));
+
 if (!$app_license_key) {
     $_SESSION['license_message'] = 'Application license key not configured.';
     $_SESSION['license_status_code'] = 'disabled';
@@ -76,6 +78,7 @@ try {
 
     // Perform re-verification if needed or if no recent check
     if ($needs_reverification || !isset($_SESSION['license_status_code']) || $_SESSION['license_status_code'] === 'unknown') {
+        error_log("DEBUG: auth_check.php - Calling revalidateLicenseSession for user {$_SESSION['user_id']}.");
         revalidateLicenseSession($pdo, $_SESSION['user_id']);
     }
 } catch (Exception $e) {
