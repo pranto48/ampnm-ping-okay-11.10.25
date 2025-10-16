@@ -65,27 +65,17 @@ include __DIR__ . '/header.php';
 
     <!-- Modals -->
     <div id="deviceModal" class="modal-backdrop hidden">
-        <div class="modal-panel bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
+        <div class="modal-panel bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 id="modalTitle" class="text-xl font-semibold text-white mb-4">Add Device</h2>
-            <form id="deviceForm">
+            <form id="deviceForm" class="space-y-6">
                 <input type="hidden" id="deviceId" name="id">
-                <div class="space-y-4">
+                
+                <!-- Basic Information -->
+                <fieldset class="border border-slate-700 rounded-lg p-4 space-y-4">
+                    <legend class="text-sm font-medium text-slate-400 px-2">Basic Information</legend>
                     <div>
                         <label for="deviceName" class="block text-sm font-medium text-slate-400 mb-1">Name</label>
                         <input type="text" id="deviceName" name="name" placeholder="Device Name" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
-                    </div>
-                    <div id="deviceIpWrapper">
-                        <label for="deviceIp" class="block text-sm font-medium text-slate-400 mb-1">IP Address</label>
-                        <input type="text" id="deviceIp" name="ip" placeholder="IP Address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
-                    </div>
-                    <div>
-                        <label for="deviceDescription" class="block text-sm font-medium text-slate-400 mb-1">Description</label>
-                        <textarea id="deviceDescription" name="description" rows="2" placeholder="Optional notes about the device" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500"></textarea>
-                    </div>
-                    <div id="devicePortWrapper">
-                        <label for="checkPort" class="block text-sm font-medium text-slate-400 mb-1">Service Port (Optional)</label>
-                        <input type="number" id="checkPort" name="check_port" placeholder="e.g., 80 for HTTP" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                        <p class="text-xs text-slate-500 mt-1">If set, status is based on this port. If empty, it will use ICMP (ping).</p>
                     </div>
                     <div>
                         <label for="deviceType" class="block text-sm font-medium text-slate-400 mb-1">Type (Default Icon)</label>
@@ -111,6 +101,54 @@ include __DIR__ . '/header.php';
                             <option value="other">Other</option>
                         </select>
                     </div>
+                    <div>
+                        <label for="deviceDescription" class="block text-sm font-medium text-slate-400 mb-1">Description</label>
+                        <textarea id="deviceDescription" name="description" rows="2" placeholder="Optional notes about the device" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500"></textarea>
+                    </div>
+                </fieldset>
+
+                <!-- Network Configuration (Conditional) -->
+                <fieldset id="networkConfigWrapper" class="border border-slate-700 rounded-lg p-4 space-y-4">
+                    <legend class="text-sm font-medium text-slate-400 px-2">Network Configuration</legend>
+                    <div id="deviceIpWrapper">
+                        <label for="deviceIp" class="block text-sm font-medium text-slate-400 mb-1">IP Address</label>
+                        <input type="text" id="deviceIp" name="ip" placeholder="IP Address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div id="devicePortWrapper">
+                        <label for="checkPort" class="block text-sm font-medium text-slate-400 mb-1">Service Port (Optional)</label>
+                        <input type="number" id="checkPort" name="check_port" placeholder="e.g., 80 for HTTP" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <p class="text-xs text-slate-500 mt-1">If set, status is based on this port. If empty, it will use ICMP (ping).</p>
+                    </div>
+                    <div id="pingIntervalWrapper">
+                        <label for="pingInterval" class="block text-sm font-medium text-slate-400 mb-1">Ping Interval (seconds)</label>
+                        <input type="number" id="pingInterval" name="ping_interval" placeholder="e.g., 60 (optional)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <p class="text-xs text-slate-500 mt-1">Set to 0 or leave blank to disable auto-ping.</p>
+                    </div>
+                </fieldset>
+
+                <!-- Appearance Settings -->
+                <fieldset class="border border-slate-700 rounded-lg p-4 space-y-4">
+                    <legend class="text-sm font-medium text-slate-400 px-2">Appearance</legend>
+                    <div>
+                        <label for="deviceMap" class="block text-sm font-medium text-slate-400 mb-1">Map Assignment</label>
+                        <select id="deviceMap" name="map_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label id="iconSizeLabel" for="iconSize" class="block text-sm font-medium text-slate-400 mb-1">Icon Size</label>
+                        <input type="number" id="iconSize" name="icon_size" placeholder="e.g., 50" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div>
+                        <label id="nameTextSizeLabel" for="nameTextSize" class="block text-sm font-medium text-slate-400 mb-1">Name Text Size</label>
+                        <input type="number" id="nameTextSize" name="name_text_size" placeholder="e.g., 14" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div id="showLivePingWrapper">
+                        <label for="showLivePing" class="flex items-center text-sm font-medium text-slate-400">
+                            <input type="checkbox" id="showLivePing" name="show_live_ping" class="h-4 w-4 rounded border-slate-500 bg-slate-700 text-cyan-600 focus:ring-cyan-500">
+                            <span class="ml-2">Show live ping status on map</span>
+                        </label>
+                    </div>
                     <fieldset class="border border-slate-600 rounded-lg p-4">
                         <legend class="text-sm font-medium text-slate-400 px-2">Custom Icon</legend>
                         <div class="space-y-3">
@@ -130,46 +168,32 @@ include __DIR__ . '/header.php';
                             </div>
                         </div>
                     </fieldset>
-                    <div id="pingIntervalWrapper">
-                        <label for="pingInterval" class="block text-sm font-medium text-slate-400 mb-1">Ping Interval (seconds)</label>
-                        <input type="number" id="pingInterval" name="ping_interval" placeholder="e.g., 60 (optional)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                    </div>
-                    <fieldset id="thresholdsWrapper" class="border border-slate-600 rounded-lg p-4">
-                        <legend class="text-sm font-medium text-slate-400 px-2">Status Thresholds (optional)</legend>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="warning_latency_threshold" class="block text-xs text-slate-400 mb-1">Warn Latency (ms)</label>
-                                <input type="number" id="warning_latency_threshold" name="warning_latency_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
-                            </div>
-                            <div>
-                                <label for="warning_packetloss_threshold" class="block text-xs text-slate-400 mb-1">Warn Packet Loss (%)</label>
-                                <input type="number" id="warning_packetloss_threshold" name="warning_packetloss_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
-                            </div>
-                            <div>
-                                <label for="critical_latency_threshold" class="block text-xs text-slate-400 mb-1">Critical Latency (ms)</label>
-                                <input type="number" id="critical_latency_threshold" name="critical_latency_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
-                            </div>
-                            <div>
-                                <label for="critical_packetloss_threshold" class="block text-xs text-slate-400 mb-1">Critical Packet Loss (%)</label>
-                                <input type="number" id="critical_packetloss_threshold" name="critical_packetloss_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
-                            </div>
+                </fieldset>
+
+                <!-- Status Thresholds (Conditional) -->
+                <fieldset id="thresholdsWrapper" class="border border-slate-700 rounded-lg p-4 space-y-4">
+                    <legend class="text-sm font-medium text-slate-400 px-2">Status Thresholds (Optional)</legend>
+                    <p class="text-sm text-slate-500">Define values to trigger 'Warning' or 'Critical' status.</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="warning_latency_threshold" class="block text-xs text-slate-400 mb-1">Warn Latency (ms)</label>
+                            <input type="number" id="warning_latency_threshold" name="warning_latency_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
                         </div>
-                    </fieldset>
-                    <div>
-                        <label id="iconSizeLabel" for="iconSize" class="block text-sm font-medium text-slate-400 mb-1">Icon Size</label>
-                        <input type="number" id="iconSize" name="icon_size" placeholder="e.g., 50" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <div>
+                            <label for="warning_packetloss_threshold" class="block text-xs text-slate-400 mb-1">Warn Packet Loss (%)</label>
+                            <input type="number" id="warning_packetloss_threshold" name="warning_packetloss_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label for="critical_latency_threshold" class="block text-xs text-slate-400 mb-1">Critical Latency (ms)</label>
+                            <input type="number" id="critical_latency_threshold" name="critical_latency_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label for="critical_packetloss_threshold" class="block text-xs text-slate-400 mb-1">Critical Packet Loss (%)</label>
+                            <input type="number" id="critical_packetloss_threshold" name="critical_packetloss_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                        </div>
                     </div>
-                    <div>
-                        <label id="nameTextSizeLabel" for="nameTextSize" class="block text-sm font-medium text-slate-400 mb-1">Name Text Size</label>
-                        <input type="number" id="nameTextSize" name="name_text_size" placeholder="e.g., 14" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
-                    </div>
-                    <div>
-                        <label for="showLivePing" class="flex items-center text-sm font-medium text-slate-400">
-                            <input type="checkbox" id="showLivePing" name="show_live_ping" class="h-4 w-4 rounded border-slate-500 bg-slate-700 text-cyan-600 focus:ring-cyan-500">
-                            <span class="ml-2">Show live ping status on map</span>
-                        </label>
-                    </div>
-                </div>
+                </fieldset>
+
                 <div class="flex justify-end gap-4 mt-6">
                     <button type="button" id="cancelBtn" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600">Cancel</button>
                     <button type="submit" id="saveBtn" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">Save</button>

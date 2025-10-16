@@ -4,11 +4,16 @@ MapApp.mapManager = {
     createMap: async () => {
         const name = prompt("Enter a name for the new map:");
         if (name) { 
-            const newMap = await MapApp.api.post('create_map', { name }); 
-            await MapApp.mapManager.loadMaps(); 
-            MapApp.ui.els.mapSelector.value = newMap.id; 
-            await MapApp.mapManager.switchMap(newMap.id); 
-            window.notyf.success(`Map "${name}" created.`);
+            try {
+                const newMap = await MapApp.api.post('create_map', { name }); 
+                await MapApp.mapManager.loadMaps(); 
+                MapApp.ui.els.mapSelector.value = newMap.id; 
+                await MapApp.mapManager.switchMap(newMap.id); 
+                window.notyf.success(`Map "${name}" created.`);
+            } catch (error) {
+                console.error("Failed to create map:", error);
+                window.notyf.error(error.message || "Failed to create map.");
+            }
         }
     },
 
