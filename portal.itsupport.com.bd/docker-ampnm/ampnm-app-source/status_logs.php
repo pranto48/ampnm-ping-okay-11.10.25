@@ -12,11 +12,11 @@ include __DIR__ . '/header.php';
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div>
                     <label for="mapSelector" class="block text-sm font-medium text-slate-400 mb-1">Map</label>
-                    <select id="mapSelector" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500"></select>
+                    <select id="mapSelector" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white"></select>
                 </div>
                 <div>
                     <label for="deviceSelector" class="block text-sm font-medium text-slate-400 mb-1">Device</label>
-                    <select id="deviceSelector" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                    <select id="deviceSelector" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                         <option value="">All Devices</option>
                     </select>
                 </div>

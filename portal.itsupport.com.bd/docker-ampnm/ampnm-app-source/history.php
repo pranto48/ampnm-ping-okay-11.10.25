@@ -11,7 +11,7 @@ include __DIR__ . '/header.php';
 
         <div class="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 mb-8">
             <form id="historyFilterForm" class="flex flex-col sm:flex-row gap-4">
-                <select name="host" id="hostSelector" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                <select name="host" id="hostSelector" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     <option value="">All Hosts</option>
                 </select>
                 <button type="submit" class="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">Filter</button>

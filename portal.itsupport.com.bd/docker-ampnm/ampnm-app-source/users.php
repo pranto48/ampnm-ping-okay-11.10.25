@@ -15,11 +15,11 @@ include __DIR__ . '/header.php';
                     <form id="createUserForm" class="space-y-4">
                         <div>
                             <label for="new_username" class="block text-sm font-medium text-slate-300 mb-1">Username</label>
-                            <input type="text" id="new_username" name="username" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                            <input type="text" id="new_username" name="username" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                         </div>
                         <div>
                             <label for="new_password" class="block text-sm font-medium text-slate-300 mb-1">Password</label>
-                            <input type="password" id="new_password" name="password" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                            <input type="password" id="new_password" name="password" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                         </div>
                         <button type="submit" class="w-full px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">
                             <i class="fas fa-user-plus mr-2"></i>Create User

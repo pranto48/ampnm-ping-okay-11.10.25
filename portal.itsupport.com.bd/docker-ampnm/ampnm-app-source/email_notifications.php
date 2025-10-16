@@ -14,23 +14,23 @@ include __DIR__ . '/header.php';
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="smtpHost" class="block text-sm font-medium text-slate-400 mb-1">SMTP Host</label>
-                        <input type="text" id="smtpHost" name="host" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="text" id="smtpHost" name="host" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                     <div>
                         <label for="smtpPort" class="block text-sm font-medium text-slate-400 mb-1">Port</label>
-                        <input type="number" id="smtpPort" name="port" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="number" id="smtpPort" name="port" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                     <div>
                         <label for="smtpUsername" class="block text-sm font-medium text-slate-400 mb-1">Username</label>
-                        <input type="text" id="smtpUsername" name="username" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="text" id="smtpUsername" name="username" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                     <div>
                         <label for="smtpPassword" class="block text-sm font-medium text-slate-400 mb-1">Password</label>
-                        <input type="password" id="smtpPassword" name="password" placeholder="Leave blank to keep current" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="password" id="smtpPassword" name="password" placeholder="Leave blank to keep current" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                     <div>
                         <label for="smtpEncryption" class="block text-sm font-medium text-slate-400 mb-1">Encryption</label>
-                        <select id="smtpEncryption" name="encryption" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <select id="smtpEncryption" name="encryption" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                             <option value="none">None</option>
                             <option value="ssl">SSL</option>
                             <option value="tls">TLS</option>
@@ -38,11 +38,11 @@ include __DIR__ . '/header.php';
                     </div>
                     <div>
                         <label for="smtpFromEmail" class="block text-sm font-medium text-slate-400 mb-1">From Email Address</label>
-                        <input type="email" id="smtpFromEmail" name="from_email" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="email" id="smtpFromEmail" name="from_email" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                     <div class="md:col-span-2">
                         <label for="smtpFromName" class="block text-sm font-medium text-slate-400 mb-1">From Name (Optional)</label>
-                        <input type="text" id="smtpFromName" name="from_name" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="text" id="smtpFromName" name="from_name" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                 </div>
                 <div class="flex justify-end">
@@ -59,7 +59,7 @@ include __DIR__ . '/header.php';
             <h2 class="text-xl font-semibold text-white mb-4">Device Email Subscriptions</h2>
             <div class="mb-4">
                 <label for="deviceSelect" class="block text-sm font-medium text-slate-400 mb-1">Select Device</label>
-                <select id="deviceSelect" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                <select id="deviceSelect" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     <option value="">-- Select a device --</option>
                 </select>
             </div>
@@ -71,7 +71,7 @@ include __DIR__ . '/header.php';
                     <input type="hidden" id="subscriptionDeviceId" name="device_id">
                     <div>
                         <label for="recipientEmail" class="block text-sm font-medium text-slate-400 mb-1">Recipient Email</label>
-                        <input type="email" id="recipientEmail" name="recipient_email" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="email" id="recipientEmail" name="recipient_email" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <label class="flex items-center text-sm font-medium text-slate-400">

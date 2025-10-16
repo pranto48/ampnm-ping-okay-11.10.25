@@ -80,16 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_license'])) {
     }
 }
 
-// Fetch all licenses with customer and product info
-$stmt_licenses = $pdo->query("
-    SELECT l.*, c.email as customer_email, p.name as product_name
-    FROM `licenses` l
-    LEFT JOIN `customers` c ON l.customer_id = c.id
-    LEFT JOIN `products` p ON l.product_id = p.id
-    ORDER BY l.created_at DESC
-");
-$licenses = $stmt_licenses->fetchAll(PDO::FETCH_ASSOC);
-
 // Fetch all customers for dropdown
 $stmt_customers = $pdo->query("SELECT id, email FROM `customers` ORDER BY email ASC");
 $customers = $stmt_customers->fetchAll(PDO::FETCH_ASSOC);
@@ -143,9 +133,7 @@ admin_header("Manage Licenses");
 
 <div class="admin-card p-6">
     <h2 class="text-2xl font-semibold text-blue-400 mb-4">All Licenses</h2>
-    <?php if (empty($licenses)): ?>
-        <p class="text-center text-gray-400 py-8">No licenses generated yet.</p>
-    <?php else: ?>
+    <div id="licensesTableContainer">
         <div class="overflow-x-auto">
             <table class="min-w-full bg-gray-700 rounded-lg">
                 <thead>
@@ -161,46 +149,13 @@ admin_header("Manage Licenses");
                         <th class="py-3 px-6 text-center">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="text-gray-300 text-sm font-light">
-                    <?php foreach ($licenses as $license): ?>
-                        <tr class="border-b border-gray-600 hover:bg-gray-600">
-                            <td class="py-3 px-6 text-left font-mono break-all"><?= htmlspecialchars($license['license_key']) ?></td>
-                            <td class="py-3 px-6 text-left"><?= htmlspecialchars($license['customer_email'] ?: 'N/A') ?></td>
-                            <td class="py-3 px-6 text-left"><?= htmlspecialchars($license['product_name'] ?: 'N/A') ?></td>
-                            <td class="py-3 px-6 text-left">
-                                <span class="py-1 px-3 rounded-full text-xs <?= $license['status'] == 'active' ? 'bg-green-500' : ($license['status'] == 'expired' ? 'bg-red-500' : 'bg-yellow-500') ?>">
-                                    <?= htmlspecialchars(ucfirst($license['status'])) ?>
-                                </span>
-                            </td>
-                            <td class="py-3 px-6 text-left"><?= htmlspecialchars($license['max_devices']) ?></td>
-                            <td class="py-3 px-6 text-left"><?= htmlspecialchars($license['current_devices']) ?></td>
-                            <td class="py-3 px-6 text-left"><?= $license['last_active_at'] ? date('Y-m-d H:i', strtotime($license['last_active_at'])) : 'Never' ?></td>
-                            <td class="py-3 px-6 text-left"><?= $license['expires_at'] ? date('Y-m-d', strtotime($license['expires_at'])) : 'Never' ?></td>
-                            <td class="py-3 px-6 text-center">
-                                <button onclick="openEditLicenseModal(<?= htmlspecialchars(json_encode($license)) ?>)" class="btn-admin-primary text-xs px-3 py-1 mr-2">
-                                    <i class="fas fa-edit mr-1"></i>Edit
-                                </button>
-                                <?php if (!empty($license['bound_installation_id'])): ?>
-                                    <form action="license-manager.php" method="POST" onsubmit="return confirm('Are you sure you want to release this license? This will unbind it from the current server, allowing it to be used on a new one.');" class="inline-block">
-                                        <input type="hidden" name="license_id" value="<?= htmlspecialchars($license['id']) ?>">
-                                        <button type="submit" name="release_license" class="btn-admin-secondary text-xs px-3 py-1 mr-2" title="Unbind from current server">
-                                            <i class="fas fa-unlink mr-1"></i>Release
-                                        </button>
-                                    </form>
-                                <?php endif; ?>
-                                <form action="license-manager.php" method="POST" onsubmit="return confirm('Are you sure you want to delete this license?');" class="inline-block">
-                                    <input type="hidden" name="license_id" value="<?= htmlspecialchars($license['id']) ?>">
-                                    <button type="submit" name="delete_license" class="btn-admin-danger text-xs px-3 py-1">
-                                        <i class="fas fa-trash-alt mr-1"></i>Delete
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+                <tbody id="licensesTableBody" class="text-gray-300 text-sm font-light">
+                    <!-- Licenses will be loaded here by JavaScript -->
+                    <tr><td colspan="9" class="text-center py-4">Loading licenses...</td></tr>
                 </tbody>
             </table>
         </div>
-    <?php endif; ?>
+    </div>
 </div>
 
 <!-- Edit License Modal -->
@@ -274,8 +229,69 @@ admin_header("Manage Licenses");
         document.getElementById('editLicenseModal').classList.add('hidden');
     }
 
-    // Display server-side messages as Notyf toasts
+    // Function to fetch and render licenses
+    async function fetchAndRenderLicenses() {
+        try {
+            const response = await fetch('admin_api.php?action=get_all_licenses');
+            const data = await response.json();
+
+            if (data.success && data.licenses) {
+                const licensesTableBody = document.getElementById('licensesTableBody');
+                licensesTableBody.innerHTML = ''; // Clear existing rows
+
+                if (data.licenses.length === 0) {
+                    licensesTableBody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No licenses generated yet.</td></tr>';
+                } else {
+                    data.licenses.forEach(license => {
+                        const row = `
+                            <tr class="border-b border-gray-600 hover:bg-gray-600">
+                                <td class="py-3 px-6 text-left font-mono break-all">${license.license_key}</td>
+                                <td class="py-3 px-6 text-left">${license.customer_email || 'N/A'}</td>
+                                <td class="py-3 px-6 text-left">${license.product_name || 'N/A'}</td>
+                                <td class="py-3 px-6 text-left">
+                                    <span class="py-1 px-3 rounded-full text-xs ${license.status == 'active' ? 'bg-green-500' : (license.status == 'expired' ? 'bg-red-500' : 'bg-yellow-500')}">
+                                        ${license.status.charAt(0).toUpperCase() + license.status.slice(1)}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-6 text-left">${license.max_devices}</td>
+                                <td class="py-3 px-6 text-left">${license.current_devices}</td>
+                                <td class="py-3 px-6 text-left">${license.last_active_at ? new Date(license.last_active_at).toLocaleString() : 'Never'}</td>
+                                <td class="py-3 px-6 text-left">${license.expires_at ? new Date(license.expires_at).toLocaleDateString() : 'Never'}</td>
+                                <td class="py-3 px-6 text-center">
+                                    <button onclick="openEditLicenseModal(${JSON.stringify(license)})" class="btn-admin-primary text-xs px-3 py-1 mr-2">
+                                        <i class="fas fa-edit mr-1"></i>Edit
+                                    </button>
+                                    ${license.bound_installation_id ? `
+                                        <form action="license-manager.php" method="POST" onsubmit="return confirm('Are you sure you want to release this license? This will unbind it from the current server, allowing it to be used on a new one.');" class="inline-block">
+                                            <input type="hidden" name="license_id" value="${license.id}">
+                                            <button type="submit" name="release_license" class="btn-admin-secondary text-xs px-3 py-1 mr-2" title="Unbind from current server">
+                                                <i class="fas fa-unlink mr-1"></i>Release
+                                            </button>
+                                        </form>
+                                    ` : ''}
+                                    <form action="license-manager.php" method="POST" onsubmit="return confirm('Are you sure you want to delete this license?');" class="inline-block">
+                                        <input type="hidden" name="license_id" value="${license.id}">
+                                        <button type="submit" name="delete_license" class="btn-admin-danger text-xs px-3 py-1">
+                                            <i class="fas fa-trash-alt mr-1"></i>Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        `;
+                        licensesTableBody.insertAdjacentHTML('beforeend', row);
+                    });
+                }
+            } else {
+                notyf.error(data.error || 'Failed to load licenses.');
+            }
+        } catch (error) {
+            console.error('Error fetching licenses:', error);
+            notyf.error('An error occurred while fetching licenses.');
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        // Display server-side messages as Notyf toasts
         const messageDiv = document.querySelector('.alert-admin-success, .alert-admin-error');
         if (messageDiv) {
             const messageText = messageDiv.textContent.trim();
@@ -286,6 +302,12 @@ admin_header("Manage Licenses");
             }
             messageDiv.style.display = 'none'; // Hide the original PHP message
         }
+
+        // Initial load of licenses
+        fetchAndRenderLicenses();
+
+        // Set up polling for real-time updates (every 10 seconds)
+        setInterval(fetchAndRenderLicenses, 10000);
     });
 </script>
 

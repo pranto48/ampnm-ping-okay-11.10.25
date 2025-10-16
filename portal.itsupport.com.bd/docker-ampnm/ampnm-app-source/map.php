@@ -9,7 +9,7 @@ include __DIR__ . '/header.php';
             <div class="flex items-center justify-between mb-4">
                 <h1 class="text-3xl font-bold text-white">Network Map</h1>
                 <div class="flex gap-4">
-                    <select id="mapSelector" class="bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500"></select>
+                    <select id="mapSelector" class="bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white"></select>
                     <button id="newMapBtn" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700"><i class="fas fa-plus mr-2"></i>New Map</button>
                     <button id="renameMapBtn" class="px-4 py-2 bg-yellow-600/80 text-white rounded-lg hover:bg-yellow-700"><i class="fas fa-edit mr-2"></i>Rename Map</button>
                     <button id="deleteMapBtn" class="px-4 py-2 bg-red-600/80 text-white rounded-lg hover:bg-red-700"><i class="fas fa-trash mr-2"></i>Delete Map</button>
@@ -75,11 +75,11 @@ include __DIR__ . '/header.php';
                     <legend class="text-sm font-medium text-slate-400 px-2">Basic Information</legend>
                     <div>
                         <label for="deviceName" class="block text-sm font-medium text-slate-400 mb-1">Name</label>
-                        <input type="text" id="deviceName" name="name" placeholder="Device Name" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500" required>
+                        <input type="text" id="deviceName" name="name" placeholder="Device Name" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white" required>
                     </div>
                     <div>
                         <label for="deviceType" class="block text-sm font-medium text-slate-400 mb-1">Type (Default Icon)</label>
-                        <select id="deviceType" name="type" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <select id="deviceType" name="type" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                             <option value="box">Box (Group)</option>
                             <option value="camera">CC Camera</option>
                             <option value="cloud">Cloud</option>
@@ -103,7 +103,7 @@ include __DIR__ . '/header.php';
                     </div>
                     <div>
                         <label for="deviceDescription" class="block text-sm font-medium text-slate-400 mb-1">Description</label>
-                        <textarea id="deviceDescription" name="description" rows="2" placeholder="Optional notes about the device" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500"></textarea>
+                        <textarea id="deviceDescription" name="description" rows="2" placeholder="Optional notes about the device" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white"></textarea>
                     </div>
                 </fieldset>
 
@@ -112,16 +112,16 @@ include __DIR__ . '/header.php';
                     <legend class="text-sm font-medium text-slate-400 px-2">Network Configuration</legend>
                     <div id="deviceIpWrapper">
                         <label for="deviceIp" class="block text-sm font-medium text-slate-400 mb-1">IP Address</label>
-                        <input type="text" id="deviceIp" name="ip" placeholder="IP Address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="text" id="deviceIp" name="ip" placeholder="IP Address" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                     <div id="devicePortWrapper">
                         <label for="checkPort" class="block text-sm font-medium text-slate-400 mb-1">Service Port (Optional)</label>
-                        <input type="number" id="checkPort" name="check_port" placeholder="e.g., 80 for HTTP" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="number" id="checkPort" name="check_port" placeholder="e.g., 80 for HTTP" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                         <p class="text-xs text-slate-500 mt-1">If set, status is based on this port. If empty, it will use ICMP (ping).</p>
                     </div>
                     <div id="pingIntervalWrapper">
                         <label for="pingInterval" class="block text-sm font-medium text-slate-400 mb-1">Ping Interval (seconds)</label>
-                        <input type="number" id="pingInterval" name="ping_interval" placeholder="e.g., 60 (optional)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="number" id="pingInterval" name="ping_interval" placeholder="e.g., 60 (optional)" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                         <p class="text-xs text-slate-500 mt-1">Set to 0 or leave blank to disable auto-ping.</p>
                     </div>
                 </fieldset>
@@ -131,17 +131,17 @@ include __DIR__ . '/header.php';
                     <legend class="text-sm font-medium text-slate-400 px-2">Appearance</legend>
                     <div>
                         <label for="deviceMap" class="block text-sm font-medium text-slate-400 mb-1">Map Assignment</label>
-                        <select id="deviceMap" name="map_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <select id="deviceMap" name="map_id" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                             <!-- Populated by JS -->
                         </select>
                     </div>
                     <div>
                         <label id="iconSizeLabel" for="iconSize" class="block text-sm font-medium text-slate-400 mb-1">Icon Size</label>
-                        <input type="number" id="iconSize" name="icon_size" placeholder="e.g., 50" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="number" id="iconSize" name="icon_size" placeholder="e.g., 50" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                     <div>
                         <label id="nameTextSizeLabel" for="nameTextSize" class="block text-sm font-medium text-slate-400 mb-1">Name Text Size</label>
-                        <input type="number" id="nameTextSize" name="name_text_size" placeholder="e.g., 14" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="number" id="nameTextSize" name="name_text_size" placeholder="e.g., 14" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                     <div id="showLivePingWrapper">
                         <label for="showLivePing" class="flex items-center text-sm font-medium text-slate-400">
@@ -154,7 +154,7 @@ include __DIR__ . '/header.php';
                         <div class="space-y-3">
                             <div>
                                 <label for="icon_url" class="block text-sm font-medium text-slate-400 mb-1">Icon URL</label>
-                                <input type="text" id="icon_url" name="icon_url" placeholder="Leave blank to use default icon" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                                <input type="text" id="icon_url" name="icon_url" placeholder="Leave blank to use default icon" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
                             </div>
                             <div class="text-center text-slate-500 text-sm">OR</div>
                             <div>
@@ -177,19 +177,19 @@ include __DIR__ . '/header.php';
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label for="warning_latency_threshold" class="block text-xs text-slate-400 mb-1">Warn Latency (ms)</label>
-                            <input type="number" id="warning_latency_threshold" name="warning_latency_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                            <input type="number" id="warning_latency_threshold" name="warning_latency_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
                         </div>
                         <div>
                             <label for="warning_packetloss_threshold" class="block text-xs text-slate-400 mb-1">Warn Packet Loss (%)</label>
-                            <input type="number" id="warning_packetloss_threshold" name="warning_packetloss_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                            <input type="number" id="warning_packetloss_threshold" name="warning_packetloss_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
                         </div>
                         <div>
                             <label for="critical_latency_threshold" class="block text-xs text-slate-400 mb-1">Critical Latency (ms)</label>
-                            <input type="number" id="critical_latency_threshold" name="critical_latency_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                            <input type="number" id="critical_latency_threshold" name="critical_latency_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
                         </div>
                         <div>
                             <label for="critical_packetloss_threshold" class="block text-xs text-slate-400 mb-1">Critical Packet Loss (%)</label>
-                            <input type="number" id="critical_packetloss_threshold" name="critical_packetloss_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                            <input type="number" id="critical_packetloss_threshold" name="critical_packetloss_threshold" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
                         </div>
                     </div>
                 </fieldset>
@@ -207,7 +207,7 @@ include __DIR__ . '/header.php';
             <h2 class="text-xl font-semibold text-white mb-4">Edit Connection</h2>
             <form id="edgeForm">
                 <input type="hidden" id="edgeId">
-                <select id="connectionType" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                <select id="connectionType" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     <option value="cat5">CAT5 Cable</option><option value="fiber">Fiber Optic</option><option value="wifi">WiFi</option><option value="radio">Radio</option>
                 </select>
                 <div class="flex justify-end gap-4 mt-6">
@@ -226,7 +226,7 @@ include __DIR__ . '/header.php';
             </div>
             <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700 mb-4">
                 <form id="scanForm" class="flex flex-col sm:flex-row gap-4">
-                    <input type="text" id="subnetInput" placeholder="e.g., 192.168.1.0/24" value="192.168.1.0/24" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                    <input type="text" id="subnetInput" placeholder="e.g., 192.168.1.0/24" value="192.168.1.0/24" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     <button type="submit" id="startScanBtn" class="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700">
                         <i class="fas fa-search mr-2"></i>Start Scan
                     </button>
@@ -253,12 +253,12 @@ include __DIR__ . '/header.php';
                         <label for="mapBgColor" class="block text-sm font-medium text-slate-400 mb-1">Background Color</label>
                         <div class="flex items-center gap-2">
                             <input type="color" id="mapBgColor" name="background_color" class="p-1 h-10 w-14 block bg-slate-900 border border-slate-600 cursor-pointer rounded-lg" value="#1e293b">
-                            <input type="text" id="mapBgColorHex" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                            <input type="text" id="mapBgColorHex" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                         </div>
                     </div>
                     <div>
                         <label for="mapBgImageUrl" class="block text-sm font-medium text-slate-400 mb-1">Background Image URL</label>
-                        <input type="text" id="mapBgImageUrl" name="background_image_url" placeholder="Leave blank for no image" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500">
+                        <input type="text" id="mapBgImageUrl" name="background_image_url" placeholder="Leave blank for no image" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-cyan-500 text-white">
                     </div>
                     <div class="text-center text-slate-500 text-sm">OR</div>
                     <div>

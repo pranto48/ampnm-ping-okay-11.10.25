@@ -112,6 +112,18 @@ switch ($action) {
         }
         break;
 
+    case 'get_all_licenses': // NEW ACTION
+        $stmt_licenses = $pdo->query("
+            SELECT l.*, c.email as customer_email, p.name as product_name
+            FROM `licenses` l
+            LEFT JOIN `customers` c ON l.customer_id = c.id
+            LEFT JOIN `products` p ON l.product_id = p.id
+            ORDER BY l.created_at DESC
+        ");
+        $licenses = $stmt_licenses->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['success' => true, 'licenses' => $licenses]);
+        break;
+
     default:
         http_response_code(404);
         echo json_encode(['error' => 'Invalid API action.']);
