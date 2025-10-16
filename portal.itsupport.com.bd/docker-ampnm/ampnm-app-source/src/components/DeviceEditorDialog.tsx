@@ -13,10 +13,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { NetworkDevice } from '@/services/networkDeviceService';
-import { Textarea } from '@/components/ui/textarea'; // Import Textarea
-import { useEffect } from 'react'; // Import useEffect
+import { Textarea } from '@/components/ui/textarea';
+import { useEffect } from 'react';
+import { Switch } from '@/components/ui/switch'; // Import Switch for boolean fields
 
 const deviceSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -90,13 +91,19 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
     if (isBoxType) {
       form.setValue('ip_address', null);
       form.setValue('check_port', null);
+      form.setValue('ping_interval', null);
+      form.setValue('warning_latency_threshold', null);
+      form.setValue('warning_packetloss_threshold', null);
+      form.setValue('critical_latency_threshold', null);
+      form.setValue('critical_packetloss_threshold', null);
+      form.setValue('show_live_ping', false);
       form.clearErrors('ip_address');
     }
   }, [isBoxType, form]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[90vh]"> {/* Added flex-col here */}
+      <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{device?.id ? 'Edit Device' : 'Add Device'}</DialogTitle>
           <DialogDescription>
@@ -104,46 +111,66 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto space-y-4 p-1"> {/* Added flex-1 and overflow-y-auto here */}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Main Router" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="icon" // This maps to 'type' in PHP backend
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type / Default Icon</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto space-y-6 p-1">
+            {/* Basic Information Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground">Basic Information</h3>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a type" />
-                      </SelectTrigger>
+                      <Input placeholder="e.g., Main Router" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      {deviceTypes.map((type) => (
-                        <SelectItem key={type} value={type} className="capitalize">
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="icon" // This maps to 'type' in PHP backend
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type / Default Icon</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {deviceTypes.map((type) => (
+                          <SelectItem key={type} value={type} className="capitalize">
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Optional notes about the device" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Network Configuration Section (Conditional) */}
             {!isBoxType && (
-              <>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground">Network Configuration</h3>
                 <FormField
                   control={form.control}
                   name="ip_address"
@@ -177,23 +204,6 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
                     </FormItem>
                   )}
                 />
-              </>
-            )}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Optional notes about the device" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {!isBoxType && (
-              <>
                 <FormField
                   control={form.control}
                   name="ping_interval"
@@ -209,151 +219,160 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
                           onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
                         />
                       </FormControl>
+                      <FormDescription>Automatically ping this device at regular intervals.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <fieldset className="border border-border rounded-lg p-4">
-                  <legend className="text-sm font-medium px-2">Status Thresholds (optional)</legend>
-                  <div className="grid grid-cols-2 gap-4 py-2">
-                    <FormField
-                      control={form.control}
-                      name="warning_latency_threshold"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Warn Latency (ms)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              value={field.value ?? ''}
-                              onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="warning_packetloss_threshold"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Warn Packet Loss (%)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              value={field.value ?? ''}
-                              onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="critical_latency_threshold"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Critical Latency (ms)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              value={field.value ?? ''}
-                              onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="critical_packetloss_threshold"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Critical Packet Loss (%)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              value={field.value ?? ''}
-                              onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </fieldset>
-              </>
+              </div>
             )}
-            <FormField
-              control={form.control}
-              name="icon_size"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{isBoxType ? 'Width' : 'Icon Size'} (20-100px)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 50"
-                      {...field}
-                      value={field.value ?? ''}
-                      onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="name_text_size"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{isBoxType ? 'Height' : 'Name Text Size'} (8-24px)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 14"
-                      {...field}
-                      value={field.value ?? ''}
-                      onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {!isBoxType && (
+
+            {/* Appearance Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground">Appearance</h3>
               <FormField
                 control={form.control}
-                name="show_live_ping"
+                name="icon_size"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                  <FormItem>
+                    <FormLabel>{isBoxType ? 'Width' : 'Icon Size'} (20-100px)</FormLabel>
                     <FormControl>
-                      <input
-                        type="checkbox"
-                        checked={field.value}
-                        onChange={field.onChange}
-                        className="h-4 w-4 rounded border-primary text-primary focus:ring-primary"
+                      <Input
+                        type="number"
+                        placeholder="e.g., 50"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
                       />
                     </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Show live ping status on map</FormLabel>
-                      <FormDescription>
-                        Display real-time ping latency and TTL directly on the device node.
-                      </FormDescription>
-                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="name_text_size"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{isBoxType ? 'Height' : 'Name Text Size'} (8-24px)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="e.g., 14"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {!isBoxType && (
+                <FormField
+                  control={form.control}
+                  name="show_live_ping"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Show Live Ping Status</FormLabel>
+                        <FormDescription>
+                          Display real-time ping latency and TTL directly on the device node.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+
+            {/* Status Thresholds Section (Conditional) */}
+            {!isBoxType && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground">Status Thresholds (Optional)</h3>
+                <p className="text-sm text-muted-foreground">Define values to trigger 'Warning' or 'Critical' status.</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="warning_latency_threshold"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Warn Latency (ms)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="warning_packetloss_threshold"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Warn Packet Loss (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="critical_latency_threshold"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Critical Latency (ms)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="critical_packetloss_threshold"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Critical Packet Loss (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
             )}
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={onClose}>
