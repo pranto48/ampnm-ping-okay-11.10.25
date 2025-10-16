@@ -6,16 +6,24 @@ require_once __DIR__ . '/config.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
 
-$app_license_key = $input['app_license_key'] ?? null;
-$user_id = $input['user_id'] ?? null; // This is the user ID from your AMPNM app's local MySQL
-$current_device_count = $input['current_device_count'] ?? 0; // New: Receive current device count from AMPNM app
-$installation_id = $input['installation_id'] ?? null; // NEW: Receive the unique installation ID
+// Log the received input for debugging
+error_log("License verification received input: " . print_r($input, true));
 
-if (!$app_license_key || !$user_id || !$installation_id) {
+$app_license_key = $input['app_license_key'] ?? null;
+$user_id = $input['user_id'] ?? null;
+$current_device_count = $input['current_device_count'] ?? 0;
+$installation_id = $input['installation_id'] ?? null;
+
+// Use empty() for a more robust check against null, empty strings, and 0
+if (empty($app_license_key) || empty($user_id) || empty($installation_id)) {
+    error_log("License verification failed: Missing app_license_key, user_id, or installation_id. " . 
+              "app_license_key: " . (empty($app_license_key) ? 'MISSING' : 'PRESENT') . 
+              ", user_id: " . (empty($user_id) ? 'MISSING' : 'PRESENT') . 
+              ", installation_id: " . (empty($installation_id) ? 'MISSING' : 'PRESENT'));
     echo json_encode([
         'success' => false,
         'message' => 'Missing application license key, user ID, or installation ID.',
-        'actual_status' => 'invalid_request' // Provide a status for clarity
+        'actual_status' => 'invalid_request'
     ]);
     exit;
 }

@@ -15,7 +15,7 @@ if (!isset($_SESSION['user_id'])) {
 $_SESSION['can_add_device'] = false; // Default to false
 $_SESSION['license_message'] = 'License validation failed.';
 $_SESSION['max_devices'] = 0; // Default max devices
-$_SESSION['license_status_code'] = 'unknown'; // 'active', 'expired', 'grace_period', 'disabled'
+$_SESSION['license_status_code'] = 'unknown'; // 'active', 'expired', 'grace_period', 'disabled', 'error', 'in_use'
 $_SESSION['license_grace_period_end'] = null; // Timestamp when grace period ends
 
 // Retrieve the application license key dynamically
@@ -80,10 +80,10 @@ try {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-            'app_license_key' => $app_license_key,
-            'user_id' => $_SESSION['user_id'], // Pass the logged-in user's ID for user-specific checks
-            'current_device_count' => $current_device_count, // Pass the current device count
-            'installation_id' => $installation_id // NEW: Pass the unique installation ID
+            'app_license_key' => (string)$app_license_key,
+            'user_id' => (string)$_SESSION['user_id'],
+            'current_device_count' => (string)(int)$current_device_count, // Ensure it's an integer then cast to string
+            'installation_id' => (string)$installation_id
         ]));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5-second timeout for the external API call
