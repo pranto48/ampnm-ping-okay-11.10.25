@@ -43,11 +43,13 @@ export interface MapData {
 }
 
 export interface LicenseStatus {
+  app_license_key?: string; // NEW: Current application license key
   can_add_device: boolean;
   max_devices: number;
   license_message: string;
-  license_status_code: 'active' | 'expired' | 'grace_period' | 'disabled' | 'error' | 'unknown';
+  license_status_code: 'active' | 'expired' | 'grace_period' | 'disabled' | 'error' | 'unknown' | 'in_use'; // Added 'in_use'
   license_grace_period_end: number | null; // Unix timestamp
+  installation_id?: string; // NEW: Installation ID
 }
 
 // Define a type for Map data from PHP backend
@@ -288,8 +290,12 @@ export const getLicenseStatus = async (): Promise<LicenseStatus> => {
   return status;
 };
 
-export const forceLicenseRecheck = async () => {
+export const forceLicenseRecheck = async (): Promise<{ success: boolean; message: string; license_status_code: LicenseStatus['license_status_code']; license_message: string }> => {
   return await callPhpApi('force_license_recheck', 'POST');
+};
+
+export const updateAppLicenseKey = async (newLicenseKey: string): Promise<{ success: boolean; message: string; license_status_code: LicenseStatus['license_status_code']; license_message: string; app_license_key: string }> => {
+  return await callPhpApi('update_app_license_key', 'POST', undefined, { new_license_key: newLicenseKey });
 };
 
 // Real-time subscription for device changes - NOT USED WITH PHP BACKEND

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Wifi, Server, Clock, RefreshCw, Network } from "lucide-react";
+import { Activity, Wifi, Server, Clock, RefreshCw, Network, Key } from "lucide-react"; // Added Key icon
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
 import NetworkScanner from "@/components/NetworkScanner";
@@ -14,7 +14,8 @@ import {
 } from "@/services/networkDeviceService";
 import { Skeleton } from "@/components/ui/skeleton";
 import DashboardContent from "@/components/DashboardContent";
-import { useDashboardData } from "@/hooks/useDashboardData"; // Import the new hook
+import { useDashboardData } from "@/hooks/useDashboardData";
+import LicenseManager from "@/components/LicenseManager"; // Import the new LicenseManager component
 
 const MainApp = () => {
   const {
@@ -27,9 +28,9 @@ const MainApp = () => {
     isLoading,
     fetchMaps,
     fetchDashboardData,
-  } = useDashboardData(); // Use the new hook
+  } = useDashboardData();
 
-  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({ can_add_device: false, max_devices: 0, license_message: 'Loading license status...', license_status_code: 'unknown', license_grace_period_end: null });
+  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({ app_license_key: '', can_add_device: false, max_devices: 0, license_message: 'Loading license status...', license_status_code: 'unknown', license_grace_period_end: null, installation_id: '' });
 
   const fetchLicenseStatus = useCallback(async () => {
     try {
@@ -37,7 +38,7 @@ const MainApp = () => {
       setLicenseStatus(status);
     } catch (error) {
       console.error("Failed to load license status:", error);
-      setLicenseStatus({ can_add_device: false, max_devices: 0, license_message: 'Error loading license status.', license_status_code: 'error', license_grace_period_end: null });
+      setLicenseStatus({ app_license_key: '', can_add_device: false, max_devices: 0, license_message: 'Error loading license status.', license_status_code: 'error', license_grace_period_end: null, installation_id: '' });
     }
   }, []);
 
@@ -88,6 +89,10 @@ const MainApp = () => {
             <TabsTrigger value="map" className="flex items-center gap-2">
               <Network className="h-4 w-4" />
               Network Map
+            </TabsTrigger>
+            <TabsTrigger value="license" className="flex items-center gap-2"> {/* NEW TAB */}
+              <Key className="h-4 w-4" />
+              License
             </TabsTrigger>
           </TabsList>
 
@@ -214,7 +219,7 @@ const MainApp = () => {
             {currentMapId ? (
               <NetworkMap 
                 devices={devices} 
-                onMapUpdate={fetchDashboardData} // Use fetchDashboardData to refresh map data
+                onMapUpdate={fetchDashboardData}
                 mapId={currentMapId} 
                 canAddDevice={licenseStatus.can_add_device}
                 licenseMessage={licenseStatus.license_message}
@@ -227,6 +232,10 @@ const MainApp = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="license"> {/* NEW TAB CONTENT */}
+            <LicenseManager licenseStatus={licenseStatus} fetchLicenseStatus={fetchLicenseStatus} />
           </TabsContent>
         </Tabs>
 
