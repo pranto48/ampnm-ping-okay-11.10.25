@@ -322,7 +322,7 @@ try {
     // Step 6: Indexing for Performance
     function indexExists($pdo, $db, $table, $index) {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?");
-        $stmt->execute([$db, $table, $column]);
+        $stmt->execute([$db, $table, $index]); // Corrected to use $index for INDEX_NAME
         return $stmt->fetchColumn() > 0;
     }
 
@@ -349,9 +349,9 @@ try {
     }
 
     echo "<h2 style='color: #06b6d4; font-family: sans-serif;'>Database setup completed successfully!</h2>";
-    echo "<p style='color: #94a3b8;'><span class='loader'></span>Redirecting to the application in 3 seconds...</p>";
-    echo '<meta http-equiv="refresh" content="3;url=index.php">';
-
+    echo "<p style='color: #94a3b8;'><span class='loader'></span>Redirecting to license setup in 3 seconds...</p>"; // Changed redirect
+    echo '<meta http-equiv="refresh" content="3;url=license_setup.php">'; // Redirect to license setup
+    
 } catch (PDOException $e) {
     message("Database setup failed: " . $e->getMessage(), true);
     exit(1);

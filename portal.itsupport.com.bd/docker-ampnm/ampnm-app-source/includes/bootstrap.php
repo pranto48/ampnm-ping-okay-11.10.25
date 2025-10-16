@@ -30,7 +30,7 @@ if ($current_page !== 'database_setup.php') {
         // If app_settings table exists, then check for the application license key
         if ($current_page !== 'license_setup.php') {
             $app_license_key = getAppLicenseKey();
-            if (!$app_license_key) {
+            if (empty($app_license_key)) { // Use empty() for a more robust check
                 header('Location: license_setup.php');
                 exit;
             }

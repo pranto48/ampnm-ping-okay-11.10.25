@@ -19,7 +19,7 @@ services:
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
       - LICENSE_API_URL=https://portal.itsupport.com.bd/verify_license.php # Your external license verification service URL
-      # APP_LICENSE_KEY will now be configured via the web interface after installation
+      # APP_LICENSE_KEY is no longer set here. It is configured via the web UI after initial setup.
     ports:
       - "2266:2266" # Main app will now run on port 2266
     restart: unless-stopped
