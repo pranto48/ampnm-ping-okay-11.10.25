@@ -113,15 +113,26 @@ switch ($action) {
         break;
 
     case 'get_all_licenses': // NEW ACTION
-        $stmt_licenses = $pdo->query("
-            SELECT l.*, c.email as customer_email, p.name as product_name
-            FROM `licenses` l
-            LEFT JOIN `customers` c ON l.customer_id = c.id
-            LEFT JOIN `products` p ON l.product_id = p.id
-            ORDER BY l.created_at DESC
-        ");
-        $licenses = $stmt_licenses->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode(['success' => true, 'licenses' => $licenses]);
+        try {
+            $pdo = getLicenseDbConnection(); // Ensure PDO is initialized for the license DB
+            $stmt_licenses = $pdo->query("
+                SELECT l.*, c.email as customer_email, p.name as product_name
+                FROM `licenses` l
+                LEFT JOIN `customers` c ON l.customer_id = c.id
+                LEFT JOIN `products` p ON l.product_id = p.id
+                ORDER BY l.created_at DESC
+            ");
+            $licenses = $stmt_licenses->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'licenses' => $licenses]);
+        } catch (PDOException $e) {
+            error_log("Error fetching licenses from admin_api.php: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+        } catch (Exception $e) {
+            error_log("Unexpected error in admin_api.php (get_all_licenses): " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'error' => 'An unexpected server error occurred.']);
+        }
         break;
 
     default:
@@ -129,4 +140,3 @@ switch ($action) {
         echo json_encode(['error' => 'Invalid API action.']);
         break;
 }
-?>
