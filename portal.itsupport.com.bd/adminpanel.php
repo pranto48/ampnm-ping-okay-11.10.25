@@ -28,26 +28,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 admin_header("Admin Login");
 ?>
 
-<div class="max-w-md mx-auto admin-card p-8">
-    <h1 class="text-3xl font-bold text-blue-400 mb-6 text-center">Admin Login</h1>
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 absolute inset-0 admin-body">
+    <div class="max-w-md w-full space-y-8 admin-card p-8 form-fade-in">
+        <div class="text-center">
+            <i class="fas fa-user-shield text-6xl text-blue-400 mb-4"></i>
+            <h1 class="text-3xl font-bold text-gray-100 mb-2">Admin Login</h1>
+            <p class="text-gray-300">Access the License Portal Administration.</p>
+        </div>
 
-    <?php if ($error_message): ?>
-        <div class="alert-admin-error mb-4">
-            <?= htmlspecialchars($error_message) ?>
-        </div>
-    <?php endif; ?>
+        <?php if ($error_message): ?>
+            <div class="alert-admin-error mb-4">
+                <?= htmlspecialchars($error_message) ?>
+            </div>
+        <?php endif; ?>
 
-    <form action="adminpanel.php" method="POST" class="space-y-4">
-        <div>
-            <label for="username" class="block text-gray-300 text-sm font-bold mb-2">Username:</label>
-            <input type="text" id="username" name="username" class="form-admin-input" required value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
-        </div>
-        <div>
-            <label for="password" class="block text-gray-300 text-sm font-bold mb-2">Password:</label>
-            <input type="password" id="password" name="password" class="form-admin-input" required>
-        </div>
-        <button type="submit" class="btn-admin-primary w-full">Login</button>
-    </form>
+        <form action="adminpanel.php" method="POST" class="mt-8 space-y-6">
+            <div>
+                <label for="username" class="sr-only">Username</label>
+                <input id="username" name="username" type="text" autocomplete="username" required
+                       class="form-admin-input relative block w-full appearance-none rounded-md border border-gray-600 px-3 py-2 text-gray-100 placeholder-gray-400 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                       placeholder="Username" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
+            </div>
+            <div>
+                <label for="password" class="sr-only">Password</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" required
+                       class="form-admin-input relative block w-full appearance-none rounded-md border border-gray-600 px-3 py-2 text-gray-100 placeholder-gray-400 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                       placeholder="Password">
+            </div>
+            
+            <div>
+                <button type="submit" class="btn-admin-primary w-full flex justify-center items-center">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <?php admin_footer(); ?>
