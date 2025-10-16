@@ -13,7 +13,8 @@ $current_device_count = $input['current_device_count'] ?? 0; // New: Receive cur
 if (!$app_license_key || !$user_id) {
     echo json_encode([
         'success' => false,
-        'message' => 'Missing application license key or user ID.'
+        'message' => 'Missing application license key or user ID.',
+        'actual_status' => 'invalid_request' // Provide a status for clarity
     ]);
     exit;
 }
@@ -29,16 +30,19 @@ try {
     if (!$license) {
         echo json_encode([
             'success' => false,
-            'message' => 'Invalid or expired application license key.'
+            'message' => 'Invalid or expired application license key.',
+            'actual_status' => 'not_found' // Provide a status for clarity
         ]);
         exit;
     }
 
     // 2. Check license status and expiry
     if ($license['status'] !== 'active' && $license['status'] !== 'free') {
+        // If not active or free, return the actual status
         echo json_encode([
             'success' => false,
-            'message' => 'License is ' . $license['status'] . '.'
+            'message' => 'License is ' . $license['status'] . '.',
+            'actual_status' => $license['status'] // Explicitly return the actual status
         ]);
         exit;
     }
@@ -49,7 +53,8 @@ try {
         $stmt->execute([$license['id']]);
         echo json_encode([
             'success' => false,
-            'message' => 'License has expired.'
+            'message' => 'License has expired.',
+            'actual_status' => 'expired' // Explicitly return expired status
         ]);
         exit;
     }
@@ -62,14 +67,16 @@ try {
     echo json_encode([
         'success' => true,
         'message' => 'License is active.',
-        'max_devices' => $license['max_devices'] ?? 1 // Provide max_devices to the AMPNM app
+        'max_devices' => $license['max_devices'] ?? 1, // Provide max_devices to the AMPNM app
+        'actual_status' => $license['status'] // Explicitly return active status
     ]);
 
 } catch (Exception $e) {
     error_log("License verification error: " . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'An internal error occurred during license verification.'
+        'message' => 'An internal error occurred during license verification.',
+        'actual_status' => 'error' // Provide a status for clarity
     ]);
 }
 ?>

@@ -129,13 +129,25 @@ try {
                 }
                 setLastLicenseCheck(date('Y-m-d H:i:s')); // Update last check timestamp
             } else {
-                $_SESSION['license_message'] = $licenseData['message'] ?? 'License validation failed.';
-                $_SESSION['license_status_code'] = 'expired';
-                // If license is explicitly expired, start grace period
-                if (!isset($_SESSION['license_grace_period_end']) || $_SESSION['license_grace_period_end'] === null) {
-                    $_SESSION['license_grace_period_end'] = strtotime('+1 month');
-                    $_SESSION['license_status_code'] = 'grace_period';
-                    $_SESSION['license_message'] = 'Your license has expired. You are in a grace period until ' . date('Y-m-d H:i', $_SESSION['license_grace_period_end']) . '. Please renew your license.';
+                // License verification failed (success is false)
+                // Check the actual_status returned by the portal
+                $actual_status = $licenseData['actual_status'] ?? 'expired'; // Default to expired if not specified
+
+                if ($actual_status === 'revoked' || $actual_status === 'disabled') { // 'disabled' is a new potential status from portal
+                    $_SESSION['license_message'] = $licenseData['message'] ?? 'Your license has been revoked by the administrator.';
+                    $_SESSION['license_status_code'] = 'disabled';
+                    $_SESSION['license_grace_period_end'] = null; // No grace period for revoked licenses
+                    header('Location: license_expired.php'); // Redirect immediately
+                    exit;
+                } else {
+                    // For 'expired' or other non-active statuses, proceed with grace period logic
+                    $_SESSION['license_message'] = $licenseData['message'] ?? 'License validation failed.';
+                    $_SESSION['license_status_code'] = 'expired';
+                    if (!isset($_SESSION['license_grace_period_end']) || $_SESSION['license_grace_period_end'] === null) {
+                        $_SESSION['license_grace_period_end'] = strtotime('+1 month');
+                        $_SESSION['license_status_code'] = 'grace_period';
+                        $_SESSION['license_message'] = 'Your license has expired. You are in a grace period until ' . date('Y-m-d H:i', $_SESSION['license_grace_period_end']) . '. Please renew your license.';
+                    }
                 }
             }
         }
