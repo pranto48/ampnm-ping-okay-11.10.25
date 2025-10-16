@@ -38,11 +38,12 @@ try {
     $current_device_count = $stmt->fetchColumn();
 
     $last_license_check = getLastLicenseCheck();
-    $one_month_ago = strtotime('-1 month');
+    // Changed re-verification interval from 1 month to 1 day
+    $one_day_ago = strtotime('-1 day'); 
     $needs_reverification = true;
 
-    if ($last_license_check && strtotime($last_license_check) > $one_month_ago) {
-        // If last check was less than a month ago, assume valid unless grace period is active
+    if ($last_license_check && strtotime($last_license_check) > $one_day_ago) {
+        // If last check was less than a day ago, assume valid unless grace period is active
         $needs_reverification = false;
     }
 
@@ -58,7 +59,7 @@ try {
             // Still in grace period, but re-verify if needed
             $_SESSION['license_status_code'] = 'grace_period';
             $_SESSION['license_message'] = 'Your license has expired. You are in a grace period until ' . date('Y-m-d H:i', $_SESSION['license_grace_period_end']) . '. Please renew your license.';
-            // Even in grace period, if it's been a month since last check, try to re-verify
+            // Even in grace period, if it's been a day since last check, try to re-verify
             if ($needs_reverification) {
                 error_log("DEBUG: Re-verifying license during grace period for user {$_SESSION['user_id']}.");
             }

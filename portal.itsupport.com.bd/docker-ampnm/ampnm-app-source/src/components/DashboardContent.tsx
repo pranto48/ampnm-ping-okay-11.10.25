@@ -9,6 +9,7 @@ import {
   NetworkDevice,
   getLicenseStatus,
   LicenseStatus,
+  forceLicenseRecheck,
 } from "@/services/networkDeviceService";
 import { performServerPing } from "@/services/pingService";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,7 +46,8 @@ const DashboardContent = () => {
   const [currentMapId, setCurrentMapId] = useState<string | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({ can_add_device: false, max_devices: 0, license_message: 'Loading license status...' });
+  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({ can_add_device: false, max_devices: 0, license_message: 'Loading license status...', license_status_code: 'unknown', license_grace_period_end: null });
+  const [isRefreshingLicense, setIsRefreshingLicense] = useState(false);
 
   const fetchMaps = useCallback(async () => {
     try {
@@ -107,7 +109,7 @@ const DashboardContent = () => {
     } catch (error) {
       showError("Failed to load license status.");
       console.error("Failed to load license status:", error);
-      setLicenseStatus({ can_add_device: false, max_devices: 0, license_message: 'Error loading license status.' });
+      setLicenseStatus({ can_add_device: false, max_devices: 0, license_message: 'Error loading license status.', license_status_code: 'error', license_grace_period_end: null });
     }
   }, []);
 
@@ -189,6 +191,22 @@ const DashboardContent = () => {
     }
   };
 
+  const handleRefreshLicense = async () => {
+    setIsRefreshingLicense(true);
+    const toastId = showLoading('Refreshing license status...');
+    try {
+      await forceLicenseRecheck();
+      await fetchLicenseStatus(); // Re-fetch license status to update UI
+      dismissToast(toastId);
+      showSuccess('License status refreshed.');
+    } catch (error: any) {
+      dismissToast(toastId);
+      showError(error.message || 'Failed to refresh license status.');
+    } finally {
+      setIsRefreshingLicense(false);
+    }
+  };
+
   useEffect(() => {
     checkNetworkStatus();
     const networkInterval = setInterval(checkNetworkStatus, 60000);
@@ -201,6 +219,17 @@ const DashboardContent = () => {
     critical: 'text-red-500',
     offline: 'text-gray-500',
     unknown: 'text-gray-500',
+  };
+
+  const getLicenseBadgeVariant = (statusCode: LicenseStatus['license_status_code']) => {
+    switch (statusCode) {
+      case 'active': return 'default';
+      case 'grace_period': return 'secondary';
+      case 'expired':
+      case 'disabled':
+      case 'error':
+      default: return 'destructive';
+    }
   };
 
   return (
@@ -283,9 +312,16 @@ const DashboardContent = () => {
             <div className="flex items-center gap-2">
               <Network className="h-5 w-5" />Quick Actions
             </div>
-            <Badge variant={licenseStatus.can_add_device ? "default" : "destructive"} className="text-sm">
-              {licenseStatus.can_add_device ? `Devices: ${devices.length}/${licenseStatus.max_devices}` : licenseStatus.license_message}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant={getLicenseBadgeVariant(licenseStatus.license_status_code)} className="text-sm">
+                {licenseStatus.license_status_code === 'active' ? `Devices: ${devices.length}/${licenseStatus.max_devices}` : licenseStatus.license_message}
+              </Badge>
+              {licenseStatus.license_status_code === 'grace_period' && licenseStatus.license_grace_period_end && (
+                <Badge variant="secondary" className="text-xs">
+                  Grace ends: {new Date(licenseStatus.license_grace_period_end * 1000).toLocaleDateString()}
+                </Badge>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4">
@@ -299,6 +335,14 @@ const DashboardContent = () => {
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isCheckingDevices ? 'animate-spin' : ''}`} />
             {isCheckingDevices ? 'Checking...' : 'Check All Devices'}
+          </Button>
+          <Button
+            onClick={handleRefreshLicense}
+            disabled={isRefreshingLicense}
+            variant="outline"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshingLicense ? 'animate-spin' : ''}`} />
+            {isRefreshingLicense ? 'Refreshing...' : 'Refresh License'}
           </Button>
           <div className="flex items-center gap-2">
             <label htmlFor="map-select" className="text-sm font-medium">Select Map:</label>

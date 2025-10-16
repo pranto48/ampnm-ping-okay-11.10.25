@@ -46,6 +46,8 @@ export interface LicenseStatus {
   can_add_device: boolean;
   max_devices: number;
   license_message: string;
+  license_status_code: 'active' | 'expired' | 'grace_period' | 'disabled' | 'error' | 'unknown';
+  license_grace_period_end: number | null; // Unix timestamp
 }
 
 const callPhpApi = async (action: string, method: 'GET' | 'POST', body?: any) => {
@@ -226,7 +228,16 @@ export const importMap = async (mapData: MapData, map_id: string) => {
 };
 
 export const getLicenseStatus = async (): Promise<LicenseStatus> => {
-  return await callPhpApi('get_license_status', 'GET');
+  const status = await callPhpApi('get_license_status', 'GET');
+  // Convert grace_period_end to Unix timestamp if it exists
+  if (status.license_grace_period_end) {
+    status.license_grace_period_end = new Date(status.license_grace_period_end).getTime() / 1000;
+  }
+  return status;
+};
+
+export const forceLicenseRecheck = async () => {
+  return await callPhpApi('force_license_recheck', 'POST');
 };
 
 // Real-time subscription for device changes - NOT USED WITH PHP BACKEND

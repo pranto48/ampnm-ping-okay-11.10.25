@@ -15,8 +15,7 @@ $dashboardActions = ['get_dashboard_data'];
 $userActions = ['get_users', 'create_user', 'delete_user', 'get_supabase_users']; 
 $logActions = ['get_status_logs'];
 $notificationActions = ['get_smtp_settings', 'save_smtp_settings', 'get_device_subscriptions', 'save_device_subscription', 'delete_device_subscription', 'get_all_devices_for_subscriptions'];
-$authActions = ['get_license_status']; // New: Auth actions
-
+$authActions = ['get_license_status', 'force_license_recheck']; // New: Auth actions
 
 if (in_array($action, $pingActions)) {
     require __DIR__ . '/api/handlers/ping_handler.php';
