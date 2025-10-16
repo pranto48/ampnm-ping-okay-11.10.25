@@ -48,6 +48,17 @@ function generateLicenseKey($prefix = 'AMPNM') {
     return strtoupper($prefix . '-' . $uuid);
 }
 
+/**
+ * Generates a UUID v4.
+ * @return string A UUID string.
+ */
+function generateUuid() {
+    $data = random_bytes(16);
+    $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // set version to 0100
+    $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // set bits 6-7 to 10
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+
 // --- Application Settings Functions ---
 function getAppLicenseKey() {
     $pdo = getDbConnection();
@@ -85,6 +96,23 @@ function setLastLicenseCheck($timestamp) {
     return $stmt->execute([$timestamp, $timestamp]);
 }
 
+function getInstallationId() {
+    $pdo = getDbConnection();
+    if (!tableExists($pdo, 'app_settings')) {
+        return null;
+    }
+    $stmt = $pdo->prepare("SELECT setting_value FROM `app_settings` WHERE setting_key = 'installation_id'");
+    $stmt->execute();
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result ? $result['setting_value'] : null;
+}
+
+function setInstallationId($installation_id) {
+    $pdo = getDbConnection();
+    $stmt = $pdo->prepare("INSERT INTO `app_settings` (setting_key, setting_value) VALUES ('installation_id', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+    return $stmt->execute([$installation_id, $installation_id]);
+}
+
 
 // --- Customer Authentication Functions ---
 function authenticateCustomer($email, $password) {
@@ -113,6 +141,33 @@ function logoutCustomer() {
     session_destroy();
     session_start(); // Start a new session for potential new login
 }
+
+/**
+ * Updates a customer's password.
+ *
+ * @param int $customer_id The ID of the customer.
+ * @param string $current_password The current password provided by the customer.
+ * @param string $new_password The new password to set.
+ * @return bool True on success, false on failure (e.g., current password mismatch).
+ */
+function updateCustomerPassword($customer_id, $current_password, $new_password) {
+    $pdo = getLicenseDbConnection();
+    
+    // First, verify the current password
+    $stmt = $pdo->prepare("SELECT password FROM `customers` WHERE id = ?");
+    $stmt->execute([$customer_id]);
+    $customer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$customer || !password_verify($current_password, $customer['password'])) {
+        return false; // Current password mismatch
+    }
+
+    // Hash the new password and update
+    $hashed_new_password = password_hash($new_password, PASSWORD_DEFAULT);
+    $stmt = $pdo->prepare("UPDATE `customers` SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+    return $stmt->execute([$hashed_new_password, $customer_id]);
+}
+
 
 // --- Admin Authentication Functions ---
 function authenticateAdmin($username, $password) {
@@ -379,7 +434,7 @@ services:
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
       - LICENSE_API_URL={$license_api_url}
-      # APP_LICENSE_KEY is no longer hardcoded here; it's set via web UI
+      # APP_LICENSE_KEY is no longer set here. It is configured via the web UI after initial setup.
     ports:
       - "2266:2266" # Main app will now run on port 2266
     restart: unless-stopped

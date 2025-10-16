@@ -9,11 +9,12 @@ $input = json_decode(file_get_contents('php://input'), true);
 $app_license_key = $input['app_license_key'] ?? null;
 $user_id = $input['user_id'] ?? null; // This is the user ID from your AMPNM app's local MySQL
 $current_device_count = $input['current_device_count'] ?? 0; // New: Receive current device count from AMPNM app
+$installation_id = $input['installation_id'] ?? null; // NEW: Receive the unique installation ID
 
-if (!$app_license_key || !$user_id) {
+if (!$app_license_key || !$user_id || !$installation_id) {
     echo json_encode([
         'success' => false,
-        'message' => 'Missing application license key or user ID.',
+        'message' => 'Missing application license key, user ID, or installation ID.',
         'actual_status' => 'invalid_request' // Provide a status for clarity
     ]);
     exit;
@@ -55,6 +56,22 @@ try {
             'success' => false,
             'message' => 'License has expired.',
             'actual_status' => 'expired' // Explicitly return expired status
+        ]);
+        exit;
+    }
+
+    // 3. Enforce one-to-one binding using installation_id
+    if (empty($license['bound_installation_id'])) {
+        // License is not bound, bind it to this installation_id
+        $stmt = $pdo->prepare("UPDATE `licenses` SET bound_installation_id = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$installation_id, $license['id']]);
+        error_log("License '{$app_license_key}' bound to new installation ID: {$installation_id}");
+    } elseif ($license['bound_installation_id'] !== $installation_id) {
+        // License is bound to a different installation_id, deny access
+        echo json_encode([
+            'success' => false,
+            'message' => 'License is already in use by another server.',
+            'actual_status' => 'in_use' // New status for license in use elsewhere
         ]);
         exit;
     }

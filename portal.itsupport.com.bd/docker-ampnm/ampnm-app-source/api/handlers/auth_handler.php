@@ -11,6 +11,7 @@ switch ($action) {
             'license_message' => $_SESSION['license_message'] ?? 'License status unknown.',
             'license_status_code' => $_SESSION['license_status_code'] ?? 'unknown',
             'license_grace_period_end' => $_SESSION['license_grace_period_end'] ?? null,
+            'installation_id' => getInstallationId() // NEW: Return the installation ID
         ]);
         break;
     case 'force_license_recheck':

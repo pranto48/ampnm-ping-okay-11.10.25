@@ -6,9 +6,18 @@ $current_user_id = $_SESSION['user_id'];
 function revalidateLicenseSession($pdo, $current_user_id) {
     // Retrieve the application license key dynamically
     $app_license_key = getAppLicenseKey();
+    $installation_id = getInstallationId(); // Retrieve the installation ID
 
     if (!$app_license_key) {
         $_SESSION['license_message'] = 'Application license key not configured.';
+        $_SESSION['can_add_device'] = false;
+        $_SESSION['max_devices'] = 0;
+        $_SESSION['license_status_code'] = 'disabled';
+        return;
+    }
+
+    if (!$installation_id) {
+        $_SESSION['license_message'] = 'Application installation ID not found. Please re-run database setup.';
         $_SESSION['can_add_device'] = false;
         $_SESSION['max_devices'] = 0;
         $_SESSION['license_status_code'] = 'disabled';
@@ -26,7 +35,8 @@ function revalidateLicenseSession($pdo, $current_user_id) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
         'app_license_key' => $app_license_key,
         'user_id' => $current_user_id,
-        'current_device_count' => $current_device_count
+        'current_device_count' => $current_device_count,
+        'installation_id' => $installation_id // NEW: Pass the unique installation ID
     ]));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     curl_setopt($ch, CURLOPT_TIMEOUT, 5);

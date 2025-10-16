@@ -11,6 +11,7 @@ $dbname = getenv('DB_NAME') ?: 'network_monitor';
 // but for initial setup, we use direct PDO connection.
 // The functions.php is not needed here as DB connection is direct.
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/functions.php'; // Include functions for generateUuid
 
 function message($text, $is_error = false) {
     $color = $is_error ? '#ef4444' : '#22c55e';
@@ -197,7 +198,7 @@ try {
             FOREIGN KEY (`device_id`) REFERENCES `devices`(`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
-        // NEW TABLE: app_settings for storing the application license key
+        // NEW TABLE: app_settings for storing the application license key and installation ID
         "CREATE TABLE IF NOT EXISTS `app_settings` (
             `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             `setting_key` VARCHAR(255) NOT NULL UNIQUE,
@@ -319,7 +320,17 @@ try {
         message("Created a default map for the admin user.");
     }
 
-    // Step 6: Indexing for Performance
+    // Step 6: Generate and store installation_id if not present
+    $existing_installation_id = getInstallationId();
+    if (empty($existing_installation_id)) {
+        $new_installation_id = generateUuid();
+        setInstallationId($new_installation_id);
+        message("Generated and stored new installation ID: " . $new_installation_id);
+    } else {
+        message("Existing installation ID found: " . $existing_installation_id);
+    }
+
+    // Step 7: Indexing for Performance
     function indexExists($pdo, $db, $table, $index) {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?");
         $stmt->execute([$db, $table, $index]); // Corrected to use $index for INDEX_NAME

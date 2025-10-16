@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_license'])) 
         $expires_at = date('Y-m-d H:i:s', strtotime("+$license_duration_days days"));
 
         $license_key = generateLicenseKey();
+        // Note: bound_installation_id is NULL by default on generation
         $stmt = $pdo->prepare("INSERT INTO `licenses` (customer_id, product_id, license_key, status, max_devices, expires_at, last_active_at) VALUES (?, ?, ?, ?, ?, ?, NOW())"); // Set last_active_at on generation
         $stmt->execute([$customer_id, $product_id, $license_key, $status, $max_devices, $expires_at]);
         $message = '<div class="alert-admin-success mb-4">License generated successfully: ' . htmlspecialchars($license_key) . '</div>';
@@ -38,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_license'])) 
     }
 }
 
-// Handle update license status/expiry
+// Handle update license status/expiry/max_devices
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_license'])) {
     $license_id = (int)$_POST['license_id'];
     $new_status = $_POST['new_status'] ?? 'active';
@@ -52,6 +53,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_license'])) {
         $message = '<div class="alert-admin-success mb-4">License updated successfully.</div>';
     } catch (PDOException $e) {
         $message = '<div class="alert-admin-error mb-4">Error updating license: ' . htmlspecialchars($e->getMessage()) . '</div>';
+    }
+}
+
+// Handle release license action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['release_license'])) {
+    $license_id = (int)$_POST['license_id'];
+    try {
+        $stmt = $pdo->prepare("UPDATE `licenses` SET bound_installation_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+        $stmt->execute([$license_id]);
+        $message = '<div class="alert-admin-success mb-4">License released successfully. It can now be used on a new server.</div>';
+    } catch (PDOException $e) {
+        $message = '<div class="alert-admin-error mb-4">Error releasing license: ' . htmlspecialchars($e->getMessage()) . '</div>';
     }
 }
 
@@ -167,6 +180,14 @@ admin_header("Manage Licenses");
                                 <button onclick="openEditLicenseModal(<?= htmlspecialchars(json_encode($license)) ?>)" class="btn-admin-primary text-xs px-3 py-1 mr-2">
                                     <i class="fas fa-edit mr-1"></i>Edit
                                 </button>
+                                <?php if (!empty($license['bound_installation_id'])): ?>
+                                    <form action="license-manager.php" method="POST" onsubmit="return confirm('Are you sure you want to release this license? This will unbind it from the current server, allowing it to be used on a new one.');" class="inline-block">
+                                        <input type="hidden" name="license_id" value="<?= htmlspecialchars($license['id']) ?>">
+                                        <button type="submit" name="release_license" class="btn-admin-secondary text-xs px-3 py-1 mr-2" title="Unbind from current server">
+                                            <i class="fas fa-unlink mr-1"></i>Release
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
                                 <form action="license-manager.php" method="POST" onsubmit="return confirm('Are you sure you want to delete this license?');" class="inline-block">
                                     <input type="hidden" name="license_id" value="<?= htmlspecialchars($license['id']) ?>">
                                     <button type="submit" name="delete_license" class="btn-admin-danger text-xs px-3 py-1">

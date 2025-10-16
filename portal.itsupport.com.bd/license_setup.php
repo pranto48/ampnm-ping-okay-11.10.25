@@ -228,6 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     `max_devices` INT(11) DEFAULT 1,
                     `current_devices` INT(11) DEFAULT 0,
                     `last_active_at` TIMESTAMP NULL, -- New column for last check-in
+                    `bound_installation_id` VARCHAR(255) NULL, -- NEW: To track which AMPNM instance is using it
                     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE SET NULL,
@@ -330,6 +331,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!columnExists($pdo, 'license_db', 'licenses', 'last_active_at')) { // Assuming 'license_db' is the DB name
                     $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `last_active_at` TIMESTAMP NULL AFTER `current_devices`;");
                     $setup_message .= '<p class="text-green-500">Migrated `licenses` table: added `last_active_at` column.</p>';
+                }
+                // NEW MIGRATION: Add bound_installation_id if it doesn't exist
+                if (!columnExists($pdo, 'license_db', 'licenses', 'bound_installation_id')) {
+                    $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `bound_installation_id` VARCHAR(255) NULL AFTER `last_active_at`;");
+                    $setup_message .= '<p class="text-green-500">Migrated `licenses` table: added `bound_installation_id` column.</p>';
                 }
 
 

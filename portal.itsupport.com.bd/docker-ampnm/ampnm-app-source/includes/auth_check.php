@@ -20,12 +20,20 @@ $_SESSION['license_grace_period_end'] = null; // Timestamp when grace period end
 
 // Retrieve the application license key dynamically
 $app_license_key = getAppLicenseKey();
+$installation_id = getInstallationId(); // Retrieve the installation ID
 
 if (!$app_license_key) {
     $_SESSION['license_message'] = 'Application license key not configured.';
     $_SESSION['license_status_code'] = 'disabled';
     // Redirect to license setup if key is missing, even if logged in (shouldn't happen if bootstrap works)
     header('Location: license_setup.php');
+    exit;
+}
+
+if (!$installation_id) {
+    $_SESSION['license_message'] = 'Application installation ID not found. Please re-run database setup.';
+    $_SESSION['license_status_code'] = 'disabled';
+    header('Location: database_setup.php'); // Redirect to setup to ensure ID is generated
     exit;
 }
 
@@ -74,7 +82,8 @@ try {
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
             'app_license_key' => $app_license_key,
             'user_id' => $_SESSION['user_id'], // Pass the logged-in user's ID for user-specific checks
-            'current_device_count' => $current_device_count // Pass the current device count
+            'current_device_count' => $current_device_count, // Pass the current device count
+            'installation_id' => $installation_id // NEW: Pass the unique installation ID
         ]));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
         curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 5-second timeout for the external API call
@@ -133,10 +142,10 @@ try {
                 // Check the actual_status returned by the portal
                 $actual_status = $licenseData['actual_status'] ?? 'expired'; // Default to expired if not specified
 
-                if ($actual_status === 'revoked' || $actual_status === 'disabled') { // 'disabled' is a new potential status from portal
-                    $_SESSION['license_message'] = $licenseData['message'] ?? 'Your license has been revoked by the administrator.';
+                if ($actual_status === 'revoked' || $actual_status === 'disabled' || $actual_status === 'in_use') { // 'in_use' is new
+                    $_SESSION['license_message'] = $licenseData['message'] ?? 'Your license has been revoked or is in use by another server.';
                     $_SESSION['license_status_code'] = 'disabled';
-                    $_SESSION['license_grace_period_end'] = null; // No grace period for revoked licenses
+                    $_SESSION['license_grace_period_end'] = null; // No grace period for revoked/in_use licenses
                     header('Location: license_expired.php'); // Redirect immediately
                     exit;
                 } else {
