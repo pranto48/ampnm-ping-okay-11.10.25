@@ -9,59 +9,27 @@ import PingHistory from "@/components/PingHistory";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import NetworkMap from "@/components/NetworkMap";
 import {
-  getDevices,
-  NetworkDevice,
   getLicenseStatus,
   LicenseStatus,
 } from "@/services/networkDeviceService";
 import { Skeleton } from "@/components/ui/skeleton";
-import DashboardContent from "@/components/DashboardContent"; // Import the new DashboardContent
-
-// Define a type for Map data from PHP backend
-interface Map {
-  id: string;
-  name: string;
-}
+import DashboardContent from "@/components/DashboardContent";
+import { useDashboardData } from "@/hooks/useDashboardData"; // Import the new hook
 
 const MainApp = () => {
-  const [devices, setDevices] = useState<NetworkDevice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [maps, setMaps] = useState<Map[]>([]);
-  const [currentMapId, setCurrentMapId] = useState<string | null>(null);
-  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({ can_add_device: false, max_devices: 0, license_message: 'Loading license status...' });
+  const {
+    maps,
+    currentMapId,
+    setCurrentMapId,
+    devices,
+    dashboardStats,
+    recentActivity,
+    isLoading,
+    fetchMaps,
+    fetchDashboardData,
+  } = useDashboardData(); // Use the new hook
 
-  const fetchMaps = useCallback(async () => {
-    try {
-      const response = await fetch('/api.php?action=get_maps');
-      if (!response.ok) throw new Error('Failed to fetch maps');
-      const data = await response.json();
-      const phpMaps = data.map((m: any) => ({ id: String(m.id), name: m.name }));
-      setMaps(phpMaps);
-      if (phpMaps.length > 0 && !currentMapId) {
-        setCurrentMapId(phpMaps[0].id);
-      } else if (phpMaps.length === 0) {
-        setCurrentMapId(null);
-      }
-    } catch (error) {
-      console.error("Failed to load maps:", error);
-    }
-  }, [currentMapId]);
-
-  const fetchDevices = useCallback(async () => {
-    if (!currentMapId) {
-      setDevices([]);
-      setIsLoading(false);
-      return;
-    }
-    try {
-      const dbDevices = await getDevices(currentMapId);
-      setDevices(dbDevices as NetworkDevice[]);
-    } catch (error) {
-      console.error("Failed to load devices:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentMapId]);
+  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({ can_add_device: false, max_devices: 0, license_message: 'Loading license status...', license_status_code: 'unknown', license_grace_period_end: null });
 
   const fetchLicenseStatus = useCallback(async () => {
     try {
@@ -69,18 +37,13 @@ const MainApp = () => {
       setLicenseStatus(status);
     } catch (error) {
       console.error("Failed to load license status:", error);
-      setLicenseStatus({ can_add_device: false, max_devices: 0, license_message: 'Error loading license status.' });
+      setLicenseStatus({ can_add_device: false, max_devices: 0, license_message: 'Error loading license status.', license_status_code: 'error', license_grace_period_end: null });
     }
   }, []);
 
   useEffect(() => {
-    fetchMaps();
     fetchLicenseStatus();
-  }, [fetchMaps, fetchLicenseStatus]);
-
-  useEffect(() => {
-    fetchDevices();
-  }, [fetchDevices]);
+  }, [fetchLicenseStatus]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -129,7 +92,19 @@ const MainApp = () => {
           </TabsList>
 
           <TabsContent value="dashboard">
-            <DashboardContent />
+            <DashboardContent
+              maps={maps}
+              currentMapId={currentMapId}
+              setCurrentMapId={setCurrentMapId}
+              devices={devices}
+              dashboardStats={dashboardStats}
+              recentActivity={recentActivity}
+              isLoading={isLoading}
+              fetchMaps={fetchMaps}
+              fetchDashboardData={fetchDashboardData}
+              licenseStatus={licenseStatus}
+              fetchLicenseStatus={fetchLicenseStatus}
+            />
           </TabsContent>
 
           <TabsContent value="devices">
@@ -239,7 +214,7 @@ const MainApp = () => {
             {currentMapId ? (
               <NetworkMap 
                 devices={devices} 
-                onMapUpdate={fetchDevices} 
+                onMapUpdate={fetchDashboardData} // Use fetchDashboardData to refresh map data
                 mapId={currentMapId} 
                 canAddDevice={licenseStatus.can_add_device}
                 licenseMessage={licenseStatus.license_message}

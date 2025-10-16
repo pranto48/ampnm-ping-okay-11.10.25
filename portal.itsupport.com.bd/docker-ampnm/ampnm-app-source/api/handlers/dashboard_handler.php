@@ -24,13 +24,14 @@ if ($action === 'get_dashboard_data') {
     $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // Ensure counts are integers, not null
+    $stats['total'] = $stats['total'] ?? 0;
     $stats['online'] = $stats['online'] ?? 0;
     $stats['warning'] = $stats['warning'] ?? 0;
     $stats['critical'] = $stats['critical'] ?? 0;
     $stats['offline'] = $stats['offline'] ?? 0;
 
-    // Get devices
-    $stmt = $pdo->prepare("SELECT name, ip, status FROM devices WHERE map_id = ? AND user_id = ? ORDER BY name ASC LIMIT 10");
+    // Get devices (minimal data for dashboard list)
+    $stmt = $pdo->prepare("SELECT id, name, ip, status, type, last_seen FROM devices WHERE map_id = ? AND user_id = ? ORDER BY name ASC LIMIT 10");
     $stmt->execute([$map_id, $current_user_id]);
     $devices = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

@@ -5,123 +5,47 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, Wifi, Server, Clock, RefreshCw, Network, WifiOff } from "lucide-react";
 import { showSuccess, showError, showLoading, dismissToast } from "@/utils/toast";
 import {
-  getDevices,
   NetworkDevice,
-  getLicenseStatus,
   LicenseStatus,
   forceLicenseRecheck,
+  Map,
+  DashboardStats,
+  RecentActivity,
 } from "@/services/networkDeviceService";
 import { performServerPing } from "@/services/pingService";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Define a type for Map data from PHP backend
-interface Map {
-  id: string;
-  name: string;
+interface DashboardContentProps {
+  maps: Map[];
+  currentMapId: string | null;
+  setCurrentMapId: (mapId: string | null) => void;
+  devices: NetworkDevice[];
+  dashboardStats: DashboardStats | null;
+  recentActivity: RecentActivity[];
+  isLoading: boolean;
+  fetchMaps: () => Promise<void>;
+  fetchDashboardData: () => Promise<void>;
+  licenseStatus: LicenseStatus;
+  fetchLicenseStatus: () => Promise<void>;
 }
 
-interface DashboardStats {
-  total: number;
-  online: number;
-  warning: number;
-  critical: number;
-  offline: number;
-}
-
-interface RecentActivity {
-  created_at: string;
-  status: string;
-  details: string;
-  device_name: string;
-  device_ip: string;
-}
-
-const DashboardContent = () => {
+const DashboardContent = ({
+  maps,
+  currentMapId,
+  setCurrentMapId,
+  devices,
+  dashboardStats,
+  recentActivity,
+  isLoading,
+  fetchMaps,
+  fetchDashboardData,
+  licenseStatus,
+  fetchLicenseStatus,
+}: DashboardContentProps) => {
   const [networkStatus, setNetworkStatus] = useState<boolean>(true);
   const [lastChecked, setLastChecked] = useState<Date>(new Date());
-  const [devices, setDevices] = useState<NetworkDevice[]>([]);
   const [isCheckingDevices, setIsCheckingDevices] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [maps, setMaps] = useState<Map[]>([]);
-  const [currentMapId, setCurrentMapId] = useState<string | null>(null);
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({ can_add_device: false, max_devices: 0, license_message: 'Loading license status...', license_status_code: 'unknown', license_grace_period_end: null });
   const [isRefreshingLicense, setIsRefreshingLicense] = useState(false);
-
-  const fetchMaps = useCallback(async () => {
-    try {
-      const response = await fetch('/api.php?action=get_maps');
-      if (!response.ok) throw new Error('Failed to fetch maps');
-      const data = await response.json();
-      const phpMaps = data.map((m: any) => ({ id: String(m.id), name: m.name }));
-      setMaps(phpMaps);
-      if (phpMaps.length > 0 && !currentMapId) {
-        setCurrentMapId(phpMaps[0].id);
-      } else if (phpMaps.length === 0) {
-        setCurrentMapId(null);
-      }
-    } catch (error) {
-      showError("Failed to load maps from database.");
-      console.error("Failed to load maps:", error);
-    }
-  }, [currentMapId]);
-
-  const fetchDevices = useCallback(async () => {
-    if (!currentMapId) {
-      setDevices([]);
-      setIsLoading(false);
-      return;
-    }
-    try {
-      const dbDevices = await getDevices(currentMapId);
-      setDevices(dbDevices as NetworkDevice[]);
-    } catch (error) {
-      showError("Failed to load devices from database.");
-      console.error("Failed to load devices:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentMapId]);
-
-  const fetchDashboardData = useCallback(async () => {
-    if (!currentMapId) {
-      setDashboardStats(null);
-      setRecentActivity([]);
-      return;
-    }
-    try {
-      const response = await fetch(`/api.php?action=get_dashboard_data&map_id=${currentMapId}`);
-      if (!response.ok) throw new Error('Failed to fetch dashboard data');
-      const data = await response.json();
-      setDashboardStats(data.stats);
-      setRecentActivity(data.recent_activity);
-    } catch (error) {
-      showError("Failed to load dashboard data.");
-      console.error("Failed to load dashboard data:", error);
-    }
-  }, [currentMapId]);
-
-  const fetchLicenseStatus = useCallback(async () => {
-    try {
-      const status = await getLicenseStatus();
-      setLicenseStatus(status);
-    } catch (error) {
-      showError("Failed to load license status.");
-      console.error("Failed to load license status:", error);
-      setLicenseStatus({ can_add_device: false, max_devices: 0, license_message: 'Error loading license status.', license_status_code: 'error', license_grace_period_end: null });
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchMaps();
-    fetchLicenseStatus(); // Fetch license status on initial load
-  }, [fetchMaps, fetchLicenseStatus]);
-
-  useEffect(() => {
-    fetchDevices();
-    fetchDashboardData();
-  }, [fetchDevices, fetchDashboardData]);
 
   // Auto-ping devices based on their ping interval
   useEffect(() => {
@@ -133,12 +57,10 @@ const DashboardContent = () => {
           try {
             console.log(`Auto-pinging ${device.ip_address}`);
             await performServerPing(device.ip_address, 1); // This also updates status in DB
-            fetchDevices();
             fetchDashboardData(); // Refresh dashboard data after auto-ping
           } catch (error) {
             console.error(`Auto-ping failed for ${device.ip_address}:`, error);
             // The performServerPing already handles status update to offline on failure
-            fetchDevices();
             fetchDashboardData(); // Refresh dashboard data after auto-ping
           }
         }, device.ping_interval * 1000);
@@ -151,7 +73,7 @@ const DashboardContent = () => {
     return () => {
       intervals.forEach(clearInterval);
     };
-  }, [devices, fetchDevices, fetchDashboardData]);
+  }, [devices, fetchDashboardData]);
 
   const checkNetworkStatus = useCallback(async () => {
     try {
@@ -178,7 +100,6 @@ const DashboardContent = () => {
       if (result.success) {
         dismissToast(toastId);
         showSuccess(`Finished checking all devices. ${result.status_changes} status changes detected.`);
-        fetchDevices();
         fetchDashboardData(); // Refresh dashboard data after bulk ping
       } else {
         throw new Error(result.error || "Unknown error during bulk ping.");

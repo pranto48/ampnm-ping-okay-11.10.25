@@ -50,7 +50,35 @@ export interface LicenseStatus {
   license_grace_period_end: number | null; // Unix timestamp
 }
 
-const callPhpApi = async (action: string, method: 'GET' | 'POST', body?: any) => {
+// Define a type for Map data from PHP backend
+export interface Map {
+  id: string;
+  name: string;
+}
+
+export interface DashboardStats {
+  total: number;
+  online: number;
+  warning: number;
+  critical: number;
+  offline: number;
+}
+
+export interface RecentActivity {
+  created_at: string;
+  status: string;
+  details: string;
+  device_name: string;
+  device_ip: string;
+}
+
+export interface FullDashboardData {
+  stats: DashboardStats;
+  devices: NetworkDevice[];
+  recent_activity: RecentActivity[];
+}
+
+const callPhpApi = async (action: string, method: 'GET' | 'POST', params?: Record<string, any>, body?: any) => {
   const options: RequestInit = {
     method: method,
     headers: {
@@ -61,12 +89,18 @@ const callPhpApi = async (action: string, method: 'GET' | 'POST', body?: any) =>
     options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${PHP_API_URL}?action=${action}`, options);
+  const queryString = params ? `&${new URLSearchParams(params).toString()}` : '';
+  const response = await fetch(`${PHP_API_URL}?action=${action}${queryString}`, options);
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }
   return response.json();
+};
+
+export const getMaps = async (): Promise<Map[]> => {
+  const data = await callPhpApi('get_maps', 'GET');
+  return data.map((m: any) => ({ id: String(m.id), name: m.name }));
 };
 
 export const getDevices = async (map_id?: string | null) => {
@@ -102,6 +136,24 @@ export const getDevices = async (map_id?: string | null) => {
   })) as NetworkDevice[];
 };
 
+export const getFullDashboardData = async (mapId: string): Promise<FullDashboardData> => {
+  const data = await callPhpApi('get_dashboard_data', 'GET', { map_id: mapId });
+  return {
+    stats: data.stats,
+    devices: data.devices.map((d: any) => ({
+      id: String(d.id),
+      name: d.name,
+      ip_address: d.ip,
+      status: d.status,
+      type: d.type,
+      map_name: d.map_name,
+      last_ping: d.last_seen,
+      // Minimal fields for dashboard list, full details fetched by getDevices
+    })),
+    recent_activity: data.recent_activity,
+  };
+};
+
 export const addDevice = async (device: Omit<NetworkDevice, 'id' | 'user_id' | 'status' | 'last_ping' | 'last_ping_result' | 'map_name' | 'last_ping_output'>) => {
   const payload = {
     name: device.name,
@@ -121,7 +173,7 @@ export const addDevice = async (device: Omit<NetworkDevice, 'id' | 'user_id' | '
     critical_packetloss_threshold: device.critical_packetloss_threshold,
     show_live_ping: device.show_live_ping,
   };
-  const data = await callPhpApi('create_device', 'POST', payload);
+  const data = await callPhpApi('create_device', 'POST', undefined, payload);
   return { ...data, id: String(data.id) } as NetworkDevice;
 };
 
@@ -155,7 +207,7 @@ export const updateDevice = async (id: string, updates: Partial<NetworkDevice>) 
       delete payload.updates[key];
     }
   }
-  const data = await callPhpApi('update_device', 'POST', payload);
+  const data = await callPhpApi('update_device', 'POST', undefined, payload);
   return { ...data, id: String(data.id) } as NetworkDevice;
 };
 
@@ -173,7 +225,7 @@ export const updateDeviceStatusByIp = async (ip_address: string, status: 'online
 };
 
 export const deleteDevice = async (id: string) => {
-  await callPhpApi('delete_device', 'POST', { id });
+  await callPhpApi('delete_device', 'POST', undefined, { id });
 };
 
 export const getEdges = async (map_id?: string | null) => {
@@ -193,18 +245,18 @@ export const addEdgeToDB = async (edge: { source: string; target: string; map_id
     map_id: edge.map_id,
     connection_type: 'cat5', // Default connection type
   };
-  const data = await callPhpApi('create_edge', 'POST', payload);
+  const data = await callPhpApi('create_edge', 'POST', undefined, payload);
   return { ...data, id: String(data.id) } as NetworkEdge;
 };
 
 export const updateEdgeInDB = async (id: string, updates: { connection_type: string }) => {
   const payload = { id, connection_type: updates.connection_type };
-  const data = await callPhpApi('update_edge', 'POST', payload);
+  const data = await callPhpApi('update_edge', 'POST', undefined, payload);
   return { ...data, id: String(data.id) } as NetworkEdge;
 };
 
 export const deleteEdgeFromDB = async (edgeId: string) => {
-  await callPhpApi('delete_edge', 'POST', { id: edgeId });
+  await callPhpApi('delete_edge', 'POST', undefined, { id: edgeId });
 };
 
 export const importMap = async (mapData: MapData, map_id: string) => {
@@ -224,7 +276,7 @@ export const importMap = async (mapData: MapData, map_id: string) => {
       connection_type: e.connection_type,
     })),
   };
-  await callPhpApi('import_map', 'POST', payload);
+  await callPhpApi('import_map', 'POST', undefined, payload);
 };
 
 export const getLicenseStatus = async (): Promise<LicenseStatus> => {
