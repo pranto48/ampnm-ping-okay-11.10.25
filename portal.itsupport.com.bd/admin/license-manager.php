@@ -225,7 +225,19 @@ admin_header("Manage Licenses");
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
 <script>
+    // Initialize Notyf for toast notifications
+    const notyf = new Notyf({
+        duration: 3000,
+        position: { x: 'right', y: 'top' },
+        types: [
+            { type: 'success', backgroundColor: '#22c5e', icon: { className: 'fas fa-check-circle', tagName: 'i', color: 'white' } },
+            { type: 'error', backgroundColor: '#ef4444', icon: { className: 'fas fa-times-circle', tagName: 'i', color: 'white' } },
+            { type: 'info', backgroundColor: '#3b82f6', icon: { className: 'fas fa-info-circle', tagName: 'i', color: 'white' } }
+        ]
+    });
+
     function openEditLicenseModal(license) {
         document.getElementById('edit_license_id').value = license.id;
         document.getElementById('edit_license_key').value = license.license_key;
@@ -240,6 +252,20 @@ admin_header("Manage Licenses");
     function closeEditLicenseModal() {
         document.getElementById('editLicenseModal').classList.add('hidden');
     }
+
+    // Display server-side messages as Notyf toasts
+    document.addEventListener('DOMContentLoaded', function() {
+        const messageDiv = document.querySelector('.alert-admin-success, .alert-admin-error');
+        if (messageDiv) {
+            const messageText = messageDiv.textContent.trim();
+            if (messageDiv.classList.contains('alert-admin-success')) {
+                notyf.success(messageText);
+            } else if (messageDiv.classList.contains('alert-admin-error')) {
+                notyf.error(messageText);
+            }
+            messageDiv.style.display = 'none'; // Hide the original PHP message
+        }
+    });
 </script>
 
 <?php admin_footer(); ?>
