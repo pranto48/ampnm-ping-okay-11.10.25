@@ -96,6 +96,33 @@ function logoutCustomer() {
     session_start(); // Start a new session for potential new login
 }
 
+/**
+ * Updates a customer's password.
+ *
+ * @param int $customer_id The ID of the customer.
+ * @param string $current_password The current password provided by the customer.
+ * @param string $new_password The new password to set.
+ * @return bool True on success, false on failure (e.g., current password mismatch).
+ */
+function updateCustomerPassword($customer_id, $current_password, $new_password) {
+    $pdo = getLicenseDbConnection();
+    
+    // First, verify the current password
+    $stmt = $pdo->prepare("SELECT password FROM `customers` WHERE id = ?");
+    $stmt->execute([$customer_id]);
+    $customer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$customer || !password_verify($current_password, $customer['password'])) {
+        return false; // Current password mismatch
+    }
+
+    // Hash the new password and update
+    $hashed_new_password = password_hash($new_password, PASSWORD_DEFAULT);
+    $stmt = $pdo->prepare("UPDATE `customers` SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+    return $stmt->execute([$hashed_new_password, $customer_id]);
+}
+
+
 // --- Admin Authentication Functions ---
 function authenticateAdmin($username, $password) {
     $pdo = getLicenseDbConnection();
@@ -468,7 +495,8 @@ function portal_header($title = "IT Support BD Portal") {
         'products.php' => 'Products',
         'dashboard.php' => 'Dashboard',
         'support.php' => '<i class="fas fa-headset mr-1"></i> Support',
-        'profile.php' => '<i class="fas fa-user-circle mr-1"></i> Profile', // Added Profile link
+        'profile.php' => '<i class="fas fa-user-circle mr-1"></i> Profile',
+        'change_password.php' => '<i class="fas fa-key mr-1"></i> Change Password', // Added Change Password link
         'cart.php' => '<i class="fas fa-shopping-cart mr-1"></i> Cart',
     ];
 
