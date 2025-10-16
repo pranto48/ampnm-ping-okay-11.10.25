@@ -68,6 +68,24 @@ function setAppLicenseKey($license_key) {
     return $stmt->execute([$license_key, $license_key]);
 }
 
+function getLastLicenseCheck() {
+    $pdo = getDbConnection();
+    if (!tableExists($pdo, 'app_settings')) {
+        return null;
+    }
+    $stmt = $pdo->prepare("SELECT setting_value FROM `app_settings` WHERE setting_key = 'last_license_check'");
+    $stmt->execute();
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result ? $result['setting_value'] : null;
+}
+
+function setLastLicenseCheck($timestamp) {
+    $pdo = getDbConnection();
+    $stmt = $pdo->prepare("INSERT INTO `app_settings` (setting_key, setting_value) VALUES ('last_license_check', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
+    return $stmt->execute([$timestamp, $timestamp]);
+}
+
+
 // --- Customer Authentication Functions ---
 function authenticateCustomer($email, $password) {
     $pdo = getLicenseDbConnection();
@@ -124,6 +142,33 @@ function logoutAdmin() {
     session_start(); // Start a new session for potential new login
 }
 
+/**
+ * Updates an admin user's password.
+ *
+ * @param int $admin_id The ID of the admin user.
+ * @param string $current_password The current password provided by the admin.
+ * @param string $new_password The new password to set.
+ * @return bool True on success, false on failure (e.g., current password mismatch).
+ */
+function updateAdminPassword($admin_id, $current_password, $new_password) {
+    $pdo = getLicenseDbConnection();
+    
+    // First, verify the current password
+    $stmt = $pdo->prepare("SELECT password FROM `admin_users` WHERE id = ?");
+    $stmt->execute([$admin_id]);
+    $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$admin || !password_verify($current_password, $admin['password'])) {
+        return false; // Current password mismatch
+    }
+
+    // Hash the new password and update
+    $hashed_new_password = password_hash($new_password, PASSWORD_DEFAULT);
+    $stmt = $pdo->prepare("UPDATE `admin_users` SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+    return $stmt->execute([$hashed_new_password, $admin_id]);
+}
+
+
 // --- Common Redirects ---
 function redirectToLogin() {
     header('Location: login.php');
@@ -136,7 +181,7 @@ function redirectToAdminLogin() {
 }
 
 function redirectToDashboard() {
-    header('Location: dashboard.php');
+    header('Location: index.php'); // Changed to index.php for AMPNM app
     exit;
 }
 
@@ -441,7 +486,8 @@ function portal_header($title = "IT Support BD Portal") {
         'products.php' => 'Products',
         'dashboard.php' => 'Dashboard',
         'support.php' => '<i class="fas fa-headset mr-1"></i> Support',
-        'profile.php' => '<i class="fas fa-user-circle mr-1"></i> Profile', // Added Profile link
+        'profile.php' => '<i class="fas fa-user-circle mr-1"></i> Profile',
+        'change_password.php' => '<i class="fas fa-key mr-1"></i> Change Password', // Added Change Password link
         'cart.php' => '<i class="fas fa-shopping-cart mr-1"></i> Cart',
     ];
 
@@ -503,6 +549,7 @@ function admin_header($title = "Admin Panel") {
         'license-manager.php' => 'Licenses',
         'products.php' => 'Products',
         'tickets.php' => '<i class="fas fa-headset mr-1"></i> Tickets', // New Admin Tickets link
+        'change_password.php' => '<i class="fas fa-key mr-1"></i> Change Password', // New Admin Password Change link
     ];
 
     if (isAdminLoggedIn()) {

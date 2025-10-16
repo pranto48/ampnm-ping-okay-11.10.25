@@ -11,6 +11,7 @@ function revalidateLicenseSession($pdo, $current_user_id) {
         $_SESSION['license_message'] = 'Application license key not configured.';
         $_SESSION['can_add_device'] = false;
         $_SESSION['max_devices'] = 0;
+        $_SESSION['license_status_code'] = 'disabled';
         return;
     }
 
@@ -39,26 +40,39 @@ function revalidateLicenseSession($pdo, $current_user_id) {
         error_log("License API cURL Error during revalidation: " . $curlError);
         $_SESSION['license_message'] = 'Failed to connect to license verification service.';
         $_SESSION['can_add_device'] = false;
+        $_SESSION['license_status_code'] = 'error';
     } elseif ($httpCode !== 200) {
         error_log("License API HTTP Error during revalidation: " . $httpCode . " - Response: " . $response);
         $_SESSION['license_message'] = 'License verification service returned an error.';
         $_SESSION['can_add_device'] = false;
+        $_SESSION['license_status_code'] = 'error';
     } else {
         $licenseData = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             error_log("License API JSON Parse Error during revalidation: " . json_last_error_msg() . " - Response: " . $response);
             $_SESSION['license_message'] = 'Invalid response from license verification service.';
             $_SESSION['can_add_device'] = false;
+            $_SESSION['license_status_code'] = 'error';
         } elseif (isset($licenseData['success']) && $licenseData['success'] === true) {
             $_SESSION['max_devices'] = $licenseData['max_devices'] ?? 0;
             $_SESSION['can_add_device'] = ($current_device_count < $_SESSION['max_devices']);
             $_SESSION['license_message'] = $licenseData['message'] ?? 'License validated successfully.';
+            $_SESSION['license_status_code'] = 'active';
+            $_SESSION['license_grace_period_end'] = null; // Clear grace period if license is active
             if (!$_SESSION['can_add_device']) {
                 $_SESSION['license_message'] = "License active, but you have reached your device limit ({$_SESSION['max_devices']} devices).";
             }
+            setLastLicenseCheck(date('Y-m-d H:i:s')); // Update last check timestamp
         } else {
             $_SESSION['license_message'] = $licenseData['message'] ?? 'License validation failed.';
             $_SESSION['can_add_device'] = false;
+            $_SESSION['license_status_code'] = 'expired';
+            // If license is explicitly expired, start grace period
+            if (!isset($_SESSION['license_grace_period_end']) || $_SESSION['license_grace_period_end'] === null) {
+                $_SESSION['license_grace_period_end'] = strtotime('+1 month');
+                $_SESSION['license_status_code'] = 'grace_period';
+                $_SESSION['license_message'] = 'Your license has expired. You are in a grace period until ' . date('Y-m-d H:i', $_SESSION['license_grace_period_end']) . '. Please renew your license.';
+            }
         }
     }
 }

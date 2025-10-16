@@ -44,4 +44,13 @@ if (session_status() === PHP_SESSION_NONE) {
             </div>
         </div>
     </nav>
+    <?php if (isset($_SESSION['license_status_code']) && ($_SESSION['license_status_code'] === 'grace_period' || $_SESSION['license_status_code'] === 'expired' || $_SESSION['license_status_code'] === 'error')): ?>
+        <div class="bg-red-600/20 border-b border-red-500 text-red-300 p-3 text-center text-sm font-medium">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <?= htmlspecialchars($_SESSION['license_message']) ?>
+            <?php if ($_SESSION['license_status_code'] !== 'disabled'): ?>
+                <a href="https://portal.itsupport.com.bd/products.php" target="_blank" class="underline ml-2 hover:text-red-100">Renew License</a>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
     <div class="page-content">
