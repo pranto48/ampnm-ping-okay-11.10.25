@@ -183,6 +183,16 @@ const LicenseManager = ({ licenseStatus, fetchLicenseStatus }: LicenseManagerPro
                 </div>
               </div>
             )}
+            <div className="p-3 border rounded-lg bg-blue-500/10 text-blue-400 flex items-start gap-2">
+              <Info className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Need Support?</p>
+                <p className="text-sm">
+                  If you encounter any issues with your license or need assistance, please visit our
+                  <a href="https://portal.itsupport.com.bd/support.php" target="_blank" rel="noopener noreferrer" className="underline ml-1">Support Ticket System</a>.
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
