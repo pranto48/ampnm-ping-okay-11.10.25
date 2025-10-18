@@ -52,7 +52,7 @@ button:hover, a.hoverable:hover {
     background-color: rgba(15, 23, 42, 0.7);
     backdrop-filter: blur(4px);
     display: flex; align-items: center; justify-content: center;
-    z-index: 50;
+    z-index: 60; /* Increased z-index to appear above the header */
     opacity: 0; pointer-events: none;
     transition: opacity 0.3s ease-out;
 }
