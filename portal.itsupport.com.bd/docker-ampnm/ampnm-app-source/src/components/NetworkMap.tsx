@@ -4,10 +4,12 @@ import ReactFlow, {
   Controls,
   Background,
   Node,
+  useReactFlow,
+  ReactFlowProvider, // Import ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Upload, Download, Network } from 'lucide-react';
+import { PlusCircle, Upload, Download, Network, Server } from 'lucide-react';
 import {
   NetworkDevice,
   MapData,
@@ -15,12 +17,15 @@ import {
 } from '@/services/networkDeviceService';
 import { DeviceEditorDialog } from './DeviceEditorDialog';
 import { EdgeEditorDialog } from './EdgeEditorDialog';
+import { PlaceDeviceDialog } from './PlaceDeviceDialog'; // Import new dialog
 import DeviceNode from './DeviceNode';
 import { showError } from '@/utils/toast';
 import { useNetworkMapLogic } from '@/hooks/useNetworkMapLogic'; // Import the new hook
 
 const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage, userRole }: { devices: NetworkDevice[]; onMapUpdate: () => void; mapId: string | null; canAddDevice: boolean; licenseMessage: string; userRole: User['role'] }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
+  const [isPlaceDeviceOpen, setIsPlaceDeviceOpen] = useState(false);
+  const reactFlowInstance = useReactFlow();
 
   const {
     nodes,
@@ -43,6 +48,7 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
     handleSaveEdge,
     handleImportMap,
     handleExportMap,
+    handlePlaceExistingDevice,
   } = useNetworkMapLogic({
     initialDevices: devices,
     mapId,
@@ -72,6 +78,20 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
     };
     reader.readAsText(file);
   };
+
+  const handlePlaceDevice = useCallback((device: NetworkDevice) => {
+    if (!mapId) return;
+    
+    // Calculate a position near the center of the current view
+    const viewport = reactFlowInstance.getViewport();
+    const position = {
+      x: viewport.x + viewport.width / 2,
+      y: viewport.y + viewport.height / 2,
+    };
+
+    handlePlaceExistingDevice(device, position);
+    setIsPlaceDeviceOpen(false); // Close the dialog after placing
+  }, [mapId, reactFlowInstance, handlePlaceExistingDevice]);
 
   const canEdit = userRole === 'admin';
 
@@ -110,6 +130,9 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
         <Button onClick={handleAddDevice} size="sm" disabled={!mapId || !canAddDevice || !canEdit} title={!canEdit ? "Only admin users can add devices." : (!canAddDevice ? licenseMessage : '')}>
           <PlusCircle className="h-4 w-4 mr-2" />Add Device
         </Button>
+        <Button onClick={() => setIsPlaceDeviceOpen(true)} size="sm" variant="secondary" disabled={!mapId || !canEdit} title={!canEdit ? "Only admin users can place devices." : ''}>
+          <Server className="h-4 w-4 mr-2" />Place Existing
+        </Button>
         <Button onClick={handleExportMap} variant="outline" size="sm" disabled={!mapId}>
           <Download className="h-4 w-4 mr-2" />Export
         </Button>
@@ -140,8 +163,24 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
           edge={editingEdge}
         />
       )}
+      {isPlaceDeviceOpen && (
+        <PlaceDeviceDialog
+          isOpen={isPlaceDeviceOpen}
+          onClose={() => setIsPlaceDeviceOpen(false)}
+          onPlace={handlePlaceDevice}
+        />
+      )}
     </div>
   );
 };
 
-export default NetworkMap;
+// Wrap NetworkMap with ReactFlowProvider to enable useReactFlow hook
+const NetworkMapWrapper = (props: any) => {
+  return (
+    <ReactFlowProvider>
+      <NetworkMap {...props} />
+    </ReactFlowProvider>
+  );
+};
+
+export default NetworkMapWrapper;

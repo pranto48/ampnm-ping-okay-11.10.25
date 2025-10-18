@@ -242,6 +242,35 @@ export const useNetworkMapLogic = ({
     }
   };
 
+  const handlePlaceExistingDevice = useCallback(async (device: NetworkDevice, position: { x: number, y: number }) => {
+    if (userRole !== 'admin') {
+      showError('Only admin users can place devices.');
+      return;
+    }
+    if (!mapId) {
+      showError('Please select a map before placing devices.');
+      return;
+    }
+    if (!device.id) return;
+
+    const toastId = showLoading(`Placing ${device.name}...`);
+    try {
+      // Update device in DB with new map_id and position
+      await updateDevice(device.id, {
+        map_id: mapId,
+        position_x: position.x,
+        position_y: position.y,
+      });
+      dismissToast(toastId);
+      showSuccess(`${device.name} placed on map.`);
+      onMapUpdate(); // Refresh the map data to show the new node
+    } catch (error) {
+      dismissToast(toastId);
+      console.error('Failed to place device:', error);
+      showError('Failed to place device on map.');
+    }
+  }, [mapId, onMapUpdate, userRole]);
+
   const onNodeDragStop: NodeDragHandler = useCallback(
     async (_event, node) => {
       if (userRole !== 'admin') {
@@ -439,5 +468,6 @@ export const useNetworkMapLogic = ({
     handleSaveEdge,
     handleImportMap,
     handleExportMap,
+    handlePlaceExistingDevice, // Export new function
   };
 };
