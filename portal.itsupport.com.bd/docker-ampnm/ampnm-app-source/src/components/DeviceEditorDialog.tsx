@@ -17,12 +17,18 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { NetworkDevice } from '@/services/networkDeviceService';
 import { Textarea } from '@/components/ui/textarea';
 import { useEffect } from 'react';
-import { Switch } from '@/components/ui/switch'; // Import Switch for boolean fields
+import { Switch } from '@/components/ui/switch';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"; // Import Accordion components
 
 const deviceSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  ip_address: z.string().optional().nullable(), // IP can be null for 'box' type
-  icon: z.string().min(1, 'Type/Icon is required'), // Corresponds to 'type' in PHP
+  ip_address: z.string().optional().nullable(),
+  icon: z.string().min(1, 'Type/Icon is required'),
   ping_interval: z.coerce.number().int().positive().optional().nullable(),
   icon_size: z.coerce.number().int().min(20).max(100).optional().nullable(),
   name_text_size: z.coerce.number().int().min(8).max(24).optional().nullable(),
@@ -34,7 +40,6 @@ const deviceSchema = z.object({
   critical_packetloss_threshold: z.coerce.number().int().positive().optional().nullable(),
   show_live_ping: z.boolean().optional(),
 }).refine((data) => {
-  // If not a 'box' type, IP address is required
   if (data.icon !== 'box' && !data.ip_address) {
     return false;
   }
@@ -51,7 +56,6 @@ interface DeviceEditorDialogProps {
   device?: Partial<NetworkDevice>;
 }
 
-// These correspond to the 'type' enum in the PHP backend
 const deviceTypes = [
   'box', 'camera', 'cloud', 'database', 'firewall', 'ipphone', 'laptop',
   'mobile', 'nas', 'rack', 'printer', 'punchdevice', 'radio-tower',
@@ -64,7 +68,7 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
     defaultValues: {
       name: device?.name || '',
       ip_address: device?.ip_address || '',
-      icon: device?.icon || 'server', // PHP uses 'type' for this
+      icon: device?.icon || 'server',
       ping_interval: device?.ping_interval || undefined,
       icon_size: device?.icon_size || 50,
       name_text_size: device?.name_text_size || 14,
@@ -83,11 +87,10 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
     onClose();
   };
 
-  const deviceType = form.watch('icon'); // Watch the 'icon' field to determine device type
+  const deviceType = form.watch('icon');
   const isBoxType = deviceType === 'box';
 
   useEffect(() => {
-    // Reset IP and port if device type becomes 'box'
     if (isBoxType) {
       form.setValue('ip_address', null);
       form.setValue('check_port', null);
@@ -112,202 +115,140 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto space-y-6 p-1">
-            {/* Basic Information Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground">Basic Information</h3>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Main Router" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="icon" // This maps to 'type' in PHP backend
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type / Default Icon</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {deviceTypes.map((type) => (
-                          <SelectItem key={type} value={type} className="capitalize">
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Optional notes about the device" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <Accordion type="multiple" defaultValue={["basic-information"]}> {/* Default open Basic Info */}
+              {/* Basic Information Section */}
+              <AccordionItem value="basic-information">
+                <AccordionTrigger className="text-lg font-semibold text-foreground">Basic Information</AccordionTrigger>
+                <AccordionContent className="space-y-4 p-2">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Main Router" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="icon"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Type / Default Icon</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {deviceTypes.map((type) => (
+                              <SelectItem key={type} value={type} className="capitalize">
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Optional notes about the device" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </AccordionContent>
+              </AccordionItem>
 
-            {/* Network Configuration Section (Conditional) */}
-            {!isBoxType && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-foreground">Network Configuration</h3>
-                <FormField
-                  control={form.control}
-                  name="ip_address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>IP Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., 192.168.1.1" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="check_port"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Service Port (Optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="e.g., 80 for HTTP"
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                        />
-                      </FormControl>
-                      <FormDescription>If set, status is based on this port. If empty, it will use ICMP (ping).</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="ping_interval"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ping Interval (seconds)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="e.g., 60 (leave blank for no auto ping)"
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                        />
-                      </FormControl>
-                      <FormDescription>Automatically ping this device at regular intervals.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            {/* Appearance Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground">Appearance</h3>
-              <FormField
-                control={form.control}
-                name="icon_size"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{isBoxType ? 'Width' : 'Icon Size'} (20-100px)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 50"
-                        {...field}
-                        value={field.value ?? ''}
-                        onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="name_text_size"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{isBoxType ? 'Height' : 'Name Text Size'} (8-24px)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="e.g., 14"
-                        {...field}
-                        value={field.value ?? ''}
-                        onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Network Configuration Section (Conditional) */}
               {!isBoxType && (
-                <FormField
-                  control={form.control}
-                  name="show_live_ping"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>Show Live Ping Status</FormLabel>
-                        <FormDescription>
-                          Display real-time ping latency and TTL directly on the device node.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <AccordionItem value="network-configuration">
+                  <AccordionTrigger className="text-lg font-semibold text-foreground">Network Configuration</AccordionTrigger>
+                  <AccordionContent className="space-y-4 p-2">
+                    <FormField
+                      control={form.control}
+                      name="ip_address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>IP Address</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., 192.168.1.1" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="check_port"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Service Port (Optional)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="e.g., 80 for HTTP"
+                              {...field}
+                              value={field.value ?? ''}
+                              onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription>If set, status is based on this port. If empty, it will use ICMP (ping).</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="ping_interval"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ping Interval (seconds)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="e.g., 60 (leave blank for no auto ping)"
+                              {...field}
+                              value={field.value ?? ''}
+                              onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                            />
+                          </FormControl>
+                          <FormDescription>Automatically ping this device at regular intervals.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
               )}
-            </div>
 
-            {/* Status Thresholds Section (Conditional) */}
-            {!isBoxType && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-foreground">Status Thresholds (Optional)</h3>
-                <p className="text-sm text-muted-foreground">Define values to trigger 'Warning' or 'Critical' status.</p>
-                <div className="grid grid-cols-2 gap-4">
+              {/* Appearance Section */}
+              <AccordionItem value="appearance">
+                <AccordionTrigger className="text-lg font-semibold text-foreground">Appearance</AccordionTrigger>
+                <AccordionContent className="space-y-4 p-2">
                   <FormField
                     control={form.control}
-                    name="warning_latency_threshold"
+                    name="icon_size"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">Warn Latency (ms)</FormLabel>
+                        <FormLabel>{isBoxType ? 'Width' : 'Icon Size'} (20-100px)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
+                            placeholder="e.g., 50"
                             {...field}
                             value={field.value ?? ''}
                             onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
@@ -319,13 +260,14 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
                   />
                   <FormField
                     control={form.control}
-                    name="warning_packetloss_threshold"
+                    name="name_text_size"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">Warn Packet Loss (%)</FormLabel>
+                        <FormLabel>{isBoxType ? 'Height' : 'Name Text Size'} (8-24px)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
+                            placeholder="e.g., 14"
                             {...field}
                             value={field.value ?? ''}
                             onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
@@ -335,46 +277,117 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="critical_latency_threshold"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Critical Latency (ms)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            value={field.value ?? ''}
-                            onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="critical_packetloss_threshold"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Critical Packet Loss (%)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            value={field.value ?? ''}
-                            onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            )}
-            <DialogFooter>
+                  {!isBoxType && (
+                    <FormField
+                      control={form.control}
+                      name="show_live_ping"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                          <div className="space-y-0.5">
+                            <FormLabel>Show Live Ping Status</FormLabel>
+                            <FormDescription>
+                              Display real-time ping latency and TTL directly on the device node.
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Status Thresholds Section (Conditional) */}
+              {!isBoxType && (
+                <AccordionItem value="status-thresholds">
+                  <AccordionTrigger className="text-lg font-semibold text-foreground">Status Thresholds (Optional)</AccordionTrigger>
+                  <AccordionContent className="space-y-4 p-2">
+                    <p className="text-sm text-muted-foreground">Define values to trigger 'Warning' or 'Critical' status.</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="warning_latency_threshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Warn Latency (ms)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...field}
+                                value={field.value ?? ''}
+                                onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="warning_packetloss_threshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Warn Packet Loss (%)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...field}
+                                value={field.value ?? ''}
+                                onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="critical_latency_threshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Critical Latency (ms)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...field}
+                                value={field.value ?? ''}
+                                onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="critical_packetloss_threshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Critical Packet Loss (%)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...field}
+                                value={field.value ?? ''}
+                                onChange={(event) => field.onChange(event.target.value === '' ? null : +event.target.value)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+            </Accordion>
+            <DialogFooter className="mt-6">
               <Button type="button" variant="ghost" onClick={onClose}>
                 Cancel
               </Button>
