@@ -1,6 +1,7 @@
 <?php
 // This file is included by api.php and assumes $pdo, $action, and $input are available.
 $current_user_id = $_SESSION['user_id'];
+$current_user_role = $_SESSION['role'] ?? 'user'; // Get current user's role
 
 // Placeholder for email notification function
 function sendEmailNotification($pdo, $device, $oldStatus, $newStatus, $details) {
@@ -92,6 +93,11 @@ function logStatusChange($pdo, $deviceId, $oldStatus, $newStatus, $details) {
 switch ($action) {
     case 'import_devices':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if ($current_user_role !== 'admin') { // Only admin can import devices
+                http_response_code(403);
+                echo json_encode(['error' => 'Forbidden: Only admin users can import devices.']);
+                exit;
+            }
             // Check license allowance from session
             if (!$_SESSION['can_add_device']) {
                 http_response_code(403);
@@ -163,6 +169,7 @@ switch ($action) {
         break;
 
     case 'check_all_devices_globally':
+        // All users can trigger a global check
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("SELECT * FROM devices WHERE enabled = TRUE AND user_id = ? AND ip IS NOT NULL AND ip != '' AND type != 'box'");
             $stmt->execute([$current_user_id]);
@@ -216,6 +223,7 @@ switch ($action) {
         break;
 
     case 'ping_all_devices':
+        // All users can trigger a map-specific ping
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $map_id = $input['map_id'] ?? null;
             if (!$map_id) { http_response_code(400); echo json_encode(['error' => 'Map ID is required']); exit; }
@@ -277,6 +285,7 @@ switch ($action) {
         break;
 
     case 'check_device':
+        // All users can check a single device
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $deviceId = $input['id'] ?? 0;
             if (!$deviceId) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
@@ -325,6 +334,7 @@ switch ($action) {
         break;
 
     case 'get_device_uptime':
+        // All users can view device uptime
         $deviceId = $_GET['id'] ?? 0;
         if (!$deviceId) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
         
@@ -353,6 +363,7 @@ switch ($action) {
         break;
 
     case 'get_device_details':
+        // All users can view device details
         $deviceId = $_GET['id'] ?? 0;
         if (!$deviceId) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
         $stmt = $pdo->prepare("SELECT d.*, m.name as map_name FROM devices d LEFT JOIN maps m ON d.map_id = m.id WHERE d.id = ? AND d.user_id = ?");
@@ -369,6 +380,7 @@ switch ($action) {
         break;
 
     case 'get_devices':
+        // All users can read devices they own
         $map_id = $_GET['map_id'] ?? null;
         $unmapped = isset($_GET['unmapped']);
 
@@ -408,6 +420,11 @@ switch ($action) {
 
     case 'create_device':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if ($current_user_role !== 'admin') { // Only admin can create devices
+                http_response_code(403);
+                echo json_encode(['error' => 'Forbidden: Only admin users can create devices.']);
+                exit;
+            }
             // Check license allowance from session
             if (!$_SESSION['can_add_device']) {
                 http_response_code(403);
@@ -421,8 +438,10 @@ switch ($action) {
                 $current_user_id, $input['name'], $input['ip'] ?? null, $input['check_port'] ?? null, $input['type'], $input['description'] ?? null, $input['map_id'] ?? null,
                 $input['x'] ?? null, $input['y'] ?? null,
                 $input['ping_interval'] ?? null, $input['icon_size'] ?? 50, $input['name_text_size'] ?? 14, $input['icon_url'] ?? null,
-                $input['warning_latency_threshold'] ?? null, $input['warning_packetloss_threshold'] ?? null,
-                $input['critical_latency_threshold'] ?? null, $input['critical_packetloss_threshold'] ?? null,
+                $input['warning_latency_threshold'] ?? null,
+                $input['warning_packetloss_threshold'] ?? null,
+                $input['critical_latency_threshold'] ?? null,
+                $input['critical_packetloss_threshold'] ?? null,
                 ($input['show_live_ping'] ?? false) ? 1 : 0
             ]);
             $lastId = $pdo->lastInsertId();
@@ -438,6 +457,11 @@ switch ($action) {
 
     case 'update_device':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if ($current_user_role !== 'admin') { // Only admin can update devices
+                http_response_code(403);
+                echo json_encode(['error' => 'Forbidden: Only admin users can update devices.']);
+                exit;
+            }
             $id = $input['id'] ?? null;
             $updates = $input['updates'] ?? [];
             if (!$id || empty($updates)) { http_response_code(400); echo json_encode(['error' => 'Device ID and updates are required']); exit; }
@@ -467,6 +491,11 @@ switch ($action) {
 
     case 'delete_device':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if ($current_user_role !== 'admin') { // Only admin can delete devices
+                http_response_code(403);
+                echo json_encode(['error' => 'Forbidden: Only admin users can delete devices.']);
+                exit;
+            }
             $id = $input['id'] ?? null;
             if (!$id) { http_response_code(400); echo json_encode(['error' => 'Device ID is required']); exit; }
             $stmt = $pdo->prepare("DELETE FROM devices WHERE id = ? AND user_id = ?"); $stmt->execute([$id, $current_user_id]);
@@ -479,6 +508,11 @@ switch ($action) {
 
     case 'upload_device_icon':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if ($current_user_role !== 'admin') { // Only admin can upload device icons
+                http_response_code(403);
+                echo json_encode(['error' => 'Forbidden: Only admin users can upload device icons.']);
+                exit;
+            }
             $deviceId = $_POST['id'] ?? null;
             if (!$deviceId || !isset($_FILES['iconFile'])) {
                 http_response_code(400);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Wifi, Server, Clock, RefreshCw, Network, Key } from "lucide-react"; // Added Key icon
+import { Activity, Wifi, Server, Clock, RefreshCw, Network, Key, Users } from "lucide-react"; // Added Users icon
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
 import NetworkScanner from "@/components/NetworkScanner";
@@ -11,11 +11,13 @@ import NetworkMap from "@/components/NetworkMap";
 import {
   getLicenseStatus,
   LicenseStatus,
+  User, // Import User interface
 } from "@/services/networkDeviceService";
 import { Skeleton } from "@/components/ui/skeleton";
 import DashboardContent from "@/components/DashboardContent";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import LicenseManager from "@/components/LicenseManager"; // Import the new LicenseManager component
+import LicenseManager from "@/components/LicenseManager";
+import UserManagement from "@/components/UserManagement"; // Import the new UserManagement component
 
 const MainApp = () => {
   const {
@@ -31,6 +33,7 @@ const MainApp = () => {
   } = useDashboardData();
 
   const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({ app_license_key: '', can_add_device: false, max_devices: 0, license_message: 'Loading license status...', license_status_code: 'unknown', license_grace_period_end: null, installation_id: '' });
+  const [userRole, setUserRole] = useState<User['role']>('user'); // State for user role
 
   const fetchLicenseStatus = useCallback(async () => {
     try {
@@ -41,6 +44,32 @@ const MainApp = () => {
       setLicenseStatus({ app_license_key: '', can_add_device: false, max_devices: 0, license_message: 'Error loading license status.', license_status_code: 'error', license_grace_period_end: null, installation_id: '' });
     }
   }, []);
+
+  // Fetch user role from PHP session (this would typically be done on initial load or via a dedicated API endpoint)
+  // For now, we'll simulate fetching it from a global variable or a simple API call if available.
+  // In a real React app, you'd have an auth context providing this.
+  useEffect(() => {
+    // This is a placeholder. In a real app, you'd fetch this from your backend.
+    // For example, if your PHP backend exposes a /api.php?action=get_user_info endpoint
+    // that returns { role: 'admin' | 'user' }.
+    const fetchUserRole = async () => {
+      try {
+        const response = await fetch('/api.php?action=get_user_info'); // Assuming this endpoint exists
+        if (response.ok) {
+          const data = await response.json();
+          setUserRole(data.role);
+        } else {
+          // Fallback to 'user' if not logged in or endpoint not found
+          setUserRole('user');
+        }
+      } catch (error) {
+        console.error("Failed to fetch user role:", error);
+        setUserRole('user'); // Default to 'user' on error
+      }
+    };
+    fetchUserRole();
+  }, []);
+
 
   useEffect(() => {
     fetchLicenseStatus();
@@ -90,10 +119,16 @@ const MainApp = () => {
               <Network className="h-4 w-4" />
               Network Map
             </TabsTrigger>
-            <TabsTrigger value="license" className="flex items-center gap-2"> {/* NEW TAB */}
+            <TabsTrigger value="license" className="flex items-center gap-2">
               <Key className="h-4 w-4" />
               License
             </TabsTrigger>
+            {userRole === 'admin' && ( // Conditionally render User Management tab
+              <TabsTrigger value="users" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Users
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -223,6 +258,7 @@ const MainApp = () => {
                 mapId={currentMapId} 
                 canAddDevice={licenseStatus.can_add_device}
                 licenseMessage={licenseStatus.license_message}
+                userRole={userRole} // Pass userRole to NetworkMap
               />
             ) : (
               <Card className="h-[70vh] flex items-center justify-center">
@@ -234,9 +270,15 @@ const MainApp = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="license"> {/* NEW TAB CONTENT */}
+          <TabsContent value="license">
             <LicenseManager licenseStatus={licenseStatus} fetchLicenseStatus={fetchLicenseStatus} />
           </TabsContent>
+
+          {userRole === 'admin' && ( // Conditionally render UserManagement content
+            <TabsContent value="users">
+              <UserManagement />
+            </TabsContent>
+          )}
         </Tabs>
 
         <MadeWithDyad />

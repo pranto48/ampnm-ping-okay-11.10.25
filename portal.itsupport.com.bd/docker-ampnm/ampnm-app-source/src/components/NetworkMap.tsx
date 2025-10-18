@@ -11,6 +11,7 @@ import { PlusCircle, Upload, Download, Network } from 'lucide-react';
 import {
   NetworkDevice,
   MapData,
+  User, // Import User interface
 } from '@/services/networkDeviceService';
 import { DeviceEditorDialog } from './DeviceEditorDialog';
 import { EdgeEditorDialog } from './EdgeEditorDialog';
@@ -18,7 +19,7 @@ import DeviceNode from './DeviceNode';
 import { showError } from '@/utils/toast';
 import { useNetworkMapLogic } from '@/hooks/useNetworkMapLogic'; // Import the new hook
 
-const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage }: { devices: NetworkDevice[]; onMapUpdate: () => void; mapId: string | null; canAddDevice: boolean; licenseMessage: string }) => {
+const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage, userRole }: { devices: NetworkDevice[]; onMapUpdate: () => void; mapId: string | null; canAddDevice: boolean; licenseMessage: string; userRole: User['role'] }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -47,6 +48,7 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage 
     mapId,
     canAddDevice,
     licenseMessage,
+    userRole, // Pass userRole to the hook
     onMapUpdate,
   });
 
@@ -71,6 +73,8 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage 
     reader.readAsText(file);
   };
 
+  const canEdit = userRole === 'admin';
+
   return (
     <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg bg-gray-900">
       <ReactFlow
@@ -80,10 +84,13 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage 
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
-        onNodeDragStop={onNodeDragStop}
-        onEdgeClick={onEdgeClick}
+        onNodeDragStop={canEdit ? onNodeDragStop : undefined} // Only allow drag for admin
+        onEdgeClick={canEdit ? onEdgeClick : undefined} // Only allow edge click for admin
         fitView
         fitViewOptions={{ padding: 0.1 }}
+        nodesDraggable={canEdit} // Make nodes draggable only for admin
+        nodesConnectable={canEdit} // Make nodes connectable only for admin
+        elementsSelectable={true} // Allow selection for all users
       >
         <Controls />
         <MiniMap
@@ -100,13 +107,13 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage 
         <Background gap={16} size={1} color="#444" />
       </ReactFlow>
       <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-        <Button onClick={handleAddDevice} size="sm" disabled={!mapId || !canAddDevice} title={!canAddDevice ? licenseMessage : ''}>
+        <Button onClick={handleAddDevice} size="sm" disabled={!mapId || !canAddDevice || !canEdit} title={!canEdit ? "Only admin users can add devices." : (!canAddDevice ? licenseMessage : '')}>
           <PlusCircle className="h-4 w-4 mr-2" />Add Device
         </Button>
         <Button onClick={handleExportMap} variant="outline" size="sm" disabled={!mapId}>
           <Download className="h-4 w-4 mr-2" />Export
         </Button>
-        <Button onClick={() => importInputRef.current?.click()} variant="outline" size="sm" disabled={!mapId}>
+        <Button onClick={() => importInputRef.current?.click()} variant="outline" size="sm" disabled={!mapId || !canEdit} title={!canEdit ? "Only admin users can import maps." : ''}>
           <Upload className="h-4 w-4 mr-2" />Import
         </Button>
         <input

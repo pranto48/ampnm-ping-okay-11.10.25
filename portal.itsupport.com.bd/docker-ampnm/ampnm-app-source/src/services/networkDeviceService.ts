@@ -80,6 +80,14 @@ export interface FullDashboardData {
   recent_activity: RecentActivity[];
 }
 
+// NEW: User interface
+export interface User {
+  id: string;
+  username: string;
+  role: 'admin' | 'user';
+  created_at: string;
+}
+
 const callPhpApi = async (action: string, method: 'GET' | 'POST', params?: Record<string, any>, body?: any) => {
   const options: RequestInit = {
     method: method,
@@ -296,6 +304,29 @@ export const forceLicenseRecheck = async (): Promise<{ success: boolean; message
 
 export const updateAppLicenseKey = async (newLicenseKey: string): Promise<{ success: boolean; message: string; license_status_code: LicenseStatus['license_status_code']; license_message: string; app_license_key: string }> => {
   return await callPhpApi('update_app_license_key', 'POST', undefined, { new_license_key: newLicenseKey });
+};
+
+// NEW: User Management API calls
+export const getUsers = async (): Promise<User[]> => {
+  const data = await callPhpApi('get_users', 'GET');
+  return data.map((u: any) => ({
+    id: String(u.id),
+    username: u.username,
+    role: u.role,
+    created_at: u.created_at,
+  })) as User[];
+};
+
+export const createUser = async (username: string, password: string, role: User['role']) => {
+  return await callPhpApi('create_user', 'POST', undefined, { username, password, role });
+};
+
+export const updateUserRole = async (id: string, role: User['role']) => {
+  return await callPhpApi('update_user_role', 'POST', undefined, { id, role });
+};
+
+export const deleteUser = async (id: string) => {
+  return await callPhpApi('delete_user', 'POST', undefined, { id });
 };
 
 // Real-time subscription for device changes - NOT USED WITH PHP BACKEND
