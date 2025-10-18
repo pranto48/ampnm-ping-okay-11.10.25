@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Wifi, Server, Clock, RefreshCw, Network, Key, Users } from "lucide-react"; // Added Users icon
+import { Activity, Wifi, Server, Clock, RefreshCw, Network, Key, Users, Package } from "lucide-react"; // Added Package icon
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
 import NetworkScanner from "@/components/NetworkScanner";
@@ -18,6 +18,7 @@ import DashboardContent from "@/components/DashboardContent";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import LicenseManager from "@/components/LicenseManager";
 import UserManagement from "@/components/UserManagement"; // Import the new UserManagement component
+import Products from "./Products"; // Import the Products page
 
 const MainApp = () => {
   const {
@@ -122,6 +123,10 @@ const MainApp = () => {
             <TabsTrigger value="license" className="flex items-center gap-2">
               <Key className="h-4 w-4" />
               License
+            </TabsTrigger>
+            <TabsTrigger value="products" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Products
             </TabsTrigger>
             {userRole === 'admin' && ( // Conditionally render User Management tab
               <TabsTrigger value="users" className="flex items-center gap-2">
@@ -272,6 +277,10 @@ const MainApp = () => {
 
           <TabsContent value="license">
             <LicenseManager licenseStatus={licenseStatus} fetchLicenseStatus={fetchLicenseStatus} />
+          </TabsContent>
+          
+          <TabsContent value="products">
+            <Products />
           </TabsContent>
 
           {userRole === 'admin' && ( // Conditionally render UserManagement content
