@@ -388,7 +388,7 @@ services:
       - MYSQL_ROOT_PASSWORD=rootpassword
       - ADMIN_PASSWORD=password
       - LICENSE_API_URL={$license_api_url}
-      # APP_LICENSE_KEY is no longer hardcoded here; it's set via web UI
+      # APP_LICENSE_KEY is no longer set here. It is configured via the web UI after initial setup.
     ports:
       - "2266:2266" # Main app will now run on port 2266
     restart: unless-stopped
@@ -554,6 +554,7 @@ function admin_header($title = "Admin Panel") {
     
     $admin_nav_links = [
         'index.php' => 'Dashboard',
+        'orders.php' => '<i class="fas fa-shopping-bag mr-1"></i> Orders', // NEW ORDERS LINK
         'users.php' => 'Customers',
         'license-manager.php' => 'Licenses',
         'products.php' => 'Products',

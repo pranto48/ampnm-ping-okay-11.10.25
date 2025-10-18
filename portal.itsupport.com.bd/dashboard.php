@@ -14,6 +14,10 @@ if (isset($_GET['order_success'])) {
     $message = '<div class="alert-glass-success mb-4">Your order #' . htmlspecialchars($_GET['order_success']) . ' has been placed successfully! Your licenses are now available below.</div>';
 }
 
+if (isset($_GET['order_pending'])) {
+    $message = '<div class="alert-glass-warning mb-4">Order #' . htmlspecialchars($_GET['order_pending']) . ' placed successfully! Your payment is pending approval. Licenses will be issued once payment is confirmed by an administrator.</div>';
+}
+
 // Fetch customer's licenses
 $stmt_licenses = $pdo->prepare("
     SELECT l.*, p.name as product_name, p.description as product_description
@@ -66,7 +70,7 @@ portal_header("My Dashboard - IT Support BD Portal");
                             </button>
                         </div>
                         <div class="grid grid-cols-2 gap-2 text-sm text-gray-200">
-                            <span><strong>Status:</strong> <span class="font-semibold <?= $license['status'] == 'active' ? 'text-green-400' : 'text-red-400' ?>"><?= htmlspecialchars(ucfirst($license['status'])) ?></span></span>
+                            <span><strong>Status:</strong> <span class="font-semibold <?= $license['status'] == 'active' || $license['status'] == 'free' ? 'text-green-400' : 'text-red-400' ?>"><?= htmlspecialchars(ucfirst($license['status'])) ?></span></span>
                             <span><strong>Max Devices:</strong> <?= htmlspecialchars($license['max_devices']) ?></span>
                             <span><strong>Issued:</strong> <?= date('Y-m-d', strtotime($license['issued_at'])) ?></span>
                             <span><strong>Expires:</strong> <?= date('Y-m-d', strtotime($license['expires_at'])) ?></span>
@@ -102,7 +106,17 @@ portal_header("My Dashboard - IT Support BD Portal");
                             <span class="text-sm text-gray-300"><?= date('Y-m-d H:i', strtotime($order['order_date'])) ?></span>
                         </div>
                         <p class="text-gray-200 mb-2"><strong>Total:</strong> $<?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></p>
-                        <p class="text-gray-200 mb-2"><strong>Status:</strong> <span class="font-semibold <?= $order['status'] == 'completed' ? 'text-green-400' : 'text-red-400' ?>"><?= htmlspecialchars(ucfirst($order['status'])) ?></span></p>
+                        <p class="text-gray-200 mb-2">
+                            <strong>Status:</strong> 
+                            <span class="font-semibold 
+                                <?= $order['status'] == 'completed' ? 'text-green-400' : 
+                                   ($order['status'] == 'pending_approval' ? 'text-yellow-400' : 'text-red-400') ?>">
+                                <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $order['status']))) ?>
+                            </span>
+                            <?php if ($order['status'] == 'pending_approval'): ?>
+                                <span class="text-xs text-yellow-200 ml-2">(Awaiting Admin Approval)</span>
+                            <?php endif; ?>
+                        </p>
                         <?php if (!empty($order['license_keys'])): ?>
                             <p class="text-gray-200 text-sm"><strong>Licenses:</strong> <span class="font-mono break-all"><?= htmlspecialchars($order['license_keys']) ?></span></p>
                         <?php endif; ?>

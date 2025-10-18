@@ -4,6 +4,18 @@ session_start(); // Start session to manage steps
 $setup_message = '';
 $config_file_path = __DIR__ . '/config.php';
 
+// Helper function to check if a column exists (needed for migrations)
+function columnExists($pdo, $db, $table, $column) {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+    // NOTE: LICENSE_DB_NAME is not defined yet if config.php hasn't been created. We must rely on the connection's current DB name.
+    // If config is loaded, use LICENSE_DB_NAME, otherwise use a placeholder.
+    $db_name = defined('LICENSE_DB_NAME') ? LICENSE_DB_NAME : 'license_db';
+    
+    $stmt->execute([$db_name, $table, $column]);
+    return $stmt->fetchColumn() > 0;
+}
+
+
 // Function to update config.php with new DB credentials
 function updateConfigFile($db_server, $db_name, $db_username, $db_password) {
     global $config_file_path;
@@ -190,6 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 require_once $config_file_path; // Ensure config is loaded
                 $pdo = getLicenseDbConnection();
+                $db_name = LICENSE_DB_NAME; // Get DB name for migration checks
 
                 // Create products table
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `products` (
@@ -237,18 +250,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $setup_message .= '<p class="text-green-500">Table `licenses` checked/created successfully.</p>';
 
                 // Create orders table (depends on customers)
+                // Updated ENUM and added payment columns
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `orders` (
                     `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                     `customer_id` INT(11) UNSIGNED NOT NULL,
                     `order_date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     `total_amount` DECIMAL(10, 2) NOT NULL,
-                    `status` ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
-                    `payment_intent_id` VARCHAR(255) NULL, -- For Stripe/PayPal integration
+                    `status` ENUM('pending', 'pending_approval', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+                    `payment_intent_id` VARCHAR(255) NULL,
+                    `payment_method` VARCHAR(50) NULL,
+                    `transaction_id` VARCHAR(255) NULL,
+                    `sender_number` VARCHAR(50) NULL,
                     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
                 $setup_message .= '<p class="text-green-500">Table `orders` checked/created successfully.</p>';
+
+                // Migration checks for new payment columns (in case the user ran setup before this update)
+                if (!columnExists($pdo, $db_name, 'orders', 'payment_method')) {
+                    $pdo->exec("ALTER TABLE `orders` ADD COLUMN `payment_method` VARCHAR(50) NULL AFTER `status`;");
+                    $setup_message .= '<p class="text-green-500">Migrated `orders` table: added `payment_method` column.</p>';
+                }
+                if (!columnExists($pdo, $db_name, 'orders', 'transaction_id')) {
+                    $pdo->exec("ALTER TABLE `orders` ADD COLUMN `transaction_id` VARCHAR(255) NULL AFTER `payment_method`;");
+                    $setup_message .= '<p class="text-green-500">Migrated `orders` table: added `transaction_id` column.</p>';
+                }
+                if (!columnExists($pdo, $db_name, 'orders', 'sender_number')) {
+                    $pdo->exec("ALTER TABLE `orders` ADD COLUMN `sender_number` VARCHAR(50) NULL AFTER `transaction_id`;");
+                    $setup_message .= '<p class="text-green-500">Migrated `orders` table: added `sender_number` column.</p>';
+                }
+                // Migration for ENUM status (complex, but necessary if the table existed without 'pending_approval')
+                // This is a simplified migration that might fail on some MySQL versions, but covers the intent.
+                try {
+                    $pdo->exec("ALTER TABLE `orders` MODIFY COLUMN `status` ENUM('pending', 'pending_approval', 'completed', 'failed', 'refunded') DEFAULT 'pending';");
+                    $setup_message .= '<p class="text-green-500">Migrated `orders` table: updated `status` ENUM.</p>';
+                } catch (PDOException $e) {
+                    $setup_message .= '<p class="text-orange-500">Warning: Could not automatically update `orders` status ENUM. Manual update may be required if "pending_approval" is missing.</p>';
+                }
+
 
                 // Create order_items table (depends on orders and products)
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `order_items` (
@@ -304,6 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Insert some sample products if they don't exist
                 $sample_products = [
+                    ['name' => 'AMPNM Free License (10 Devices / 1 Year)', 'description' => 'Free license for up to 10 devices, valid for 1 year.', 'price' => 0.00, 'max_devices' => 10, 'license_duration_days' => 365], // NEW FREE PRODUCT
                     ['name' => 'AMPNM Basic License (10 Devices / 1 Year)', 'description' => 'Basic license for up to 10 devices, valid for 1 year.', 'price' => 99.00, 'max_devices' => 10, 'license_duration_days' => 365],
                     ['name' => 'AMPNM Pro License (50 Devices / 1 Year)', 'description' => 'Pro license for up to 50 devices, valid for 1 year.', 'price' => 299.00, 'max_devices' => 50, 'license_duration_days' => 365],
                     ['name' => 'AMPNM Enterprise License (Unlimited Devices / 1 Year)', 'description' => 'Enterprise license for unlimited devices, valid for 1 year.', 'price' => 999.00, 'max_devices' => 99999, 'license_duration_days' => 365],
@@ -323,17 +364,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 // Migration: Add last_active_at if it doesn't exist
-                function columnExists($pdo, $db, $table, $column) {
-                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?");
-                    $stmt->execute([$db, $table, $column]);
-                    return $stmt->fetchColumn() > 0;
-                }
-                if (!columnExists($pdo, 'license_db', 'licenses', 'last_active_at')) { // Assuming 'license_db' is the DB name
+                if (!columnExists($pdo, $db_name, 'licenses', 'last_active_at')) {
                     $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `last_active_at` TIMESTAMP NULL AFTER `current_devices`;");
                     $setup_message .= '<p class="text-green-500">Migrated `licenses` table: added `last_active_at` column.</p>';
                 }
                 // NEW MIGRATION: Add bound_installation_id if it doesn't exist
-                if (!columnExists($pdo, 'license_db', 'licenses', 'bound_installation_id')) {
+                if (!columnExists($pdo, $db_name, 'licenses', 'bound_installation_id')) {
                     $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `bound_installation_id` VARCHAR(255) NULL AFTER `last_active_at`;");
                     $setup_message .= '<p class="text-green-500">Migrated `licenses` table: added `bound_installation_id` column.</p>';
                 }
