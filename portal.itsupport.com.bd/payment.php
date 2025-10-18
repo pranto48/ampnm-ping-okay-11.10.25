@@ -24,27 +24,26 @@ $payment_status = '';
 $order_id = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
-    // --- Simulate Payment Processing ---
-    // In a real application, this is where you would integrate with a payment gateway (e.g., Stripe, PayPal).
-    // For this example, we'll simulate a successful payment.
-    $payment_successful = true; // Assume payment is always successful for now
+    $payment_method = $_POST['payment_method'] ?? '';
+    $transaction_id = trim($_POST['transaction_id'] ?? '');
+    $sender_number = trim($_POST['sender_number'] ?? '');
 
-    if ($payment_successful) {
-        try {
-            $pdo->beginTransaction();
+    try {
+        $pdo->beginTransaction();
 
-            // 1. Create the Order
-            $stmt = $pdo->prepare("INSERT INTO `orders` (customer_id, total_amount, status) VALUES (?, ?, 'completed')");
-            $stmt->execute([$customer_id, $total_amount]);
-            $order_id = $pdo->lastInsertId();
+        // 1. Create the Order
+        $status = ($total_amount == 0) ? 'completed' : 'pending_approval'; // Free licenses are completed immediately
+        $stmt = $pdo->prepare("INSERT INTO `orders` (customer_id, total_amount, status, payment_method, transaction_id, sender_number) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$customer_id, $total_amount, $status, $payment_method, $transaction_id, $sender_number]);
+        $order_id = $pdo->lastInsertId();
 
-            // 2. Add Order Items and Generate Licenses
+        // 2. Handle License Generation (Only for Free/Completed orders)
+        if ($status === 'completed') {
             foreach ($cart_items as $item) {
                 $product_id = $item['product_id'];
                 $quantity = $item['quantity'];
                 $price = $item['price'];
 
-                // Fetch product details to get max_devices and duration
                 $stmt = $pdo->prepare("SELECT max_devices, license_duration_days FROM `products` WHERE id = ?");
                 $stmt->execute([$product_id]);
                 $product_details = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -56,32 +55,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
                 $max_devices = $product_details['max_devices'];
                 $license_duration_days = $product_details['license_duration_days'];
 
-                // Generate a unique license key
                 $license_key = generateLicenseKey();
                 $expires_at = date('Y-m-d H:i:s', strtotime("+$license_duration_days days"));
 
-                // Insert into licenses table
                 $stmt = $pdo->prepare("INSERT INTO `licenses` (customer_id, product_id, license_key, status, max_devices, expires_at) VALUES (?, ?, ?, 'active', ?, ?)");
                 $stmt->execute([$customer_id, $product_id, $license_key, $max_devices, $expires_at]);
 
-                // Add to order_items, linking the generated license key
                 $stmt = $pdo->prepare("INSERT INTO `order_items` (order_id, product_id, quantity, price, license_key_generated) VALUES (?, ?, ?, ?, ?)");
                 $stmt->execute([$order_id, $product_id, $quantity, $price, $license_key]);
             }
-
-            $pdo->commit();
             $_SESSION['cart'] = []; // Clear cart after successful order
-            $payment_status = 'success';
+            $pdo->commit();
             header('Location: dashboard.php?order_success=' . $order_id);
             exit;
-
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            error_log("Payment processing error: " . $e->getMessage());
-            $payment_status = 'error';
         }
-    } else {
-        $payment_status = 'failed';
+
+        // 3. Handle Pending Approval orders (Paid orders)
+        if ($status === 'pending_approval') {
+            // Insert order items without generating licenses yet
+            foreach ($cart_items as $item) {
+                $stmt = $pdo->prepare("INSERT INTO `order_items` (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$order_id, $item['product_id'], $item['quantity'], $item['price']]);
+            }
+            $_SESSION['cart'] = []; // Clear cart
+            $pdo->commit();
+            header('Location: dashboard.php?order_pending=' . $order_id);
+            exit;
+        }
+
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        error_log("Payment processing error: " . $e->getMessage());
+        $payment_status = 'error';
     }
 }
 
@@ -93,10 +98,6 @@ portal_header("Checkout - IT Support BD Portal");
 <?php if ($payment_status === 'error'): ?>
     <div class="alert-glass-error mb-4">
         Payment failed due to an internal error. Please try again or contact support.
-    </div>
-<?php elseif ($payment_status === 'failed'): ?>
-    <div class="alert-glass-error mb-4">
-        Your payment could not be processed. Please check your details and try again.
     </div>
 <?php endif; ?>
 
@@ -116,17 +117,96 @@ portal_header("Checkout - IT Support BD Portal");
     </div>
 
     <h2 class="text-2xl font-semibold text-white mb-4">Payment Information</h2>
-    <div class="alert-glass-warning mb-6">
-        <p class="font-bold">Payment Gateway Placeholder</p>
-        <p class="text-sm">In a real application, you would integrate with a payment provider like Stripe or PayPal here.</p>
-        <p class="text-sm">For this demo, clicking "Confirm Payment" will simulate a successful transaction.</p>
-    </div>
 
-    <form action="payment.php" method="POST">
-        <button type="submit" name="confirm_payment" class="btn-glass-primary w-full">
-            <i class="fas fa-credit-card mr-2"></i>Confirm Payment
-        </button>
-    </form>
+    <?php if ($total_amount == 0): ?>
+        <div class="alert-glass-success mb-6">
+            <p class="font-bold">Free License Checkout</p>
+            <p class="text-sm">Your total is $0. Click "Confirm Order" to receive your free license immediately.</p>
+        </div>
+        <form action="payment.php" method="POST">
+            <input type="hidden" name="confirm_payment" value="1">
+            <input type="hidden" name="payment_method" value="free">
+            <button type="submit" class="btn-glass-primary w-full">
+                <i class="fas fa-check-circle mr-2"></i>Confirm Order (Free)
+            </button>
+        </form>
+    <?php else: ?>
+        <div class="space-y-6">
+            <!-- Payment Method Selection -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold text-white">Select Payment Method</h3>
+                
+                <!-- Buy Me A Coffee -->
+                <div class="p-4 bg-gray-800/50 rounded-lg border border-gray-600">
+                    <h4 class="text-lg font-medium text-white mb-2">External Payment Link</h4>
+                    <p class="text-gray-300 mb-3">Pay instantly using Buy Me A Coffee.</p>
+                    <a href="https://buymeacoffee.com/pranto48" target="_blank" class="btn-glass-primary w-full text-center bg-yellow-500 hover:bg-yellow-600">
+                        <i class="fas fa-mug-hot mr-2"></i>Pay via Buy Me A Coffee
+                    </a>
+                </div>
+
+                <!-- Manual Payment -->
+                <div class="p-4 bg-gray-800/50 rounded-lg border border-gray-600">
+                    <h4 class="text-lg font-medium text-white mb-2">Manual Payment (Bkash, Rocket, Nagad)</h4>
+                    <p class="text-gray-300 mb-3">Transfer $<?= htmlspecialchars(number_format($total_amount, 2)) ?> to one of the following numbers (Personal Account):</p>
+                    
+                    <div class="grid grid-cols-3 gap-4 text-center mb-4">
+                        <div class="bg-pink-800/30 p-3 rounded-lg">
+                            <strong class="text-pink-300">Bkash</strong>
+                            <p class="font-mono text-sm text-white">01915822266</p>
+                            <p class="text-xs text-pink-400">(Personal)</p>
+                        </div>
+                        <div class="bg-red-800/30 p-3 rounded-lg">
+                            <strong class="text-red-300">Rocket</strong>
+                            <p class="font-mono text-sm text-white">019158222660</p>
+                            <p class="text-xs text-red-400">(Personal)</p>
+                        </div>
+                        <div class="bg-purple-800/30 p-3 rounded-lg">
+                            <strong class="text-purple-300">Nagad</strong>
+                            <p class="font-mono text-sm text-white">01915822266</p>
+                            <p class="text-xs text-purple-400">(Personal)</p>
+                        </div>
+                    </div>
+
+                    <form action="payment.php" method="POST" class="space-y-4">
+                        <input type="hidden" name="confirm_payment" value="1">
+                        
+                        <div>
+                            <label for="payment_method" class="block text-gray-200 text-sm font-bold mb-2">Payment Method Used:</label>
+                            <select id="payment_method" name="payment_method" class="form-glass-input" required>
+                                <option value="">-- Select Method --</option>
+                                <option value="bkash">Bkash</option>
+                                <option value="rocket">Rocket</option>
+                                <option value="nagad">Nagad</option>
+                                <option value="buymeacoffee">Buy Me A Coffee</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="transaction_id" class="block text-gray-200 text-sm font-bold mb-2">Transaction ID / Reference:</label>
+                            <input type="text" id="transaction_id" name="transaction_id" class="form-glass-input" placeholder="Enter Transaction ID" required>
+                        </div>
+                        <div>
+                            <label for="sender_number" class="block text-gray-200 text-sm font-bold mb-2">Sender Number (Optional):</label>
+                            <input type="text" id="sender_number" name="sender_number" class="form-glass-input" placeholder="e.g., 01XXXXXXXXX">
+                        </div>
+                        
+                        <button type="submit" class="btn-glass-primary w-full bg-green-600 hover:bg-green-700">
+                            <i class="fas fa-paper-plane mr-2"></i>Confirm Manual Payment
+                        </button>
+                        <p class="text-xs text-gray-400 mt-2 text-center">Your order will be marked as 'Pending Approval' until an admin verifies the payment.</p>
+                    </form>
+                </div>
+
+                <!-- Bank Transfer (Disabled) -->
+                <div class="p-4 bg-gray-800/50 rounded-lg border border-gray-600 opacity-50 cursor-not-allowed">
+                    <h4 class="text-lg font-medium text-white mb-2">Bank Transfer</h4>
+                    <div class="alert-glass-warning text-center">
+                        <i class="fas fa-clock mr-2"></i>Coming Soon
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <?php portal_footer(); ?>
