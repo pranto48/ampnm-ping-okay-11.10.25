@@ -2,7 +2,7 @@
 // This file is included by api.php and assumes $pdo, $action, and $input are available.
 
 // Ensure only admin can perform these actions
-if ($_SESSION['username'] !== 'admin') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     http_response_code(403);
     echo json_encode(['error' => 'Forbidden: Only admin can manage users.']);
     exit;
@@ -10,21 +10,27 @@ if ($_SESSION['username'] !== 'admin') {
 
 switch ($action) {
     case 'get_users':
-        $stmt = $pdo->query("SELECT id, username, created_at FROM users ORDER BY username ASC");
+        $stmt = $pdo->query("SELECT id, username, role, created_at FROM users ORDER BY username ASC");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($users);
         break;
-
-    // Removed 'get_supabase_users' action as it's no longer needed.
 
     case 'create_user':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $username = $input['username'] ?? '';
             $password = $input['password'] ?? '';
+            $role = $input['role'] ?? 'user'; // Default to 'user' role
 
             if (empty($username) || empty($password)) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Username and password are required.']);
+                exit;
+            }
+
+            // Validate role input
+            if (!in_array($role, ['admin', 'user'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid role specified.']);
                 exit;
             }
 
@@ -38,10 +44,41 @@ switch ($action) {
             }
 
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
-            $stmt->execute([$username, $hashed_password]);
+            $stmt = $pdo->prepare("INSERT INTO users (username, password, role) VALUES (?, ?, ?)");
+            $stmt->execute([$username, $hashed_password, $role]);
             
             echo json_encode(['success' => true, 'message' => 'User created successfully.']);
+        }
+        break;
+
+    case 'update_user_role': // NEW ACTION
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $input['id'] ?? null;
+            $new_role = $input['role'] ?? '';
+
+            if (!$id || empty($new_role)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'User ID and new role are required.']);
+                exit;
+            }
+
+            // Validate role input
+            if (!in_array($new_role, ['admin', 'user'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid role specified.']);
+                exit;
+            }
+
+            // Prevent admin from changing their own role or deleting themselves
+            if ($id == $_SESSION['user_id'] && $new_role !== 'admin') {
+                http_response_code(403);
+                echo json_encode(['error' => 'Cannot change your own role from admin.']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("UPDATE users SET role = ? WHERE id = ?");
+            $stmt->execute([$new_role, $id]);
+            echo json_encode(['success' => true, 'message' => 'User role updated successfully.']);
         }
         break;
 
@@ -55,12 +92,9 @@ switch ($action) {
             }
 
             // Prevent admin from deleting themselves
-            $stmt = $pdo->prepare("SELECT username FROM users WHERE id = ?");
-            $stmt->execute([$id]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($user && $user['username'] === 'admin') {
+            if ($id == $_SESSION['user_id']) {
                 http_response_code(403);
-                echo json_encode(['error' => 'Cannot delete the admin user.']);
+                echo json_encode(['error' => 'Cannot delete your own admin account.']);
                 exit;
             }
 

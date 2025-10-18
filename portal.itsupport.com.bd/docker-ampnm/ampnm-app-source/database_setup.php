@@ -44,14 +44,28 @@ try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname", $app_username, $app_password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Step 1: Ensure users table exists first
+    // Step 1: Ensure users table exists first with 'role' column
     $pdo->exec("CREATE TABLE IF NOT EXISTS `users` (
         `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         `username` VARCHAR(50) NOT NULL UNIQUE,
         `password` VARCHAR(255) NOT NULL,
+        `role` ENUM('admin', 'user') DEFAULT 'user' NOT NULL,
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     message("Table 'users' checked/created successfully.");
+
+    // Migration: Add 'role' column if it doesn't exist
+    function columnExists($pdo, $db, $table, $column) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+        $stmt->execute([$db, $table, $column]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    if (!columnExists($pdo, $dbname, 'users', 'role')) {
+        $pdo->exec("ALTER TABLE `users` ADD COLUMN `role` ENUM('admin', 'user') DEFAULT 'user' NOT NULL AFTER `password`;");
+        message("Migrated 'users' table: added 'role' column.");
+    }
+
 
     // Step 2: Ensure admin user exists and set password from environment variable
     $admin_user = 'admin';
@@ -64,9 +78,9 @@ try {
 
     if (!$admin_data) {
         $admin_pass_hash = password_hash($admin_password, PASSWORD_DEFAULT);
-        $pdo->prepare("INSERT INTO `users` (username, password) VALUES (?, ?)")->execute([$admin_user, $admin_pass_hash]);
+        $pdo->prepare("INSERT INTO `users` (username, password, role) VALUES (?, ?, 'admin')")->execute([$admin_user, $admin_pass_hash]);
         $admin_id = $pdo->lastInsertId();
-        message("Created default user 'admin'.");
+        message("Created default user 'admin' with 'admin' role.");
         if ($is_default_password) {
             message("WARNING: Admin password is set to the default 'password'. Please change the ADMIN_PASSWORD in docker-compose.yml for security.", true);
         } else {
@@ -80,6 +94,12 @@ try {
             $updateStmt = $pdo->prepare("UPDATE `users` SET password = ? WHERE id = ?");
             $updateStmt->execute([$new_hash, $admin_id]);
             message("Updated admin password from environment variable.");
+        }
+        // Ensure admin user has 'admin' role
+        $stmt = $pdo->prepare("UPDATE `users` SET role = 'admin' WHERE id = ? AND role != 'admin'");
+        $stmt->execute([$admin_id]);
+        if ($stmt->rowCount() > 0) {
+            message("Ensured 'admin' user has 'admin' role.");
         }
     }
 
@@ -216,12 +236,6 @@ try {
     }
 
     // Step 4: Schema migration section to handle upgrades
-    function columnExists($pdo, $db, $table, $column) {
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?");
-        $stmt->execute([$db, $table, $column]);
-        return $stmt->fetchColumn() > 0;
-    }
-
     // User ID migrations for existing tables
     if (!columnExists($pdo, $dbname, 'maps', 'user_id')) {
         $pdo->exec("ALTER TABLE `maps` ADD COLUMN `user_id` INT(6) UNSIGNED;");
@@ -331,12 +345,6 @@ try {
     }
 
     // Step 7: Indexing for Performance
-    function indexExists($pdo, $db, $table, $index) {
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ?");
-        $stmt->execute([$db, $table, $index]); // Corrected to use $index for INDEX_NAME
-        return $stmt->fetchColumn() > 0;
-    }
-
     message("Applying database indexes for performance...");
     $indexes = [
         'ping_results' => ['idx_host_created_at' => '(`host`, `created_at` DESC)'],
