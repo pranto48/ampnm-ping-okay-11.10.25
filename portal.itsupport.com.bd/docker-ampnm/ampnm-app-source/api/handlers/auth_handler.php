@@ -56,4 +56,12 @@ switch ($action) {
             }
         }
         break;
+    case 'get_user_info': // NEW ACTION
+        // Return the current user's role from the session
+        echo json_encode([
+            'role' => $_SESSION['role'] ?? 'user',
+            'user_id' => $_SESSION['user_id'] ?? null,
+            'username' => $_SESSION['username'] ?? null,
+        ]);
+        break;
 }

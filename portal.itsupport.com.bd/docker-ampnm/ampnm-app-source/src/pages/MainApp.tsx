@@ -72,20 +72,17 @@ const MainApp = () => {
     }
   }, []);
 
-  // Placeholder function to fetch user role (security enforced by PHP API handlers)
   const fetchUserRole = useCallback(async () => {
     try {
-      // Assuming a simple endpoint exists to check if the current session user is admin
-      // NOTE: This endpoint doesn't exist yet, but we assume it returns { role: 'admin' | 'user' }
-      // For now, we rely on the PHP session check in the API handlers for security.
-      // We'll default to 'admin' here for testing the UI if the PHP session is not exposed directly.
-      // Since the PHP backend is running, we'll assume the user is 'admin' if they are logged in, 
-      // as the current PHP setup only allows 'admin' to log in to the AMPNM app.
-      // However, the PHP user_handler supports 'user' role, so we should rely on the PHP session.
-      // Since we cannot access PHP session directly, we'll assume 'admin' for the logged-in user 
-      // until a proper API endpoint is created to expose the role.
-      setUserRole('admin'); 
+      const response = await fetch('/api.php?action=get_user_info'); 
+      if (response.ok) {
+        const data = await response.json();
+        setUserRole(data.role);
+      } else {
+        setUserRole('user');
+      }
     } catch (error) {
+      console.error("Failed to fetch user role:", error);
       setUserRole('user'); 
     }
   }, []);
