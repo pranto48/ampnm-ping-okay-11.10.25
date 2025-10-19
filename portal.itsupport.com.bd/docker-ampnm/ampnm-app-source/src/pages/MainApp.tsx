@@ -30,6 +30,7 @@ import UserManagement from "@/components/UserManagement";
 import DockerUpdate from "@/components/DockerUpdate";
 import Products from "./Products";
 import Maintenance from "./Maintenance";
+import { Card, CardContent } from "@/components/ui/card";
 
 // Helper to get initial tab from URL hash
 const getInitialTab = () => {
@@ -37,12 +38,10 @@ const getInitialTab = () => {
   const validTabs = [
     "dashboard", "devices", "ping", "server-ping", "status", "scanner", 
     "history", "map", "license", "products", "users", "maintenance",
-    "status_logs", "email_notifications" // Include old PHP page names for compatibility
+    "status_logs", "email_notifications"
   ];
   if (validTabs.includes(hash)) {
-    // Map old PHP page names to new tab values
-    if (hash === "status_logs") return "status";
-    if (hash === "email_notifications") return "status"; // Grouping email notifications under status for now
+    if (hash === "status_logs" || hash === "email_notifications") return "status";
     return hash;
   }
   return "dashboard";
@@ -56,7 +55,7 @@ const MainApp = () => {
     devices,
     dashboardStats,
     recentActivity,
-    isLoading,
+    isLoading: isDashboardLoading,
     fetchMaps,
     fetchDashboardData,
   } = useDashboardData();
@@ -72,23 +71,23 @@ const MainApp = () => {
   });
   const [userRole, setUserRole] = useState<User["role"]>("user");
   const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
+  const [isLicenseStatusLoading, setIsLicenseStatusLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(getInitialTab());
 
   const fetchLicenseStatus = useCallback(async () => {
+    setIsLicenseStatusLoading(true);
     try {
       const status = await getLicenseStatus();
       setLicenseStatus(status);
     } catch (error) {
       console.error("Failed to load license status:", error);
-      setLicenseStatus({
-        app_license_key: "",
-        can_add_device: false,
-        max_devices: 0,
+      setLicenseStatus(prev => ({
+        ...prev,
         license_message: "Error loading license status.",
         license_status_code: "error",
-        license_grace_period_end: null,
-        installation_id: "",
-      });
+      }));
+    } finally {
+      setIsLicenseStatusLoading(false);
     }
   }, []);
 
@@ -111,16 +110,20 @@ const MainApp = () => {
   }, []);
 
   const isAdmin = useMemo(() => userRole === "admin", [userRole]);
+  const isAppLoading = isUserRoleLoading || isLicenseStatusLoading;
 
   useEffect(() => {
     fetchUserRole();
-  }, [fetchUserRole]);
+    fetchLicenseStatus();
+  }, [fetchUserRole, fetchLicenseStatus]);
 
   useEffect(() => {
-    fetchLicenseStatus();
-    fetchDashboardData();
-    fetchMaps();
-  }, [fetchLicenseStatus, fetchDashboardData, fetchMaps]);
+    // Fetch dashboard data only after we know the license status and user role
+    if (!isAppLoading) {
+      fetchDashboardData();
+      fetchMaps();
+    }
+  }, [isAppLoading, fetchDashboardData, fetchMaps]);
 
   // Update URL hash when tab changes
   const handleTabChange = (value: string) => {
@@ -137,6 +140,15 @@ const MainApp = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  if (isAppLoading) {
+    return (
+      <div className="flex w-full flex-col items-center justify-center min-h-[80vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+        <p className="text-lg text-slate-400">Loading application data...</p>
+        <p className="text-sm text-slate-500 mt-2">Fetching user permissions and license status.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex w-full flex-col">
@@ -188,9 +200,7 @@ const MainApp = () => {
               <Package className="mr-2 h-4 w-4" />
               Products
             </TabsTrigger>
-            {isUserRoleLoading ? (
-              <Skeleton className="h-9 w-20" />
-            ) : isAdmin && (
+            {isAdmin && (
               <>
                 <TabsTrigger value="users">
                   <Users className="mr-2 h-4 w-4" />
@@ -212,7 +222,7 @@ const MainApp = () => {
               devices={devices}
               dashboardStats={dashboardStats}
               recentActivity={recentActivity}
-              isLoading={isLoading}
+              isLoading={isDashboardLoading}
               fetchMaps={fetchMaps}
               fetchDashboardData={fetchDashboardData}
               licenseStatus={licenseStatus}
@@ -227,7 +237,7 @@ const MainApp = () => {
                 <CardDescription>Monitor the status of devices on your local network</CardDescription>
               </CardHeader>
               <CardContent>
-                {isLoading ? (
+                {isDashboardLoading ? (
                   <div className="space-y-4">
                     {[...Array(5)].map((_, i) => (
                       <Skeleton key={i} className="h-16 w-full rounded-lg" />
