@@ -49,6 +49,7 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
     handleImportMap,
     handleExportMap,
     handlePlaceExistingDevice,
+    canEdit, // Use canEdit status from the hook
   } = useNetworkMapLogic({
     initialDevices: devices,
     mapId,
@@ -92,8 +93,6 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
     handlePlaceExistingDevice(device, position);
     setIsPlaceDeviceOpen(false); // Close the dialog after placing
   }, [mapId, reactFlowInstance, handlePlaceExistingDevice]);
-
-  const canEdit = userRole === 'admin';
 
   return (
     <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg bg-gray-900">

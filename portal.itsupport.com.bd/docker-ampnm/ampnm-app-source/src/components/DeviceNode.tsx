@@ -63,6 +63,7 @@ const DeviceNode = ({ data }: { data: any }) => {
   const IconComponent = iconMap[data.icon] || Server;
   const iconSize = data.icon_size || 50;
   const nameTextSize = data.name_text_size || 14;
+  const canEdit = data.canEdit; // Get permission status
 
   const statusBorderColor =
     data.status === 'online'
@@ -124,25 +125,27 @@ const DeviceNode = ({ data }: { data: any }) => {
             )}
           </div>
         </CardContent>
-        <div className="absolute top-1 right-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => data.onEdit(data.id)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => data.onDelete(data.id)} className="text-red-500">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {canEdit && (
+          <div className="absolute top-1 right-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => data.onEdit(data.id)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => data.onDelete(data.id)} className="text-red-500">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </Card>
     </>
   );
