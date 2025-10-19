@@ -79,10 +79,12 @@ const MainApp = () => {
         const data = await response.json();
         setUserRole(data.role);
       } else {
+        // If response is not ok, default to 'user'
         setUserRole('user');
       }
     } catch (error) {
       console.error("Failed to fetch user role:", error);
+      // On network error, default to 'user'
       setUserRole('user'); 
     }
   }, []);
