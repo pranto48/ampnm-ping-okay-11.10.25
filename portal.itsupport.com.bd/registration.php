@@ -89,32 +89,32 @@ portal_header("Register - IT Support BD Portal");
                 <div>
                     <label for="first_name" class="sr-only">First Name</label>
                     <input type="text" id="first_name" name="first_name" required
-                           class="form-glass-input relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                           class="form-glass-input"
                            placeholder="First Name" value="<?= htmlspecialchars($_POST['first_name'] ?? '') ?>">
                 </div>
                 <div>
                     <label for="last_name" class="sr-only">Last Name</label>
                     <input type="text" id="last_name" name="last_name" required
-                           class="form-glass-input relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                           class="form-glass-input"
                            placeholder="Last Name" value="<?= htmlspecialchars($_POST['last_name'] ?? '') ?>">
                 </div>
             </div>
             <div>
                 <label for="email" class="sr-only">Email address</label>
                 <input type="email" id="email" name="email" autocomplete="email" required
-                       class="form-glass-input relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                       class="form-glass-input"
                        placeholder="Email address" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
             </div>
             <div>
                 <label for="password" class="sr-only">Password</label>
                 <input type="password" id="password" name="password" autocomplete="new-password" required
-                       class="form-glass-input relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                       class="form-glass-input"
                        placeholder="Password">
             </div>
             <div>
                 <label for="confirm_password" class="sr-only">Confirm Password</label>
                 <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password" required
-                       class="form-glass-input relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                       class="form-glass-input"
                        placeholder="Confirm Password">
             </div>
             
