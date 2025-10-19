@@ -95,7 +95,7 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
   }, [mapId, reactFlowInstance, handlePlaceExistingDevice]);
 
   return (
-    <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg bg-gray-900">
+    <div style={{ height: '70vh', width: '100%' }} className="relative border rounded-lg bg-card">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -111,7 +111,7 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
         nodesConnectable={canEdit} // Make nodes connectable only for admin
         elementsSelectable={true} // Allow selection for all users
       >
-        <Controls />
+        <Controls className="[&_button]:bg-card [&_button]:border-border [&_button]:text-foreground [&_button:hover]:bg-primary [&_button:hover]:text-primary-foreground" />
         <MiniMap
           nodeColor={(n) => {
             switch (n.data.status) {
@@ -122,20 +122,21 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
           }}
           nodeStrokeWidth={3}
           maskColor="rgba(15, 23, 42, 0.8)"
+          className="bg-card"
         />
         <Background gap={16} size={1} color="#444" />
       </ReactFlow>
       <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-        <Button onClick={handleAddDevice} size="sm" disabled={!mapId || !canAddDevice || !canEdit} title={!canEdit ? "Only admin users can add devices." : (!canAddDevice ? licenseMessage : '')}>
+        <Button onClick={handleAddDevice} size="sm" disabled={!mapId || !canAddDevice || !canEdit} title={!canEdit ? "Only admin users can add devices." : (!canAddDevice ? licenseMessage : '')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
           <PlusCircle className="h-4 w-4 mr-2" />Add Device
         </Button>
         <Button onClick={() => setIsPlaceDeviceOpen(true)} size="sm" variant="secondary" disabled={!mapId || !canEdit} title={!canEdit ? "Only admin users can place devices." : ''}>
           <Server className="h-4 w-4 mr-2" />Place Existing
         </Button>
-        <Button onClick={handleExportMap} variant="outline" size="sm" disabled={!mapId}>
+        <Button onClick={handleExportMap} variant="outline" size="sm" disabled={!mapId} className="bg-card hover:bg-secondary text-foreground border-border">
           <Download className="h-4 w-4 mr-2" />Export
         </Button>
-        <Button onClick={() => importInputRef.current?.click()} variant="outline" size="sm" disabled={!mapId || !canEdit} title={!canEdit ? "Only admin users can import maps." : ''}>
+        <Button onClick={() => importInputRef.current?.click()} variant="outline" size="sm" disabled={!mapId || !canEdit} title={!canEdit ? "Only admin users can import maps." : ''} className="bg-card hover:bg-secondary text-foreground border-border">
           <Upload className="h-4 w-4 mr-2" />Import
         </Button>
         <input

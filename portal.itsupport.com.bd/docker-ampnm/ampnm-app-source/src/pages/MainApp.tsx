@@ -13,6 +13,13 @@ import {
   Settings,
   Map,
   WifiOff,
+  Desktop, // Added for Server Ping icon
+  Search, // Added for Network Scanner icon
+  History, // Added for Ping History icon
+  ShieldHalf, // Added for License icon
+  BoxOpen, // Added for Products icon
+  UserCog, // Added for Users icon
+  Tools, // Added for Maintenance icon
 } from "lucide-react";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
@@ -38,10 +45,8 @@ const getInitialTab = () => {
   const validTabs = [
     "dashboard", "devices", "ping", "server-ping", "status", "scanner", 
     "history", "map", "license", "products", "users", "maintenance",
-    "status_logs", "email_notifications"
   ];
   if (validTabs.includes(hash)) {
-    if (hash === "status_logs" || hash === "email_notifications") return "status";
     return hash;
   }
   return "dashboard";
@@ -143,9 +148,9 @@ const MainApp = () => {
   if (isAppLoading) {
     return (
       <div className="flex w-full flex-col items-center justify-center min-h-[80vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-        <p className="text-lg text-slate-400">Loading application data...</p>
-        <p className="text-sm text-slate-500 mt-2">Fetching user permissions and license status.</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-lg text-muted-foreground">Loading application data...</p>
+        <p className="text-sm text-muted-foreground mt-2">Fetching user permissions and license status.</p>
       </div>
     );
   }
@@ -154,9 +159,9 @@ const MainApp = () => {
     <div className="flex w-full flex-col">
       <div className="flex-1 space-y-4 p-4 pt-6 sm:p-8">
         {/* Temporary debug display for user role */}
-        <div className="bg-blue-500/20 text-blue-300 p-2 rounded-md text-sm mb-4">
+        {/* <div className="bg-blue-500/20 text-blue-300 p-2 rounded-md text-sm mb-4">
           Debug: Current User Role is <span className="font-bold capitalize">{userRole}</span>
-        </div>
+        </div> */}
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="flex flex-wrap h-auto p-1">
@@ -173,7 +178,7 @@ const MainApp = () => {
               Browser Ping
             </TabsTrigger>
             <TabsTrigger value="server-ping">
-              <Server className="mr-2 h-4 w-4" />
+              <Desktop className="mr-2 h-4 w-4" />
               Server Ping
             </TabsTrigger>
             <TabsTrigger value="status">
@@ -181,11 +186,11 @@ const MainApp = () => {
               Network Status
             </TabsTrigger>
             <TabsTrigger value="scanner">
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <Search className="mr-2 h-4 w-4" />
               Network Scanner
             </TabsTrigger>
             <TabsTrigger value="history">
-              <Clock className="mr-2 h-4 w-4" />
+              <History className="mr-2 h-4 w-4" />
               Ping History
             </TabsTrigger>
             <TabsTrigger value="map">
@@ -193,21 +198,21 @@ const MainApp = () => {
               Network Map
             </TabsTrigger>
             <TabsTrigger value="license">
-              <Key className="mr-2 h-4 w-4" />
+              <ShieldHalf className="mr-2 h-4 w-4" />
               License
             </TabsTrigger>
             <TabsTrigger value="products">
-              <Package className="mr-2 h-4 w-4" />
+              <BoxOpen className="mr-2 h-4 w-4" />
               Products
             </TabsTrigger>
             {isAdmin && (
               <>
                 <TabsTrigger value="users">
-                  <Users className="mr-2 h-4 w-4" />
+                  <UserCog className="mr-2 h-4 w-4" />
                   Users
                 </TabsTrigger>
                 <TabsTrigger value="maintenance">
-                  <Settings className="mr-2 h-4 w-4" />
+                  <Tools className="mr-2 h-4 w-4" />
                   Maintenance
                 </TabsTrigger>
               </>
@@ -313,10 +318,10 @@ const MainApp = () => {
 
           <TabsContent value="map">
             <div className="flex items-center gap-2 mb-4">
-              <label htmlFor="map-select" className="text-sm font-medium">Select Map:</label>
+              <label htmlFor="map-select" className="text-sm font-medium text-muted-foreground">Select Map:</label>
               <select
                 id="map-select"
-                className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 value={currentMapId || ''}
                 onChange={(e) => setCurrentMapId(e.target.value)}
               >

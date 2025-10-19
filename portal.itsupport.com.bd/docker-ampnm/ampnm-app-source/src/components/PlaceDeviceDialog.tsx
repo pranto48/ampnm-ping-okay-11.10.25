@@ -49,11 +49,11 @@ export const PlaceDeviceDialog = ({ isOpen, onClose, onPlace }: PlaceDeviceDialo
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full sm:max-w-[450px] flex flex-col max-h-[90vh]"> {/* Adjusted width here */}
+      <DialogContent className="w-full sm:max-w-[450px] flex flex-col max-h-[90vh] bg-card text-foreground"> {/* Adjusted width here */}
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             Place Existing Device
-            <Button variant="ghost" size="icon" onClick={fetchUnmappedDevices} disabled={isLoading}>
+            <Button variant="ghost" size="icon" onClick={fetchUnmappedDevices} disabled={isLoading} className="text-muted-foreground hover:text-primary">
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
           </DialogTitle>
@@ -66,7 +66,7 @@ export const PlaceDeviceDialog = ({ isOpen, onClose, onPlace }: PlaceDeviceDialo
           <div className="space-y-3">
             {isLoading ? (
               [...Array(4)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={i} className="flex items-center justify-between p-3 border rounded-lg bg-background border-border">
                   <Skeleton className="h-5 w-3/4" />
                   <Skeleton className="h-8 w-16" />
                 </div>
@@ -78,7 +78,7 @@ export const PlaceDeviceDialog = ({ isOpen, onClose, onPlace }: PlaceDeviceDialo
               </div>
             ) : (
               unmappedDevices.map((device) => (
-                <div key={device.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted transition-colors">
+                <div key={device.id} className="flex items-center justify-between p-3 border rounded-lg bg-background border-border hover:bg-secondary transition-colors">
                   <div className="flex items-center gap-3">
                     <Server className="h-5 w-5 text-muted-foreground" />
                     <div>
@@ -89,7 +89,7 @@ export const PlaceDeviceDialog = ({ isOpen, onClose, onPlace }: PlaceDeviceDialo
                   <Button 
                     size="sm" 
                     onClick={() => handlePlace(device)}
-                    className="h-8"
+                    className="h-8 bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     Place
                   </Button>
