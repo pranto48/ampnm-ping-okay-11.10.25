@@ -27,7 +27,7 @@ import DashboardContent from "@/components/DashboardContent";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import LicenseManager from "@/components/LicenseManager";
 import UserManagement from "@/components/UserManagement";
-import DockerUpdate from "@/components/DockerUpdate";
+import DockerUpdate from "@/components/DockerUpdate"; // Keep DockerUpdate component
 import Products from "./Products";
 
 const MainApp = () => {
@@ -320,7 +320,7 @@ const MainApp = () => {
 
           {isAdmin && (
             <TabsContent value="maintenance">
-              <DockerUpdate />
+              <DockerUpdate /> {/* Render the DockerUpdate component here */}
             </TabsContent>
           )}
         </Tabs>
