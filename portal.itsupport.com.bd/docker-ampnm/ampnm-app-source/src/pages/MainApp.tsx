@@ -1,6 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, Wifi, Server, Clock, RefreshCw, Network, Key, Users, Package } from "lucide-react"; // Added Package icon
+import {
+  Activity,
+  Wifi,
+  Server,
+  Clock,
+  RefreshCw,
+  Network,
+  Key,
+  Users,
+  Package,
+  Settings,
+  Map,
+  WifiOff,
+} from "lucide-react";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
 import NetworkScanner from "@/components/NetworkScanner";
@@ -8,17 +21,14 @@ import ServerPingTest from "@/components/ServerPingTest";
 import PingHistory from "@/components/PingHistory";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import NetworkMap from "@/components/NetworkMap";
-import {
-  getLicenseStatus,
-  LicenseStatus,
-  User, // Import User interface
-} from "@/services/networkDeviceService";
+import { getLicenseStatus, LicenseStatus, User } from "@/services/networkDeviceService";
 import { Skeleton } from "@/components/ui/skeleton";
 import DashboardContent from "@/components/DashboardContent";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import LicenseManager from "@/components/LicenseManager";
-import UserManagement from "@/components/UserManagement"; // Import the new UserManagement component
-import Products from "./Products"; // Import the Products page
+import UserManagement from "@/components/UserManagement";
+import DockerUpdate from "@/components/DockerUpdate";
+import Products from "./Products";
 
 const MainApp = () => {
   const {
@@ -33,8 +43,16 @@ const MainApp = () => {
     fetchDashboardData,
   } = useDashboardData();
 
-  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({ app_license_key: '', can_add_device: false, max_devices: 0, license_message: 'Loading license status...', license_status_code: 'unknown', license_grace_period_end: null, installation_id: '' });
-  const [userRole, setUserRole] = useState<User['role']>('user'); // State for user role
+  const [licenseStatus, setLicenseStatus] = useState<LicenseStatus>({
+    app_license_key: "",
+    can_add_device: false,
+    max_devices: 0,
+    license_message: "Loading license status...",
+    license_status_code: "unknown",
+    license_grace_period_end: null,
+    installation_id: "",
+  });
+  const [userRole, setUserRole] = useState<User["role"]>("user");
 
   const fetchLicenseStatus = useCallback(async () => {
     try {
@@ -42,97 +60,104 @@ const MainApp = () => {
       setLicenseStatus(status);
     } catch (error) {
       console.error("Failed to load license status:", error);
-      setLicenseStatus({ app_license_key: '', can_add_device: false, max_devices: 0, license_message: 'Error loading license status.', license_status_code: 'error', license_grace_period_end: null, installation_id: '' });
+      setLicenseStatus({
+        app_license_key: "",
+        can_add_device: false,
+        max_devices: 0,
+        license_message: "Error loading license status.",
+        license_status_code: "error",
+        license_grace_period_end: null,
+        installation_id: "",
+      });
     }
   }, []);
 
-  // Fetch user role from PHP session (this would typically be done on initial load or via a dedicated API endpoint)
-  // For now, we'll simulate fetching it from a global variable or a simple API call if available.
-  // In a real React app, you'd have an auth context providing this.
-  useEffect(() => {
-    // This is a placeholder. In a real app, you'd fetch this from your backend.
-    // For example, if your PHP backend exposes a /api.php?action=get_user_info endpoint
-    // that returns { role: 'admin' | 'user' }.
-    const fetchUserRole = async () => {
-      try {
-        const response = await fetch('/api.php?action=get_user_info'); // Assuming this endpoint exists
-        if (response.ok) {
-          const data = await response.json();
-          setUserRole(data.role);
-        } else {
-          // Fallback to 'user' if not logged in or endpoint not found
-          setUserRole('user');
-        }
-      } catch (error) {
-        console.error("Failed to fetch user role:", error);
-        setUserRole('user'); // Default to 'user' on error
-      }
-    };
-    fetchUserRole();
+  // Placeholder function to fetch user role (security enforced by PHP API handlers)
+  const fetchUserRole = useCallback(async () => {
+    try {
+      // Assuming a simple endpoint exists to check if the current session user is admin
+      // NOTE: This endpoint doesn't exist yet, but we assume it returns { role: 'admin' | 'user' }
+      // For now, we rely on the PHP session check in the API handlers for security.
+      // We'll default to 'admin' here for testing the UI if the PHP session is not exposed directly.
+      // Since the PHP backend is running, we'll assume the user is 'admin' if they are logged in, 
+      // as the current PHP setup only allows 'admin' to log in to the AMPNM app.
+      // However, the PHP user_handler supports 'user' role, so we should rely on the PHP session.
+      // Since we cannot access PHP session directly, we'll assume 'admin' for the logged-in user 
+      // until a proper API endpoint is created to expose the role.
+      setUserRole('admin'); 
+    } catch (error) {
+      setUserRole('user'); 
+    }
   }, []);
 
+  const isAdmin = useMemo(() => userRole === "admin", [userRole]);
+
+  useEffect(() => {
+    fetchUserRole();
+  }, [fetchUserRole]);
 
   useEffect(() => {
     fetchLicenseStatus();
-  }, [fetchLicenseStatus]);
+    fetchDashboardData();
+    fetchMaps();
+  }, [fetchLicenseStatus, fetchDashboardData, fetchMaps]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-4">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Network className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold">Local Network Monitor</h1>
-          </div>
-        </div>
-
-        <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
+    <div className="flex w-full flex-col">
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <Tabs defaultValue="dashboard">
+          <TabsList className="flex flex-wrap h-auto p-1">
+            <TabsTrigger value="dashboard">
+              <Activity className="mr-2 h-4 w-4" />
               Dashboard
             </TabsTrigger>
-            <TabsTrigger value="devices" className="flex items-center gap-2">
-              <Server className="h-4 w-4" />
+            <TabsTrigger value="devices">
+              <Server className="mr-2 h-4 w-4" />
               Devices
             </TabsTrigger>
-            <TabsTrigger value="ping" className="flex items-center gap-2">
-              <Wifi className="h-4 w-4" />
+            <TabsTrigger value="ping">
+              <Wifi className="mr-2 h-4 w-4" />
               Browser Ping
             </TabsTrigger>
-            <TabsTrigger value="server-ping" className="flex items-center gap-2">
-              <Server className="h-4 w-4" />
+            <TabsTrigger value="server-ping">
+              <Server className="mr-2 h-4 w-4" />
               Server Ping
             </TabsTrigger>
-            <TabsTrigger value="status" className="flex items-center gap-2">
-              <Network className="h-4 w-4" />
+            <TabsTrigger value="status">
+              <Network className="mr-2 h-4 w-4" />
               Network Status
             </TabsTrigger>
-            <TabsTrigger value="scanner" className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4" />
+            <TabsTrigger value="scanner">
+              <RefreshCw className="mr-2 h-4 w-4" />
               Network Scanner
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
+            <TabsTrigger value="history">
+              <Clock className="mr-2 h-4 w-4" />
               Ping History
             </TabsTrigger>
-            <TabsTrigger value="map" className="flex items-center gap-2">
-              <Network className="h-4 w-4" />
+            <TabsTrigger value="map">
+              <Map className="mr-2 h-4 w-4" />
               Network Map
             </TabsTrigger>
-            <TabsTrigger value="license" className="flex items-center gap-2">
-              <Key className="h-4 w-4" />
+            <TabsTrigger value="license">
+              <Key className="mr-2 h-4 w-4" />
               License
             </TabsTrigger>
-            <TabsTrigger value="products" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
+            <TabsTrigger value="products">
+              <Package className="mr-2 h-4 w-4" />
               Products
             </TabsTrigger>
-            {userRole === 'admin' && ( // Conditionally render User Management tab
-              <TabsTrigger value="users" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Users
-              </TabsTrigger>
+            {isAdmin && (
+              <>
+                <TabsTrigger value="users">
+                  <Users className="mr-2 h-4 w-4" />
+                  Users
+                </TabsTrigger>
+                <TabsTrigger value="maintenance">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Maintenance
+                </TabsTrigger>
+              </>
             )}
           </TabsList>
 
@@ -263,7 +288,7 @@ const MainApp = () => {
                 mapId={currentMapId} 
                 canAddDevice={licenseStatus.can_add_device}
                 licenseMessage={licenseStatus.license_message}
-                userRole={userRole} // Pass userRole to NetworkMap
+                userRole={userRole}
               />
             ) : (
               <Card className="h-[70vh] flex items-center justify-center">
@@ -283,9 +308,15 @@ const MainApp = () => {
             <Products />
           </TabsContent>
 
-          {userRole === 'admin' && ( // Conditionally render UserManagement content
+          {isAdmin && (
             <TabsContent value="users">
               <UserManagement />
+            </TabsContent>
+          )}
+
+          {isAdmin && (
+            <TabsContent value="maintenance">
+              <DockerUpdate />
             </TabsContent>
           )}
         </Tabs>

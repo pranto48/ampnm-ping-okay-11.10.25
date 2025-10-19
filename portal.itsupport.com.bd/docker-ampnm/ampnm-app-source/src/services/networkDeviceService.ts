@@ -235,7 +235,7 @@ export const updateDevice = async (id: string, updates: Partial<NetworkDevice>) 
     warning_latency_threshold: updates.warning_latency_threshold,
     warning_packetloss_threshold: updates.warning_packetloss_threshold,
     critical_latency_threshold: updates.critical_latency_threshold,
-    critical_packetloss_threshold: updates.critical_packetloss_threshold,
+    critical_packetloss_threshold: updates.critical_latency_threshold,
     show_live_ping: updates.show_live_ping,
     status: updates.status,
     last_seen: updates.last_ping,
@@ -358,6 +358,11 @@ export const updateUserRole = async (id: string, role: User['role']) => {
 
 export const deleteUser = async (id: string) => {
   return await callPhpApi('delete_user', 'POST', undefined, { id });
+};
+
+// NEW: Docker Maintenance API call
+export const updateDockerImage = async (imageName: string): Promise<{ success: boolean; message: string; error?: string }> => {
+  return await callPhpApi('docker_update', 'POST', undefined, { image_name: imageName });
 };
 
 // Real-time subscription for device changes - NOT USED WITH PHP BACKEND
