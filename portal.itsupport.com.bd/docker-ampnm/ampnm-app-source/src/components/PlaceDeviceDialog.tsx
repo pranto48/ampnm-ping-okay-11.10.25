@@ -49,7 +49,7 @@ export const PlaceDeviceDialog = ({ isOpen, onClose, onPlace }: PlaceDeviceDialo
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[450px] flex flex-col max-h-[90vh]">
+      <DialogContent className="w-full sm:max-w-[450px] flex flex-col max-h-[90vh]"> {/* Adjusted width here */}
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             Place Existing Device

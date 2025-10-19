@@ -182,7 +182,7 @@ const PingTest = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row gap-2 mb-4"> {/* Adjusted flex direction here */}
             <Input
               placeholder="Enter hostname or IP (e.g., 192.168.1.1 or google.com)"
               value={host}

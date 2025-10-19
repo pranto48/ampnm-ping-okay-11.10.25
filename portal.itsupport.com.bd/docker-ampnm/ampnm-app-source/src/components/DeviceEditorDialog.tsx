@@ -106,7 +106,7 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[90vh]">
+      <DialogContent className="w-full sm:max-w-[425px] flex flex-col max-h-[90vh]"> {/* Adjusted width here */}
         <DialogHeader>
           <DialogTitle>{device?.id ? 'Edit Device' : 'Add Device'}</DialogTitle>
           <DialogDescription>
@@ -309,7 +309,7 @@ export const DeviceEditorDialog = ({ isOpen, onClose, onSave, device }: DeviceEd
                   <AccordionTrigger className="text-lg font-semibold text-foreground">Status Thresholds (Optional)</AccordionTrigger>
                   <AccordionContent className="space-y-4 p-2">
                     <p className="text-sm text-muted-foreground">Define values to trigger 'Warning' or 'Critical' status.</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4"> {/* Adjusted grid here */}
                       <FormField
                         control={form.control}
                         name="warning_latency_threshold"

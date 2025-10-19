@@ -69,7 +69,7 @@ const PingHistory = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-4">
+          <div className="flex flex-col sm:flex-row gap-2 mb-4"> {/* Adjusted flex direction here */}
             <Input
               placeholder="Filter by host (e.g., 192.168.1.1)"
               value={filterHost}
@@ -81,7 +81,7 @@ const PingHistory = () => {
               placeholder="Limit"
               value={limit}
               onChange={(e) => setLimit(Math.max(1, parseInt(e.target.value) || 20))}
-              className="w-20"
+              className="w-full sm:w-20" {/* Adjusted width here */}
               min="1"
               max="100"
             />

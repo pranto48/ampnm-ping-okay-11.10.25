@@ -79,7 +79,7 @@ const NetworkScanner = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2"> {/* Adjusted flex direction here */}
               <Input
                 placeholder="Enter subnet (e.g., 192.168.1.0/24)"
                 value={subnet}

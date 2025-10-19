@@ -91,7 +91,7 @@ const ServerPingTest = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2"> {/* Adjusted flex direction here */}
               <Input
                 placeholder="Enter hostname or IP (e.g., 192.168.1.1 or google.com)"
                 value={host}
@@ -103,7 +103,7 @@ const ServerPingTest = () => {
                 placeholder="Count"
                 value={pingCount}
                 onChange={(e) => setPingCount(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20"
+                className="w-full sm:w-20" {/* Adjusted width here */}
                 min="1"
                 max="10"
               />

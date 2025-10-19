@@ -79,10 +79,12 @@ const MainApp = () => {
         const data = await response.json();
         setUserRole(data.role);
       } else {
+        // If response is not ok, default to 'user'
         setUserRole('user');
       }
     } catch (error) {
       console.error("Failed to fetch user role:", error);
+      // On network error, default to 'user'
       setUserRole('user'); 
     }
   }, []);
@@ -101,7 +103,7 @@ const MainApp = () => {
 
   return (
     <div className="flex w-full flex-col">
-      <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex-1 space-y-4 p-4 pt-6 sm:p-8"> {/* Adjusted padding here */}
         {/* Temporary debug display for user role */}
         <div className="bg-blue-500/20 text-blue-300 p-2 rounded-md text-sm mb-4">
           Debug: Current User Role is <span className="font-bold capitalize">{userRole}</span>
