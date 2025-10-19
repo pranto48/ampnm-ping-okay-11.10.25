@@ -35,9 +35,9 @@ const Products = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-card text-foreground border-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-primary">
             <Package className="h-5 w-5" />
             Available License Products
           </CardTitle>
@@ -47,7 +47,7 @@ const Products = () => {
         </CardHeader>
         <CardContent>
           <div className="flex justify-end mb-4">
-            <Button onClick={fetchProducts} disabled={isLoading} variant="outline">
+            <Button onClick={fetchProducts} disabled={isLoading} variant="outline" className="bg-secondary hover:bg-secondary/80 text-foreground border-border">
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh List
             </Button>
@@ -56,7 +56,7 @@ const Products = () => {
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(3)].map((_, i) => (
-                <Card key={i} className="p-4 space-y-3">
+                <Card key={i} className="p-4 space-y-3 bg-background border-border">
                   <Skeleton className="h-6 w-3/4" />
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-1/2" />
@@ -65,16 +65,16 @@ const Products = () => {
               ))}
             </div>
           ) : products.length === 0 ? (
-            <div className="text-center p-8 text-muted-foreground">
+            <div className="text-center p-8 text-muted-foreground border rounded-lg bg-muted border-border">
               <Package className="h-12 w-12 mx-auto mb-4" />
               <p>No products are currently available in the license portal.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {products.map((product) => (
-                <Card key={product.id} className="flex flex-col justify-between">
+                <Card key={product.id} className="flex flex-col justify-between bg-background border-border">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-xl">{product.name}</CardTitle>
+                    <CardTitle className="text-xl text-foreground">{product.name}</CardTitle>
                     <CardDescription>{product.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -92,7 +92,7 @@ const Products = () => {
                         <span>Duration: {product.license_duration_days / 365} Year(s)</span>
                       </div>
                     </div>
-                    <Button onClick={() => handleBuyNow(product)} className="w-full mt-4">
+                    <Button onClick={() => handleBuyNow(product)} className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground">
                       {product.price === 0 ? 'Get Free License' : 'Buy Now'}
                     </Button>
                   </CardContent>

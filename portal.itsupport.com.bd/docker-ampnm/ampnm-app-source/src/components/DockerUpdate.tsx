@@ -36,9 +36,9 @@ const DockerUpdate = () => {
   };
 
   return (
-    <Card>
+    <Card className="bg-card text-foreground border-border">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-primary">
           <Docker className="h-5 w-5" />
           Application Update (Docker)
         </CardTitle>
@@ -47,7 +47,7 @@ const DockerUpdate = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="p-4 border rounded-lg bg-yellow-500/10 text-yellow-400 flex items-start gap-3">
+        <div className="p-4 border rounded-lg bg-yellow-500/10 text-yellow-400 flex items-start gap-3 border-yellow-500">
           <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">Warning:</p>
@@ -57,15 +57,15 @@ const DockerUpdate = () => {
           </div>
         </div>
         
-        <div className="flex items-center justify-between p-3 border rounded-lg bg-muted">
+        <div className="flex items-center justify-between p-3 border rounded-lg bg-muted border-border">
           <span className="font-medium">Target Image:</span>
-          <code className="font-mono text-sm">{dockerImageName}</code>
+          <code className="font-mono text-sm text-foreground">{dockerImageName}</code>
         </div>
 
         <Button 
           onClick={handleUpdate} 
           disabled={isUpdating} 
-          className="w-full bg-blue-600 hover:bg-blue-700"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isUpdating ? 'animate-spin' : ''}`} />
           {isUpdating ? "Pulling Image..." : "Pull Latest Image"}
