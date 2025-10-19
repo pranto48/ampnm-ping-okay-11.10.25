@@ -352,10 +352,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Insert some sample products if they don't exist
                 $sample_products = [
-                    ['name' => 'AMPNM Free License (10 Devices / 1 Year)', 'description' => 'Free license for up to 10 devices, valid for 1 year.', 'price' => 0.00, 'max_devices' => 10, 'license_duration_days' => 365, 'category' => 'AMPNM'], // NEW FREE PRODUCT
-                    ['name' => 'AMPNM Basic License (10 Devices / 1 Year)', 'description' => 'Basic license for up to 10 devices, valid for 1 year.', 'price' => 99.00, 'max_devices' => 10, 'license_duration_days' => 365, 'category' => 'AMPNM'],
-                    ['name' => 'AMPNM Pro License (50 Devices / 1 Year)', 'description' => 'Pro license for up to 50 devices, valid for 1 year.', 'price' => 299.00, 'max_devices' => 50, 'license_duration_days' => 365, 'category' => 'AMPNM'],
-                    ['name' => 'AMPNM Enterprise License (Unlimited Devices / 1 Year)', 'description' => 'Enterprise license for unlimited devices, valid for 1 year.', 'price' => 999.00, 'max_devices' => 99999, 'license_duration_days' => 365, 'category' => 'AMPNM'],
+                    ['name' => 'AMPNM Free License (10 Devices / 1 Year)', 'description' => 'Free license for up to 10 devices, valid for 1 year.', 'price' => 0.00, 'max_devices' => 10, 'license_duration_days' => 365, 'category' => 'AMPNM'],
+                    ['name' => 'AMPNM Basic License (15 Devices / 1 Year)', 'description' => 'Basic license for up to 15 devices, valid for 1 year.', 'price' => 1.00, 'max_devices' => 15, 'license_duration_days' => 365, 'category' => 'AMPNM'],
+                    ['name' => 'AMPNM Standard License (20 Devices / 1 Year)', 'description' => 'Standard license for up to 20 devices, valid for 1 year.', 'price' => 5.00, 'max_devices' => 20, 'license_duration_days' => 365, 'category' => 'AMPNM'],
+                    ['name' => 'AMPNM Advance License (30 Devices / 1 Year)', 'description' => 'Advance license for up to 30 devices, valid for 1 year.', 'price' => 10.00, 'max_devices' => 30, 'license_duration_days' => 365, 'category' => 'AMPNM'],
+                    ['name' => 'AMPNM Premium License (50 Devices / 1 Year)', 'description' => 'Premium license for up to 50 devices, valid for 1 year.', 'price' => 50.00, 'max_devices' => 50, 'license_duration_days' => 365, 'category' => 'AMPNM'],
+                    ['name' => 'AMPNM Ultimate License (Unlimited Devices / 1 Year)', 'description' => 'Ultimate license for unlimited devices, valid for 1 year.', 'price' => 100.00, 'max_devices' => 99999, 'license_duration_days' => 365, 'category' => 'AMPNM'],
                 ];
 
                 foreach ($sample_products as $product_data) {
@@ -367,7 +369,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt->execute([$product_data['name'], $product_data['description'], $product_data['price'], $product_data['max_devices'], $product_data['license_duration_days'], $product_data['category']]);
                         $setup_message .= '<p class="text-green-500">Added sample product: ' . htmlspecialchars($product_data['name']) . '</p>';
                     } else {
-                        $setup_message .= '<p class="text-orange-500">Sample product already exists: ' . htmlspecialchars($product_data['name']) . '</p>';
+                        // Update existing product if it matches by name
+                        $sql = "UPDATE `products` SET description = ?, price = ?, max_devices = ?, license_duration_days = ?, category = ?, updated_at = CURRENT_TIMESTAMP WHERE name = ?";
+                        $stmt = $pdo->prepare($sql);
+                        $stmt->execute([$product_data['description'], $product_data['price'], $product_data['max_devices'], $product_data['license_duration_days'], $product_data['category'], $product_data['name']]);
+                        $setup_message .= '<p class="text-orange-500">Updated existing product: ' . htmlspecialchars($product_data['name']) . '</p>';
                     }
                 }
 

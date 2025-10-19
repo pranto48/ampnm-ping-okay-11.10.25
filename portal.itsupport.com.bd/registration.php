@@ -26,12 +26,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->fetch()) {
             $error_message = 'Email already registered. Please login or use a different email.';
         } else {
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO `customers` (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
-            if ($stmt->execute([$first_name, $last_name, $email, $hashed_password])) {
-                $success_message = 'Registration successful! You can now <a href="login.php" class="text-blue-300 hover:underline">login</a>.';
-            } else {
-                $error_message = 'Something went wrong during registration. Please try again.';
+            $pdo->beginTransaction();
+            try {
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("INSERT INTO `customers` (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$first_name, $last_name, $email, $hashed_password]);
+                $new_customer_id = $pdo->lastInsertId();
+
+                // Automatically assign a free license
+                $stmt_product = $pdo->prepare("SELECT id, max_devices, license_duration_days FROM `products` WHERE name = 'AMPNM Free License (10 Devices / 1 Year)'");
+                $stmt_product->execute();
+                $free_product = $stmt_product->fetch(PDO::FETCH_ASSOC);
+
+                if ($free_product) {
+                    $license_key = generateLicenseKey();
+                    $expires_at = date('Y-m-d H:i:s', strtotime("+" . $free_product['license_duration_days'] . " days"));
+                    
+                    $stmt_license = $pdo->prepare("INSERT INTO `licenses` (customer_id, product_id, license_key, status, max_devices, expires_at) VALUES (?, ?, ?, 'free', ?, ?)");
+                    $stmt_license->execute([$new_customer_id, $free_product['id'], $license_key, $free_product['max_devices'], $expires_at]);
+                    $success_message = 'Registration successful! A free license has been assigned to your account. You can now <a href="login.php" class="text-blue-300 hover:underline">login</a>.';
+                } else {
+                    // Fallback if free product not found
+                    $success_message = 'Registration successful! You can now <a href="login.php" class="text-blue-300 hover:underline">login</a>. (Note: Free license could not be assigned automatically, please contact support.)';
+                    error_log("WARNING: 'AMPNM Free License (10 Devices / 1 Year)' product not found during registration.");
+                }
+                
+                $pdo->commit();
+            } catch (PDOException $e) {
+                $pdo->rollBack();
+                $error_message = 'Something went wrong during registration: ' . htmlspecialchars($e->getMessage()) . '. Please try again.';
+                error_log("Registration failed: " . $e->getMessage());
             }
         }
     }
