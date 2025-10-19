@@ -32,7 +32,7 @@ portal_header("Our Products - IT Support BD Portal");
                     <form action="cart.php" method="POST" class="space-y-4">
                         <div>
                             <label for="ampnm_product_select" class="block text-gray-200 text-sm font-bold mb-2">Choose License:</label>
-                            <select id="ampnm_product_select" name="product_id" class="form-input" required>
+                            <select id="ampnm_product_select" name="product_id" class="form-glass-input" required>
                                 <?php foreach ($category_products as $product): ?>
                                     <option value="<?= htmlspecialchars($product['id']) ?>">
                                         <?= htmlspecialchars($product['name']) ?> - $<?= htmlspecialchars(number_format($product['price'], 2)) ?>
@@ -40,7 +40,7 @@ portal_header("Our Products - IT Support BD Portal");
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <button type="submit" name="add_to_cart" class="btn-primary w-full">
+                        <button type="submit" name="add_to_cart" class="btn-glass-primary w-full">
                             <i class="fas fa-cart-plus mr-2"></i>Add to Cart
                         </button>
                     </form>
@@ -61,7 +61,7 @@ portal_header("Our Products - IT Support BD Portal");
                                 <p class="text-3xl font-bold text-blue-300 mb-4">$<?= htmlspecialchars(number_format($product['price'], 2)) ?></p>
                                 <form action="cart.php" method="POST">
                                     <input type="hidden" name="product_id" value="<?= htmlspecialchars($product['id']) ?>">
-                                    <button type="submit" name="add_to_cart" class="btn-primary w-full">
+                                    <button type="submit" name="add_to_cart" class="btn-glass-primary w-full">
                                         <i class="fas fa-cart-plus mr-2"></i>Add to Cart
                                     </button>
                                 </form>
