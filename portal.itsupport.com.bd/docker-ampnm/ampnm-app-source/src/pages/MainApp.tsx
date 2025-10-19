@@ -27,8 +27,9 @@ import DashboardContent from "@/components/DashboardContent";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import LicenseManager from "@/components/LicenseManager";
 import UserManagement from "@/components/UserManagement";
-import DockerUpdate from "@/components/DockerUpdate"; // Keep DockerUpdate component
+import DockerUpdate from "@/components/DockerUpdate";
 import Products from "./Products";
+import Maintenance from "./Maintenance"; // Import Maintenance page
 
 const MainApp = () => {
   const {
@@ -53,6 +54,7 @@ const MainApp = () => {
     installation_id: "",
   });
   const [userRole, setUserRole] = useState<User["role"]>("user");
+  const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
 
   const fetchLicenseStatus = useCallback(async () => {
     try {
@@ -73,19 +75,20 @@ const MainApp = () => {
   }, []);
 
   const fetchUserRole = useCallback(async () => {
+    setIsUserRoleLoading(true);
     try {
       const response = await fetch('/api.php?action=get_user_info'); 
       if (response.ok) {
         const data = await response.json();
         setUserRole(data.role);
       } else {
-        // If response is not ok, default to 'user'
         setUserRole('user');
       }
     } catch (error) {
       console.error("Failed to fetch user role:", error);
-      // On network error, default to 'user'
       setUserRole('user'); 
+    } finally {
+      setIsUserRoleLoading(false);
     }
   }, []);
 
@@ -103,7 +106,7 @@ const MainApp = () => {
 
   return (
     <div className="flex w-full flex-col">
-      <div className="flex-1 space-y-4 p-4 pt-6 sm:p-8"> {/* Adjusted padding here */}
+      <div className="flex-1 space-y-4 p-4 pt-6 sm:p-8">
         {/* Temporary debug display for user role */}
         <div className="bg-blue-500/20 text-blue-300 p-2 rounded-md text-sm mb-4">
           Debug: Current User Role is <span className="font-bold capitalize">{userRole}</span>
@@ -151,7 +154,9 @@ const MainApp = () => {
               <Package className="mr-2 h-4 w-4" />
               Products
             </TabsTrigger>
-            {isAdmin && (
+            {isUserRoleLoading ? (
+              <Skeleton className="h-9 w-20" />
+            ) : isAdmin && (
               <>
                 <TabsTrigger value="users">
                   <Users className="mr-2 h-4 w-4" />
@@ -320,7 +325,7 @@ const MainApp = () => {
 
           {isAdmin && (
             <TabsContent value="maintenance">
-              <DockerUpdate /> {/* Render the DockerUpdate component here */}
+              <Maintenance />
             </TabsContent>
           )}
         </Tabs>
