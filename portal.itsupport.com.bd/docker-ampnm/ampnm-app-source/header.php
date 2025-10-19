@@ -29,14 +29,15 @@ if (session_status() === PHP_SESSION_NONE) {
                 </div>
                 <div class="hidden md:block">
                     <div id="main-nav" class="ml-10 flex items-baseline space-x-1">
+                        <!-- Navigation links now point to the SPA routes -->
                         <a href="index.php" class="nav-link"><i class="fas fa-tachometer-alt fa-fw mr-2"></i>Dashboard</a>
-                        <a href="devices.php" class="nav-link"><i class="fas fa-server fa-fw mr-2"></i>Devices</a>
-                        <a href="history.php" class="nav-link"><i class="fas fa-history fa-fw mr-2"></i>History</a>
-                        <a href="map.php" class="nav-link"><i class="fas fa-project-diagram fa-fw mr-2"></i>Map</a>
-                        <a href="status_logs.php" class="nav-link"><i class="fas fa-clipboard-list fa-fw mr-2"></i>Status Logs</a>
-                        <a href="email_notifications.php" class="nav-link"><i class="fas fa-envelope fa-fw mr-2"></i>Email Notifications</a>
+                        <a href="index.php#devices" class="nav-link"><i class="fas fa-server fa-fw mr-2"></i>Devices</a>
+                        <a href="index.php#history" class="nav-link"><i class="fas fa-history fa-fw mr-2"></i>History</a>
+                        <a href="index.php#map" class="nav-link"><i class="fas fa-project-diagram fa-fw mr-2"></i>Map</a>
+                        <a href="index.php#status_logs" class="nav-link"><i class="fas fa-clipboard-list fa-fw mr-2"></i>Status Logs</a>
+                        <a href="index.php#email_notifications" class="nav-link"><i class="fas fa-envelope fa-fw mr-2"></i>Email Notifications</a>
                         <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-                            <a href="users.php" class="nav-link"><i class="fas fa-users-cog fa-fw mr-2"></i>Users</a>
+                            <a href="index.php#users" class="nav-link"><i class="fas fa-users-cog fa-fw mr-2"></i>Users</a>
                         <?php endif; ?>
                         <a href="logout.php" class="nav-link"><i class="fas fa-sign-out-alt fa-fw mr-2"></i>Logout</a>
                     </div>

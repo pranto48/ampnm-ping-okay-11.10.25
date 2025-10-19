@@ -29,7 +29,24 @@ import LicenseManager from "@/components/LicenseManager";
 import UserManagement from "@/components/UserManagement";
 import DockerUpdate from "@/components/DockerUpdate";
 import Products from "./Products";
-import Maintenance from "./Maintenance"; // Import Maintenance page
+import Maintenance from "./Maintenance";
+
+// Helper to get initial tab from URL hash
+const getInitialTab = () => {
+  const hash = window.location.hash.substring(1);
+  const validTabs = [
+    "dashboard", "devices", "ping", "server-ping", "status", "scanner", 
+    "history", "map", "license", "products", "users", "maintenance",
+    "status_logs", "email_notifications" // Include old PHP page names for compatibility
+  ];
+  if (validTabs.includes(hash)) {
+    // Map old PHP page names to new tab values
+    if (hash === "status_logs") return "status";
+    if (hash === "email_notifications") return "status"; // Grouping email notifications under status for now
+    return hash;
+  }
+  return "dashboard";
+};
 
 const MainApp = () => {
   const {
@@ -55,6 +72,7 @@ const MainApp = () => {
   });
   const [userRole, setUserRole] = useState<User["role"]>("user");
   const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(getInitialTab());
 
   const fetchLicenseStatus = useCallback(async () => {
     try {
@@ -104,6 +122,22 @@ const MainApp = () => {
     fetchMaps();
   }, [fetchLicenseStatus, fetchDashboardData, fetchMaps]);
 
+  // Update URL hash when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.location.hash = value;
+  };
+
+  // Listen for hash changes (e.g., back button)
+  useEffect(() => {
+    const handleHashChange = () => {
+      setActiveTab(getInitialTab());
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+
   return (
     <div className="flex w-full flex-col">
       <div className="flex-1 space-y-4 p-4 pt-6 sm:p-8">
@@ -112,7 +146,7 @@ const MainApp = () => {
           Debug: Current User Role is <span className="font-bold capitalize">{userRole}</span>
         </div>
 
-        <Tabs defaultValue="dashboard">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="flex flex-wrap h-auto p-1">
             <TabsTrigger value="dashboard">
               <Activity className="mr-2 h-4 w-4" />
