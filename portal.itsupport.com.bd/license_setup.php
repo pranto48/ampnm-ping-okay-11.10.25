@@ -190,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $setup_message .= '<p class="text-green-500">Admin user ' . htmlspecialchars($admin_username) . ' created.</p>';
                     } else {
                         $stmt = $pdo->prepare("UPDATE `admin_users` SET password = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?");
-                        $stmt->execute([$hashed_username, $admin_email, $admin_username]);
+                        $stmt->execute([$hashed_password, $admin_email, $admin_username]);
                         $setup_message .= '<p class="text-orange-500">Admin user ' . htmlspecialchars($admin_username) . ' password updated.</p>';
                     }
                     $step = 3; // Move to next step
@@ -318,6 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     `customer_id` INT(11) UNSIGNED NOT NULL,
                     `subject` VARCHAR(255) NOT NULL,
                     `message` TEXT NOT NULL,
+                    `attachments` JSON NULL, -- NEW COLUMN FOR ATTACHMENTS
                     `status` ENUM('open', 'in progress', 'closed') DEFAULT 'open',
                     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -325,16 +326,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
                 $setup_message .= '<p class="text-green-500">Table `support_tickets` checked/created successfully.</p>';
 
+                // Migration: Add attachments column to support_tickets if it doesn't exist
+                if (!columnExists($pdo, $db_name, 'support_tickets', 'attachments')) {
+                    $pdo->exec("ALTER TABLE `support_tickets` ADD COLUMN `attachments` JSON NULL AFTER `message`;");
+                    $setup_message .= '<p class="text-green-500">Migrated `support_tickets` table: added `attachments` column.</p>';
+                }
+
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `ticket_replies` (
                     `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                     `ticket_id` INT(11) UNSIGNED NOT NULL,
                     `sender_id` INT(11) UNSIGNED NOT NULL,
                     `sender_type` ENUM('customer', 'admin') NOT NULL,
                     `message` TEXT NOT NULL,
+                    `attachments` JSON NULL, -- NEW COLUMN FOR ATTACHMENTS
                     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (`ticket_id`) REFERENCES `support_tickets`(`id`) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
                 $setup_message .= '<p class="text-green-500">Table `ticket_replies` checked/created successfully.</p>';
+
+                // Migration: Add attachments column to ticket_replies if it doesn't exist
+                if (!columnExists($pdo, $db_name, 'ticket_replies', 'attachments')) {
+                    $pdo->exec("ALTER TABLE `ticket_replies` ADD COLUMN `attachments` JSON NULL AFTER `message`;");
+                    $setup_message .= '<p class="text-green-500">Migrated `ticket_replies` table: added `attachments` column.</p>';
+                }
 
                 // NEW TABLE FOR USER PROFILES
                 $pdo->exec("CREATE TABLE IF NOT EXISTS `profiles` (
@@ -403,6 +417,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!columnExists($pdo, $db_name, 'licenses', 'bound_installation_id')) {
                     $pdo->exec("ALTER TABLE `licenses` ADD COLUMN `bound_installation_id` VARCHAR(255) NULL AFTER `last_active_at`;");
                     $setup_message .= '<p class="text-green-500">Migrated `licenses` table: added `bound_installation_id` column.</p>';
+                }
+
+                // Ensure the uploads directory exists and has correct permissions
+                $upload_base_dir = __DIR__ . '/uploads/';
+                $ticket_upload_dir = $upload_base_dir . 'tickets/';
+                if (!is_dir($ticket_upload_dir)) {
+                    if (!mkdir($ticket_upload_dir, 0755, true)) {
+                        throw new Exception("Failed to create uploads/tickets directory.");
+                    }
+                    $setup_message .= '<p class="text-green-500">Created uploads/tickets directory.</p>';
                 }
 
 

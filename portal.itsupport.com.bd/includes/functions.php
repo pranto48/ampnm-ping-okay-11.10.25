@@ -204,19 +204,64 @@ function redirectToAdminDashboard() {
     exit;
 }
 
-// --- Support Ticket System Functions ---
+// Helper function to upload ticket attachments
+function uploadTicketAttachments($files, $entity_id, $type = 'ticket') {
+    $uploaded_paths = [];
+    $upload_dir = __DIR__ . '/../uploads/tickets/'; // Relative to functions.php
 
-function createSupportTicket($customer_id, $subject, $message) {
-    $pdo = getLicenseDbConnection();
-    $stmt = $pdo->prepare("INSERT INTO `support_tickets` (customer_id, subject, message) VALUES (?, ?, ?)");
-    return $stmt->execute([$customer_id, $subject, $message]);
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0755, true);
+    }
+
+    if (isset($files['name']) && is_array($files['name'])) {
+        foreach ($files['name'] as $index => $name) {
+            if ($files['error'][$index] === UPLOAD_ERR_OK) {
+                $file_tmp_name = $files['tmp_name'][$index];
+                $file_extension = pathinfo($name, PATHINFO_EXTENSION);
+                $new_file_name = "{$type}_{$entity_id}_" . uniqid() . ".{$file_extension}";
+                $destination = $upload_dir . $new_file_name;
+
+                if (move_uploaded_file($file_tmp_name, $destination)) {
+                    $uploaded_paths[] = 'uploads/tickets/' . $new_file_name; // Store relative path
+                } else {
+                    error_log("Failed to move uploaded file: {$name} to {$destination}");
+                }
+            } else {
+                error_log("File upload error for {$name}: " . $files['error'][$index]);
+            }
+        }
+    }
+    return $uploaded_paths;
 }
 
-function getCustomerTickets($customer_id) {
+
+// --- Support Ticket System Functions ---
+
+function createSupportTicket($customer_id, $subject, $message, $files = []) { // Added $files parameter
     $pdo = getLicenseDbConnection();
-    $stmt = $pdo->prepare("SELECT * FROM `support_tickets` WHERE customer_id = ? ORDER BY created_at DESC");
-    $stmt->execute([$customer_id]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("INSERT INTO `support_tickets` (customer_id, subject, message, attachments) VALUES (?, ?, ?, ?)");
+        // Placeholder for attachments, will update after getting ticket ID
+        $stmt->execute([$customer_id, $subject, $message, '[]']);
+        $ticket_id = $pdo->lastInsertId();
+
+        $attachment_paths = [];
+        if (!empty($files) && isset($files['name'][0]) && $files['name'][0] !== '') {
+            $attachment_paths = uploadTicketAttachments($files, $ticket_id, 'ticket');
+        }
+        
+        // Update the ticket with attachment paths
+        $stmt_update = $pdo->prepare("UPDATE `support_tickets` SET attachments = ? WHERE id = ?");
+        $stmt_update->execute([json_encode($attachment_paths), $ticket_id]);
+
+        $pdo->commit();
+        return true;
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Error creating support ticket: " . $e->getMessage());
+        return false;
+    }
 }
 
 function getTicketDetails($ticket_id, $customer_id = null) {
@@ -229,22 +274,49 @@ function getTicketDetails($ticket_id, $customer_id = null) {
     }
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    return $stmt->fetch(PDO::FETCH_ASSOC);
+    $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($ticket && isset($ticket['attachments'])) {
+        $ticket['attachments'] = json_decode($ticket['attachments'], true);
+        if (!is_array($ticket['attachments'])) {
+            $ticket['attachments'] = []; // Ensure it's an array even if JSON is invalid
+        }
+    } else if ($ticket) {
+        $ticket['attachments'] = [];
+    }
+    return $ticket;
 }
 
 function getTicketReplies($ticket_id) {
     $pdo = getLicenseDbConnection();
     $stmt = $pdo->prepare("SELECT * FROM `ticket_replies` WHERE ticket_id = ? ORDER BY created_at ASC");
     $stmt->execute([$ticket_id]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $replies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($replies as &$reply) {
+        if (isset($reply['attachments'])) {
+            $reply['attachments'] = json_decode($reply['attachments'], true);
+            if (!is_array($reply['attachments'])) {
+                $reply['attachments'] = [];
+            }
+        } else {
+            $reply['attachments'] = [];
+        }
+    }
+    return $replies;
 }
 
-function addTicketReply($ticket_id, $sender_id, $sender_type, $message) {
+function addTicketReply($ticket_id, $sender_id, $sender_type, $message, $files = []) { // Added $files parameter
     $pdo = getLicenseDbConnection();
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare("INSERT INTO `ticket_replies` (ticket_id, sender_id, sender_type, message) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$ticket_id, $sender_id, $sender_type, $message]);
+        $attachment_paths = [];
+        if (!empty($files) && isset($files['name'][0]) && $files['name'][0] !== '') {
+            $attachment_paths = uploadTicketAttachments($files, $ticket_id, 'reply'); // Use ticket_id for replies too
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO `ticket_replies` (ticket_id, sender_id, sender_type, message, attachments) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$ticket_id, $sender_id, $sender_type, $message, json_encode($attachment_paths)]);
         
         // Update ticket's updated_at timestamp and status if it's a customer reply
         if ($sender_type === 'customer') {
@@ -313,7 +385,19 @@ function getAllTickets($filter_status = null) {
     $sql .= " ORDER BY st.updated_at DESC";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($tickets as &$ticket) {
+        if (isset($ticket['attachments'])) {
+            $ticket['attachments'] = json_decode($ticket['attachments'], true);
+            if (!is_array($ticket['attachments'])) {
+                $ticket['attachments'] = [];
+            }
+        } else {
+            $ticket['attachments'] = [];
+        }
+    }
+    return $tickets;
 }
 
 /**

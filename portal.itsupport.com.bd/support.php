@@ -14,11 +14,12 @@ $ticket_id = $_GET['ticket_id'] ?? null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_ticket'])) {
     $subject = trim($_POST['subject'] ?? '');
     $message_content = trim($_POST['message_content'] ?? '');
+    $files = $_FILES['attachments'] ?? []; // Get uploaded files
 
     if (empty($subject) || empty($message_content)) {
         $message = '<div class="alert-glass-error mb-4">Subject and message cannot be empty.</div>';
     } else {
-        if (createSupportTicket($customer_id, $subject, $message_content)) {
+        if (createSupportTicket($customer_id, $subject, $message_content, $files)) {
             $message = '<div class="alert-glass-success mb-4">Your support ticket has been submitted successfully!</div>';
             // Redirect to prevent resubmission and show updated list
             header('Location: support.php?message=' . urlencode('Your support ticket has been submitted successfully!'));
@@ -32,11 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_ticket'])) {
 // Handle adding reply
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_reply']) && $ticket_id) {
     $reply_content = trim($_POST['reply_content'] ?? '');
+    $files = $_FILES['reply_attachments'] ?? []; // Get uploaded files for reply
 
     if (empty($reply_content)) {
         $message = '<div class="alert-glass-error mb-4">Reply message cannot be empty.</div>';
     } else {
-        if (addTicketReply($ticket_id, $customer_id, 'customer', $reply_content)) {
+        if (addTicketReply($ticket_id, $customer_id, 'customer', $reply_content, $files)) {
             $message = '<div class="alert-glass-success mb-4">Your reply has been added.</div>';
             // Redirect to prevent resubmission and show updated replies
             header('Location: support.php?ticket_id=' . $ticket_id . '&message=' . urlencode('Your reply has been added.'));
@@ -89,6 +91,19 @@ portal_header("Support - IT Support BD Portal");
                         <span class="text-gray-400 text-xs ml-2"><?= date('Y-m-d H:i', strtotime($ticket['created_at'])) ?></span>
                     </p>
                     <p class="text-white"><?= nl2br(htmlspecialchars($ticket['message'])) ?></p>
+                    <?php if (!empty($ticket['attachments'])): ?>
+                        <div class="mt-4">
+                            <h3 class="text-lg font-semibold text-white mb-2">Attachments:</h3>
+                            <div class="space-y-2">
+                                <?php foreach ($ticket['attachments'] as $attachment_path): ?>
+                                    <a href="<?= htmlspecialchars($attachment_path) ?>" target="_blank" class="flex items-center p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+                                        <i class="fas fa-paperclip mr-3 text-blue-400"></i>
+                                        <span class="text-white text-sm"><?= htmlspecialchars(basename($attachment_path)) ?></span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <?php foreach ($replies as $reply): ?>
@@ -99,6 +114,22 @@ portal_header("Support - IT Support BD Portal");
                             <span class="text-gray-400 text-xs ml-2"><?= date('Y-m-d H:i', strtotime($reply['created_at'])) ?></span>
                         </p>
                         <p class="text-white"><?= nl2br(htmlspecialchars($reply['message'])) ?></p>
+                        
+                        <?php 
+                        $reply_attachments = $reply['attachments']; // Already decoded by getTicketReplies
+                        if (!empty($reply_attachments)): ?>
+                            <div class="mt-3">
+                                <h4 class="text-sm font-semibold text-gray-300 mb-1">Attachments:</h4>
+                                <div class="space-y-1">
+                                    <?php foreach ($reply_attachments as $attachment_path): ?>
+                                        <a href="<?= htmlspecialchars($attachment_path) ?>" target="_blank" class="flex items-center p-2 bg-gray-800 rounded-md hover:bg-gray-700 transition-colors">
+                                            <i class="fas fa-paperclip mr-2 text-blue-300 text-xs"></i>
+                                            <span class="text-white text-xs"><?= htmlspecialchars(basename($attachment_path)) ?></span>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -106,10 +137,19 @@ portal_header("Support - IT Support BD Portal");
             <?php if ($ticket['status'] !== 'closed'): ?>
                 <div class="glass-card p-6">
                     <h3 class="text-xl font-semibold text-white mb-4">Add a Reply</h3>
-                    <form action="support.php?ticket_id=<?= htmlspecialchars($ticket_id) ?>" method="POST" class="space-y-4">
+                    <form action="support.php?ticket_id=<?= htmlspecialchars($ticket_id) ?>" method="POST" class="space-y-4" enctype="multipart/form-data">
                         <div>
                             <label for="reply_content" class="block text-gray-200 text-sm font-bold mb-2">Your Message:</label>
                             <textarea id="reply_content" name="reply_content" rows="5" class="form-glass-input" required></textarea>
+                        </div>
+                        <div>
+                            <label for="reply_attachments" class="block text-gray-200 text-sm font-bold mb-2">Attachments (Optional):</label>
+                            <input type="file" id="reply_attachments" name="reply_attachments[]" multiple
+                                class="form-glass-input file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                                    file:text-sm file:font-semibold file:bg-blue-500 file:text-white
+                                    hover:file:bg-blue-600 hover:file:cursor-pointer"
+                                onchange="previewFiles(this.files, 'reply-file-preview')">
+                            <div id="reply-file-preview" class="mt-2 space-y-2"></div>
                         </div>
                         <button type="submit" name="add_reply" class="btn-glass-primary w-full">
                             <i class="fas fa-reply mr-2"></i>Send Reply
@@ -130,7 +170,7 @@ portal_header("Support - IT Support BD Portal");
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-1 glass-card p-6 h-fit">
             <h2 class="text-2xl font-semibold text-white mb-4">Submit New Ticket</h2>
-            <form action="support.php" method="POST" class="space-y-4">
+            <form action="support.php" method="POST" class="space-y-4" enctype="multipart/form-data">
                 <input type="hidden" name="new_ticket" value="1">
                 <div>
                     <label for="subject" class="block text-gray-200 text-sm font-bold mb-2">Subject:</label>
@@ -139,6 +179,15 @@ portal_header("Support - IT Support BD Portal");
                 <div>
                     <label for="message_content" class="block text-gray-200 text-sm font-bold mb-2">Message:</label>
                     <textarea id="message_content" name="message_content" rows="5" class="form-glass-input" required></textarea>
+                </div>
+                <div>
+                    <label for="attachments" class="block text-gray-200 text-sm font-bold mb-2">Attachments (Optional):</label>
+                    <input type="file" id="attachments" name="attachments[]" multiple
+                           class="form-glass-input file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0
+                                  file:text-sm file:font-semibold file:bg-blue-500 file:text-white
+                                  hover:file:bg-blue-600 hover:file:cursor-pointer"
+                           onchange="previewFiles(this.files)">
+                    <div id="file-preview" class="mt-2 space-y-2"></div>
                 </div>
                 <button type="submit" class="btn-glass-primary w-full">
                     <i class="fas fa-paper-plane mr-2"></i>Submit Ticket
@@ -175,5 +224,29 @@ portal_header("Support - IT Support BD Portal");
         </div>
     </div>
 <?php endif; ?>
+
+<script>
+function previewFiles(files, previewContainerId = 'file-preview') {
+    const previewContainer = document.getElementById(previewContainerId);
+    previewContainer.innerHTML = ''; // Clear previous previews
+
+    if (files.length === 0) return;
+
+    Array.from(files).forEach(file => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'flex items-center justify-between p-2 bg-gray-700 rounded-md text-sm text-white';
+        
+        const fileName = document.createElement('span');
+        fileName.textContent = file.name;
+        fileItem.appendChild(fileName);
+
+        const fileSize = document.createElement('span');
+        fileSize.textContent = (file.size / 1024).toFixed(2) + ' KB';
+        fileItem.appendChild(fileSize);
+
+        previewContainer.appendChild(fileItem);
+    });
+}
+</script>
 
 <?php portal_footer(); ?>
