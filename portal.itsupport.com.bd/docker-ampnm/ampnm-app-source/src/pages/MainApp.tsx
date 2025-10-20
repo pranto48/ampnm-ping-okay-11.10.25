@@ -19,6 +19,7 @@ import {
   Tools,
   Menu, // For mobile menu icon
   ChevronDown, // For dropdown indicator
+  LogOut, // Import LogOut icon
 } from "lucide-react";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
@@ -52,7 +53,7 @@ const getInitialTab = () => {
   const hash = window.location.hash.substring(1);
   const validTabs = [
     "dashboard", "devices", "ping", "server-ping", "status", "scanner", 
-    "history", "map", "license", "products", "users", "maintenance",
+    "history", "map", "products", "users", "license", "maintenance", // Include all possible tabs for initial check
   ];
   if (validTabs.includes(hash)) {
     return hash;
@@ -163,13 +164,13 @@ const MainApp = () => {
     { value: "scanner", label: "Network Scanner", icon: Search },
     { value: "history", label: "Ping History", icon: History },
     { value: "map", label: "Network Map", icon: Map },
-    { value: "license", label: "License", icon: ShieldHalf },
     { value: "products", label: "Products", icon: BoxOpen },
   ], []);
 
-  const adminNavItems = useMemo(() => [
+  const adminMaintenanceSubItems = useMemo(() => [
     { value: "users", label: "Users", icon: UserCog },
-    { value: "maintenance", label: "Maintenance", icon: Tools },
+    { value: "license", label: "Licensing", icon: ShieldHalf },
+    { value: "maintenance", label: "System Maintenance", icon: Tools },
   ], []);
 
   const renderNavigation = (isMobileMenu: boolean = false) => (
@@ -197,8 +198,8 @@ const MainApp = () => {
         isMobileMenu ? (
           <>
             <DropdownMenuSeparator className="my-2" />
-            <span className="text-sm font-semibold text-muted-foreground px-2">Admin Tools</span>
-            {adminNavItems.map((item) => {
+            <span className="text-sm font-semibold text-muted-foreground px-2">Maintenance</span>
+            {adminMaintenanceSubItems.map((item) => {
               const Icon = item.icon;
               return (
                 <a
@@ -218,11 +219,11 @@ const MainApp = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-1 text-foreground hover:bg-muted">
                 <Settings className="mr-2 h-4 w-4" />
-                Admin <ChevronDown className="h-4 w-4" />
+                Maintenance <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-card text-foreground border-border">
-              {adminNavItems.map((item) => {
+              {adminMaintenanceSubItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <DropdownMenuItem key={item.value} onClick={() => handleTabChange(item.value)} className="hover:bg-secondary">
@@ -425,24 +426,23 @@ const MainApp = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="license">
-              <LicenseManager licenseStatus={licenseStatus} fetchLicenseStatus={fetchLicenseStatus} />
-            </TabsContent>
-            
             <TabsContent value="products">
               <Products />
             </TabsContent>
 
+            {/* Admin-only tabs, now under Maintenance dropdown */}
             {isAdmin && (
-              <TabsContent value="users">
-                <UserManagement />
-              </TabsContent>
-            )}
-
-            {isAdmin && (
-              <TabsContent value="maintenance">
-                <Maintenance />
-              </TabsContent>
+              <>
+                <TabsContent value="users">
+                  <UserManagement />
+                </TabsContent>
+                <TabsContent value="license">
+                  <LicenseManager licenseStatus={licenseStatus} fetchLicenseStatus={fetchLicenseStatus} />
+                </TabsContent>
+                <TabsContent value="maintenance">
+                  <Maintenance />
+                </TabsContent>
+              </>
             )}
           </Tabs>
         )}
