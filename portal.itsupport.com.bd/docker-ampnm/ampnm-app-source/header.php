@@ -29,22 +29,7 @@ if (session_status() === PHP_SESSION_NONE) {
                 </div>
                 <div class="hidden md:block">
                     <div id="main-nav" class="ml-10 flex items-baseline space-x-1">
-                        <!-- Navigation links now point to the SPA routes -->
-                        <a href="#/dashboard" class="nav-link"><i class="fas fa-tachometer-alt fa-fw mr-2"></i>Dashboard</a>
-                        <a href="#/devices" class="nav-link"><i class="fas fa-server fa-fw mr-2"></i>Devices</a>
-                        <a href="#/ping" class="nav-link"><i class="fas fa-wifi fa-fw mr-2"></i>Browser Ping</a>
-                        <a href="#/server-ping" class="nav-link"><i class="fas fa-desktop fa-fw mr-2"></i>Server Ping</a>
-                        <a href="#/status" class="nav-link"><i class="fas fa-network-wired fa-fw mr-2"></i>Network Status</a>
-                        <a href="#/scanner" class="nav-link"><i class="fas fa-search fa-fw mr-2"></i>Network Scanner</a>
-                        <a href="#/history" class="nav-link"><i class="fas fa-history fa-fw mr-2"></i>Ping History</a>
-                        <a href="#/map" class="nav-link"><i class="fas fa-project-diagram fa-fw mr-2"></i>Network Map</a>
-                        <a href="#/license" class="nav-link"><i class="fas fa-key fa-fw mr-2"></i>License</a>
-                        <a href="#/products" class="nav-link"><i class="fas fa-box-open fa-fw mr-2"></i>Products</a>
-                        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-                            <a href="#/users" class="nav-link"><i class="fas fa-users-cog fa-fw mr-2"></i>Users</a>
-                            <a href="#/maintenance" class="nav-link"><i class="fas fa-tools fa-fw mr-2"></i>Maintenance</a>
-                        <?php endif; ?>
-                        <a href="logout.php" class="nav-link"><i class="fas fa-sign-out-alt fa-fw mr-2"></i>Logout</a>
+                        <!-- Navigation links will be rendered by the React application -->
                     </div>
                 </div>
             </div>

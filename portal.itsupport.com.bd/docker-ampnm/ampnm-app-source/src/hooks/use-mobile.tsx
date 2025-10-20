@@ -1,4 +1,5 @@
 import * as React from "react";
+import { LogOut } from "lucide-react"; // Import LogOut icon
 
 const MOBILE_BREAKPOINT = 768;
 
