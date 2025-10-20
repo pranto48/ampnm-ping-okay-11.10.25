@@ -40,16 +40,26 @@ import Products from "./Products";
 import Maintenance from "./Maintenance";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Import Card components
 
-// Helper to get initial tab from URL path
-const getInitialTab = (pathname: string) => {
-  const path = pathname.substring(1); // Remove leading slash
+// Helper to get initial tab from URL path or query params
+const getInitialTab = (pathname: string, search: string) => {
   const validTabs = [
     "dashboard", "devices", "ping", "server-ping", "status", "scanner", 
     "history", "map", "license", "products", "users", "maintenance",
   ];
+  
+  // 1. Check query parameter (used for PHP redirects)
+  const params = new URLSearchParams(search);
+  const queryTab = params.get('tab');
+  if (queryTab && validTabs.includes(queryTab)) {
+    return queryTab;
+  }
+
+  // 2. Check path (used for direct React Router navigation)
+  const path = pathname.substring(1); // Remove leading slash
   if (validTabs.includes(path)) {
     return path;
   }
+  
   return "dashboard";
 };
 
@@ -82,8 +92,8 @@ const MainApp = () => {
   const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
   const [isLicenseStatusLoading, setIsLicenseStatusLoading] = useState(true);
   
-  // Initialize activeTab based on current path
-  const [activeTab, setActiveTab] = useState(getInitialTab(location.pathname));
+  // Initialize activeTab based on current path and search params
+  const [activeTab, setActiveTab] = useState(getInitialTab(location.pathname, location.search));
 
   const fetchLicenseStatus = useCallback(async () => {
     setIsLicenseStatusLoading(true);
@@ -138,8 +148,8 @@ const MainApp = () => {
 
   // Update activeTab when location changes (due to browser back/forward or external link)
   useEffect(() => {
-    setActiveTab(getInitialTab(location.pathname));
-  }, [location.pathname]);
+    setActiveTab(getInitialTab(location.pathname, location.search));
+  }, [location.pathname, location.search]);
 
   // Update URL path when tab changes
   const handleTabChange = (value: string) => {

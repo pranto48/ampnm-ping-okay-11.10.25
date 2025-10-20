@@ -6,7 +6,7 @@
     <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
     <script src="assets/js/shared.js"></script>
     
-    <!-- Modular Map Scripts -->
+    <!-- Modular Map Scripts (Keeping only core map dependencies) -->
     <script src="assets/js/map/config.js"></script>
     <script src="assets/js/map/state.js"></script>
     <script src="assets/js/map/api.js"></script>
@@ -16,15 +16,7 @@
     <script src="assets/js/map/deviceManager.js"></script>
     <script src="assets/js/map/mapManager.js"></script>
     <script src="assets/js/map/network.js"></script>
-    <script src="assets/js/map.js"></script>
     
-    <script src="assets/js/dashboard.js"></script>
-    <script src="assets/js/devices.js"></script>
-    <script src="assets/js/history.js"></script>
-    <script src="assets/js/users.js"></script>
-    <script src="assets/js/status_logs.js"></script>
-    <script src="assets/js/email_notifications.js"></script>
-    <script src="assets/js/licenses.js"></script>
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {
