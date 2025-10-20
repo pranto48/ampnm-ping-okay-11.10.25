@@ -1,0 +1,12 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Base directory is the root of the application
+  RewriteBase /
+  
+  # Exclude existing files and directories from rewrite
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  
+  # Rewrite everything else to index.php
+  RewriteRule ^(.*)$ index.php [L]
+</IfModule>

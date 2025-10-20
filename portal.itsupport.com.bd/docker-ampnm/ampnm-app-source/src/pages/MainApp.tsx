@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom"; // Import useLocation and useNavigate
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Activity,
@@ -37,22 +38,25 @@ import UserManagement from "@/components/UserManagement";
 import DockerUpdate from "@/components/DockerUpdate";
 import Products from "./Products";
 import Maintenance from "./Maintenance";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Import Card components
 
-// Helper to get initial tab from URL hash
-const getInitialTab = () => {
-  const hash = window.location.hash.substring(1);
+// Helper to get initial tab from URL path
+const getInitialTab = (pathname: string) => {
+  const path = pathname.substring(1); // Remove leading slash
   const validTabs = [
     "dashboard", "devices", "ping", "server-ping", "status", "scanner", 
     "history", "map", "license", "products", "users", "maintenance",
   ];
-  if (validTabs.includes(hash)) {
-    return hash;
+  if (validTabs.includes(path)) {
+    return path;
   }
   return "dashboard";
 };
 
 const MainApp = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   const {
     maps,
     currentMapId,
@@ -77,7 +81,9 @@ const MainApp = () => {
   const [userRole, setUserRole] = useState<User["role"]>("user");
   const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
   const [isLicenseStatusLoading, setIsLicenseStatusLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(getInitialTab());
+  
+  // Initialize activeTab based on current path
+  const [activeTab, setActiveTab] = useState(getInitialTab(location.pathname));
 
   const fetchLicenseStatus = useCallback(async () => {
     setIsLicenseStatusLoading(true);
@@ -130,20 +136,17 @@ const MainApp = () => {
     }
   }, [isAppLoading, fetchDashboardData, fetchMaps]);
 
-  // Update URL hash when tab changes
+  // Update activeTab when location changes (due to browser back/forward or external link)
+  useEffect(() => {
+    setActiveTab(getInitialTab(location.pathname));
+  }, [location.pathname]);
+
+  // Update URL path when tab changes
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    window.location.hash = value;
+    // Use navigate to update the URL without reloading the page
+    navigate(value === 'dashboard' ? '/' : `/${value}`);
   };
-
-  // Listen for hash changes (e.g., back button)
-  useEffect(() => {
-    const handleHashChange = () => {
-      setActiveTab(getInitialTab());
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
 
   if (isAppLoading) {
     return (

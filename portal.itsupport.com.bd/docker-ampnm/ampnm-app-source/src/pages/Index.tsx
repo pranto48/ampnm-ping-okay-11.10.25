@@ -1,11 +1,11 @@
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainApp from "./MainApp";
 import NotFound from "./NotFound";
 import Products from "./Products";
 import Maintenance from "./Maintenance"; // Import Maintenance page
 
 const Index = () => (
-  <HashRouter>
+  <BrowserRouter>
     <Routes>
       {/* MainApp handles all tabs internally, so we only need one route for the root path */}
       <Route path="/" element={<MainApp />} />
@@ -15,7 +15,7 @@ const Index = () => (
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
-  </HashRouter>
+  </BrowserRouter>
 );
 
 export default Index;
