@@ -7,6 +7,11 @@ if (session_status() === PHP_SESSION_NONE) {
 // Include database configuration
 require_once __DIR__ . '/../config.php'; // Adjusted path to config.php
 
+// PHPMailer Autoload (assuming it's installed via Composer)
+require_once __DIR__ . '/../vendor/autoload.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
 // Function to get database connection (defined in config.php)
 // function getLicenseDbConnection() is already defined in config.php
 
@@ -250,6 +255,19 @@ function addTicketReply($ticket_id, $sender_id, $sender_type, $message) {
             $stmt->execute([$ticket_id]);
         }
         $pdo->commit();
+
+        // Send email notification
+        $ticket = getTicketDetails($ticket_id);
+        if ($ticket) {
+            $recipient_email = ($sender_type === 'admin') ? $ticket['email'] : getAdminSmtpSettings()['from_email']; // Send to customer or admin from_email
+            $subject = "Ticket #{$ticket_id} - New Reply: {$ticket['subject']}";
+            $body = "A new reply has been added to your support ticket #{$ticket_id} - '{$ticket['subject']}'.\n\n";
+            $body .= "Sender: " . ($sender_type === 'admin' ? 'Admin' : $ticket['first_name'] . ' ' . $ticket['last_name']) . "\n";
+            $body .= "Message: {$message}\n\n";
+            $body .= "View ticket: " . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "/support.php?ticket_id={$ticket_id}\n";
+            sendEmail($recipient_email, $subject, $body);
+        }
+
         return true;
     } catch (PDOException $e) {
         $pdo->rollBack();
@@ -260,8 +278,28 @@ function addTicketReply($ticket_id, $sender_id, $sender_type, $message) {
 
 function updateTicketStatus($ticket_id, $status) {
     $pdo = getLicenseDbConnection();
-    $stmt = $pdo->prepare("UPDATE `support_tickets` SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-    return $stmt->execute([$status, $ticket_id]);
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("UPDATE `support_tickets` SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+        $stmt->execute([$status, $ticket_id]);
+        $pdo->commit();
+
+        // Send email notification
+        $ticket = getTicketDetails($ticket_id);
+        if ($ticket) {
+            $recipient_email = $ticket['email'];
+            $subject = "Ticket #{$ticket_id} - Status Updated to " . ucfirst($status) . ": {$ticket['subject']}";
+            $body = "The status of your support ticket #{$ticket_id} - '{$ticket['subject']}' has been updated to " . ucfirst($status) . ".\n\n";
+            $body .= "View ticket: " . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "/support.php?ticket_id={$ticket_id}\n";
+            sendEmail($recipient_email, $subject, $body);
+        }
+
+        return true;
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        error_log("Error updating ticket status: " . $e->getMessage());
+        return false;
+    }
 }
 
 function getAllTickets($filter_status = null) {
@@ -469,6 +507,88 @@ function updateCustomerProfile($customer_id, $first_name, $last_name, $address, 
     }
 }
 
+// --- SMTP Settings Functions (for Portal Admin) ---
+function getAdminSmtpSettings() {
+    $pdo = getLicenseDbConnection();
+    $admin_id = $_SESSION['admin_id'] ?? null;
+    if (!$admin_id) return null;
+
+    $stmt = $pdo->prepare("SELECT host, port, username, password, encryption, from_email, from_name FROM smtp_settings WHERE admin_id = ?");
+    $stmt->execute([$admin_id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+function saveAdminSmtpSettings($host, $port, $username, $password, $encryption, $from_email, $from_name) {
+    $pdo = getLicenseDbConnection();
+    $admin_id = $_SESSION['admin_id'] ?? null;
+    if (!$admin_id) return false;
+
+    // Check if settings already exist for this admin
+    $stmt = $pdo->prepare("SELECT id, password FROM smtp_settings WHERE admin_id = ?");
+    $stmt->execute([$admin_id]);
+    $existingSettings = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $hashed_password = null;
+    if ($password !== '********' && !empty($password)) {
+        // Only hash and update password if it's not the masked value and not empty
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+    } elseif ($existingSettings) {
+        // If password is '********' (masked), keep the existing hashed password
+        $hashed_password = $existingSettings['password'];
+    } else {
+        // New settings, but empty password provided (should be caught by frontend or required)
+        return false; // Password is required for new SMTP settings
+    }
+
+    if ($existingSettings) {
+        $sql = "UPDATE smtp_settings SET host = ?, port = ?, username = ?, password = ?, encryption = ?, from_email = ?, from_name = ?, updated_at = CURRENT_TIMESTAMP WHERE admin_id = ?";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([$host, $port, $username, $hashed_password, $encryption, $from_email, $from_name, $admin_id]);
+    } else {
+        $sql = "INSERT INTO smtp_settings (admin_id, host, port, username, password, encryption, from_email, from_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([$admin_id, $host, $port, $username, $hashed_password, $encryption, $from_email, $from_name]);
+    }
+}
+
+// --- Email Sending Function ---
+function sendEmail($to, $subject, $body) {
+    $smtpSettings = getAdminSmtpSettings();
+
+    if (!$smtpSettings || empty($smtpSettings['host']) || empty($smtpSettings['username']) || empty($smtpSettings['password']) || empty($smtpSettings['from_email'])) {
+        error_log("Email sending failed: SMTP settings are incomplete or not configured.");
+        return false;
+    }
+
+    $mail = new PHPMailer(true);
+    try {
+        //Server settings
+        $mail->isSMTP();                                            // Send using SMTP
+        $mail->Host       = $smtpSettings['host'];                  // Set the SMTP server to send through
+        $mail->SMTPAuth   = true;                                   // Enable SMTP authentication
+        $mail->Username   = $smtpSettings['username'];              // SMTP username
+        $mail->Password   = $smtpSettings['password'];              // SMTP password
+        $mail->SMTPSecure = $smtpSettings['encryption'] === 'ssl' ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS; // Enable TLS encryption; `PHPMailer::ENCRYPTION_SMTPS` encouraged
+        $mail->Port       = $smtpSettings['port'];                  // TCP port to connect to
+
+        //Recipients
+        $mail->setFrom($smtpSettings['from_email'], $smtpSettings['from_name'] ?: 'IT Support BD Portal');
+        $mail->addAddress($to);     // Add a recipient
+
+        // Content
+        $mail->isHTML(false);                                  // Set email format to plain text
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+
+        $mail->send();
+        error_log("Email sent to {$to} for subject: {$subject}");
+        return true;
+    } catch (Exception $e) {
+        error_log("Email sending failed to {$to}. Mailer Error: {$mail->ErrorInfo}");
+        return false;
+    }
+}
+
 
 // --- Basic HTML Header/Footer for the portal ---
 function portal_header($title = "IT Support BD Portal") {
@@ -559,6 +679,7 @@ function admin_header($title = "Admin Panel") {
         'license-manager.php' => 'Licenses',
         'products.php' => 'Products',
         'tickets.php' => '<i class="fas fa-headset mr-1"></i> Tickets', // New Admin Tickets link
+        'smtp_settings.php' => '<i class="fas fa-envelope mr-1"></i> SMTP Settings', // NEW SMTP SETTINGS LINK
         'change_password.php' => '<i class="fas fa-key mr-1"></i> Change Password', // New Admin Password Change link
     ];
 

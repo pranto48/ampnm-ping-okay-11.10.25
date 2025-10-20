@@ -94,7 +94,7 @@ function isAdminUserSetup($pdo) {
 
 // Helper to check if all other tables exist (products, customers, orders, order_items, licenses)
 function areAllTablesSetup($pdo) {
-    $tables_to_check = ['products', 'customers', 'orders', 'order_items', 'licenses', 'support_tickets', 'ticket_replies', 'profiles']; // Added 'profiles'
+    $tables_to_check = ['products', 'customers', 'orders', 'order_items', 'licenses', 'support_tickets', 'ticket_replies', 'profiles', 'smtp_settings']; // Added 'profiles' and 'smtp_settings'
     foreach ($tables_to_check as $table) {
         try {
             $pdo->query("SELECT 1 FROM `$table` LIMIT 1");
@@ -190,7 +190,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $setup_message .= '<p class="text-green-500">Admin user ' . htmlspecialchars($admin_username) . ' created.</p>';
                     } else {
                         $stmt = $pdo->prepare("UPDATE `admin_users` SET password = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?");
-                        $stmt->execute([$hashed_password, $admin_email, $admin_username]);
+                        $stmt->execute([$hashed_username, $admin_email, $admin_username]);
                         $setup_message .= '<p class="text-orange-500">Admin user ' . htmlspecialchars($admin_username) . ' password updated.</p>';
                     }
                     $step = 3; // Move to next step
@@ -348,6 +348,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
                 $setup_message .= '<p class="text-green-500">Table `profiles` checked/created successfully.</p>';
+
+                // NEW TABLE FOR ADMIN SMTP SETTINGS
+                $pdo->exec("CREATE TABLE IF NOT EXISTS `smtp_settings` (
+                    `id` INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `admin_id` INT(11) UNSIGNED NOT NULL UNIQUE,
+                    `host` VARCHAR(255) NOT NULL,
+                    `port` INT(5) NOT NULL,
+                    `username` VARCHAR(255) NOT NULL,
+                    `password` VARCHAR(255) NOT NULL,
+                    `encryption` ENUM('none', 'ssl', 'tls') DEFAULT 'tls',
+                    `from_email` VARCHAR(255) NOT NULL,
+                    `from_name` VARCHAR(255) NULL,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (`admin_id`) REFERENCES `admin_users`(`id`) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+                $setup_message .= '<p class="text-green-500">Table `smtp_settings` checked/created successfully.</p>';
 
 
                 // Insert some sample products if they don't exist
