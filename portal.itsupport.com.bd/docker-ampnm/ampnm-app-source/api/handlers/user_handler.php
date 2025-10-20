@@ -27,8 +27,8 @@ switch ($action) {
                 exit;
             }
 
-            // Validate role input
-            if (!in_array($role, ['admin', 'user'])) {
+            // Validate role input against new ENUM values
+            if (!in_array($role, ['admin', 'editor', 'viewer', 'user'])) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid role specified.']);
                 exit;
@@ -51,7 +51,7 @@ switch ($action) {
         }
         break;
 
-    case 'update_user_role': // NEW ACTION
+    case 'update_user_role':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $input['id'] ?? null;
             $new_role = $input['role'] ?? '';
@@ -62,8 +62,8 @@ switch ($action) {
                 exit;
             }
 
-            // Validate role input
-            if (!in_array($new_role, ['admin', 'user'])) {
+            // Validate role input against new ENUM values
+            if (!in_array($new_role, ['admin', 'editor', 'viewer', 'user'])) {
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid role specified.']);
                 exit;

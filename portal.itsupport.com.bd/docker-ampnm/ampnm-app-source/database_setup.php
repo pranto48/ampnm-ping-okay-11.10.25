@@ -22,6 +22,7 @@ function message($text, $is_error = false) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Setup</title>
     <style>
         body { background-color: #0f172a; color: #cbd5e1; font-family: sans-serif; padding: 2rem; }
@@ -45,11 +46,12 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // Step 1: Ensure users table exists first with 'role' column
+    // UPDATED: Changed ENUM to include 'editor' and 'viewer'
     $pdo->exec("CREATE TABLE IF NOT EXISTS `users` (
         `id` INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         `username` VARCHAR(50) NOT NULL UNIQUE,
         `password` VARCHAR(255) NOT NULL,
-        `role` ENUM('admin', 'user') DEFAULT 'user' NOT NULL,
+        `role` ENUM('admin', 'editor', 'viewer', 'user') DEFAULT 'user' NOT NULL,
         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
     message("Table 'users' checked/created successfully.");
@@ -62,8 +64,16 @@ try {
     }
 
     if (!columnExists($pdo, $dbname, 'users', 'role')) {
-        $pdo->exec("ALTER TABLE `users` ADD COLUMN `role` ENUM('admin', 'user') DEFAULT 'user' NOT NULL AFTER `password`;");
+        $pdo->exec("ALTER TABLE `users` ADD COLUMN `role` ENUM('admin', 'editor', 'viewer', 'user') DEFAULT 'user' NOT NULL AFTER `password`;");
         message("Migrated 'users' table: added 'role' column.");
+    } else {
+        // Migration: Update 'role' ENUM if it exists but doesn't include new roles
+        // This is a more robust way to alter ENUMs without losing data
+        $current_enum_values_query = $pdo->query("SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = '{$dbname}' AND TABLE_NAME = 'users' AND COLUMN_NAME = 'role'")->fetchColumn();
+        if (strpos($current_enum_values_query, "'editor'") === false || strpos($current_enum_values_query, "'viewer'") === false) {
+            $pdo->exec("ALTER TABLE `users` MODIFY COLUMN `role` ENUM('admin', 'editor', 'viewer', 'user') DEFAULT 'user' NOT NULL;");
+            message("Migrated 'users' table: updated 'role' ENUM to include 'editor' and 'viewer'.");
+        }
     }
 
 

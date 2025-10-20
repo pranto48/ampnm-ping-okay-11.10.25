@@ -49,7 +49,8 @@ export const useNetworkMapLogic = ({
   const [isEdgeEditorOpen, setIsEdgeEditorOpen] = useState(false);
   const [editingEdge, setEditingEdge] = useState<Edge | undefined>(undefined);
 
-  const canEdit = userRole === 'admin'; // Determine edit permission based on role
+  // Determine edit permission based on role: admin or editor
+  const canEdit = userRole === 'admin' || userRole === 'editor';
 
   const mapDeviceToNode = useCallback(
     (device: NetworkDevice): Node => ({
@@ -138,7 +139,7 @@ export const useNetworkMapLogic = ({
   const onConnect = useCallback(
     async (params: Connection) => {
       if (!canEdit) {
-        showError('Only admin users can create connections.');
+        showError('Only admin or editor users can create connections.');
         return;
       }
       if (!mapId) {
@@ -171,7 +172,7 @@ export const useNetworkMapLogic = ({
 
   const handleAddDevice = () => {
     if (!canEdit) {
-      showError('Only admin users can add devices.');
+      showError('Only admin or editor users can add devices.');
       return;
     }
     if (!canAddDevice) {
@@ -184,7 +185,7 @@ export const useNetworkMapLogic = ({
 
   const handleEditDevice = (deviceId: string) => {
     if (!canEdit) {
-      showError('Only admin users can edit devices.');
+      showError('Only admin or editor users can edit devices.');
       return;
     }
     const nodeToEdit = nodes.find((n) => n.id === deviceId);
@@ -196,7 +197,7 @@ export const useNetworkMapLogic = ({
 
   const handleDeleteDevice = async (deviceId: string) => {
     if (!canEdit) {
-      showError('Only admin users can delete devices.');
+      showError('Only admin or editor users can delete devices.');
       return;
     }
     if (window.confirm('Are you sure you want to delete this device?')) {
@@ -218,9 +219,9 @@ export const useNetworkMapLogic = ({
     }
   };
 
-  const handleSaveDevice = async (deviceData: Omit<NetworkDevice, 'id' | 'user_id' | 'position_x' | 'position_y' | 'status' | 'last_ping' | 'last_ping_result' | 'map_name' | 'last_ping_output'>) => {
+  const handleSaveDevice = async (deviceData: Omit<NetworkDevice, 'id' | 'user_id' | 'status' | 'last_ping' | 'last_ping_result' | 'map_name' | 'last_ping_output'>) => {
     if (!canEdit) {
-      showError('Only admin users can save device changes.');
+      showError('Only admin or editor users can save device changes.');
       return;
     }
     if (!mapId) {
@@ -247,7 +248,7 @@ export const useNetworkMapLogic = ({
 
   const handlePlaceExistingDevice = useCallback(async (device: NetworkDevice, position: { x: number, y: number }) => {
     if (!canEdit) {
-      showError('Only admin users can place devices.');
+      showError('Only admin or editor users can place devices.');
       return;
     }
     if (!mapId) {
@@ -277,7 +278,7 @@ export const useNetworkMapLogic = ({
   const onNodeDragStop: NodeDragHandler = useCallback(
     async (_event, node) => {
       if (!canEdit) {
-        showError('Only admin users can move devices.');
+        showError('Only admin or editor users can move devices.');
         return;
       }
       try {
@@ -297,7 +298,7 @@ export const useNetworkMapLogic = ({
       changes.forEach(async (change) => {
         if (change.type === 'remove') {
           if (!canEdit) {
-            showError('Only admin users can delete connections.');
+            showError('Only admin or editor users can delete connections.');
             return;
           }
           try {
@@ -316,7 +317,7 @@ export const useNetworkMapLogic = ({
 
   const onEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
     if (!canEdit) {
-      showError('Only admin users can edit connections.');
+      showError('Only admin or editor users can edit connections.');
       return;
     }
     setEditingEdge(edge);
@@ -325,7 +326,7 @@ export const useNetworkMapLogic = ({
 
   const handleSaveEdge = async (edgeId: string, connectionType: string) => {
     if (!canEdit) {
-      showError('Only admin users can save connection changes.');
+      showError('Only admin or editor users can save connection changes.');
       return;
     }
     // Optimistically update UI
@@ -347,7 +348,7 @@ export const useNetworkMapLogic = ({
 
   const handleImportMap = async (mapData: MapData) => {
     if (!canEdit) {
-      showError('Only admin users can import maps.');
+      showError('Only admin or editor users can import maps.');
       return;
     }
     if (!mapId) {

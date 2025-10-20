@@ -101,14 +101,14 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onConnect={canEdit ? onConnect : undefined} // Only allow connect for admin/editor
         nodeTypes={nodeTypes}
-        onNodeDragStop={canEdit ? onNodeDragStop : undefined} // Only allow drag for admin
-        onEdgeClick={canEdit ? onEdgeClick : undefined} // Only allow edge click for admin
+        onNodeDragStop={canEdit ? onNodeDragStop : undefined} // Only allow drag for admin/editor
+        onEdgeClick={canEdit ? onEdgeClick : undefined} // Only allow edge click for admin/editor
         fitView
         fitViewOptions={{ padding: 0.1 }}
-        nodesDraggable={canEdit} // Make nodes draggable only for admin
-        nodesConnectable={canEdit} // Make nodes connectable only for admin
+        nodesDraggable={canEdit} // Make nodes draggable only for admin/editor
+        nodesConnectable={canEdit} // Make nodes connectable only for admin/editor
         elementsSelectable={true} // Allow selection for all users
       >
         <Controls className="[&_button]:bg-card [&_button]:border-border [&_button]:text-foreground [&_button:hover]:bg-primary [&_button:hover]:text-primary-foreground" />
@@ -127,16 +127,16 @@ const NetworkMap = ({ devices, onMapUpdate, mapId, canAddDevice, licenseMessage,
         <Background gap={16} size={1} color="#444" />
       </ReactFlow>
       <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-        <Button onClick={handleAddDevice} size="sm" disabled={!mapId || !canAddDevice || !canEdit} title={!canEdit ? "Only admin users can add devices." : (!canAddDevice ? licenseMessage : '')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+        <Button onClick={handleAddDevice} size="sm" disabled={!mapId || !canAddDevice || !canEdit} title={!canEdit ? "Only admin or editor users can add devices." : (!canAddDevice ? licenseMessage : '')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
           <PlusCircle className="h-4 w-4 mr-2" />Add Device
         </Button>
-        <Button onClick={() => setIsPlaceDeviceOpen(true)} size="sm" variant="secondary" disabled={!mapId || !canEdit} title={!canEdit ? "Only admin users can place devices." : ''}>
+        <Button onClick={() => setIsPlaceDeviceOpen(true)} size="sm" variant="secondary" disabled={!mapId || !canEdit} title={!canEdit ? "Only admin or editor users can place devices." : ''}>
           <Server className="h-4 w-4 mr-2" />Place Existing
         </Button>
         <Button onClick={handleExportMap} variant="outline" size="sm" disabled={!mapId} className="bg-card hover:bg-secondary text-foreground border-border">
           <Download className="h-4 w-4 mr-2" />Export
         </Button>
-        <Button onClick={() => importInputRef.current?.click()} variant="outline" size="sm" disabled={!mapId || !canEdit} title={!canEdit ? "Only admin users can import maps." : ''} className="bg-card hover:bg-secondary text-foreground border-border">
+        <Button onClick={() => importInputRef.current?.click()} variant="outline" size="sm" disabled={!mapId || !canEdit} title={!canEdit ? "Only admin or editor users can import maps." : ''} className="bg-card hover:bg-secondary text-foreground border-border">
           <Upload className="h-4 w-4 mr-2" />Import
         </Button>
         <input

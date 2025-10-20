@@ -64,6 +64,10 @@ const UserManagement = () => {
   };
 
   const handleUpdateUserRole = async (userId: string, currentUsername: string, newRole: User['role']) => {
+    if (currentUser && currentUser.id === userId) {
+      showError("You cannot change your own role.");
+      return;
+    }
     if (window.confirm(`Are you sure you want to change the role of user "${currentUsername}" to "${newRole}"?`)) {
       const toastId = showLoading(`Updating role for ${currentUsername}...`);
       try {
@@ -83,6 +87,10 @@ const UserManagement = () => {
   };
 
   const handleDeleteUser = async (userId: string, username: string) => {
+    if (currentUser && currentUser.id === userId) {
+      showError("You cannot delete your own account.");
+      return;
+    }
     if (window.confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
       const toastId = showLoading(`Deleting user ${username}...`);
       try {
@@ -110,7 +118,7 @@ const UserManagement = () => {
             User Management
           </CardTitle>
           <CardDescription>
-            Manage application users and their roles (admin/user).
+            Manage application users and their roles (admin/editor/viewer/user).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -151,6 +159,8 @@ const UserManagement = () => {
                       </SelectTrigger>
                       <SelectContent className="bg-card text-foreground border-border">
                         <SelectItem value="user" className="hover:bg-secondary">User</SelectItem>
+                        <SelectItem value="viewer" className="hover:bg-secondary">Viewer</SelectItem>
+                        <SelectItem value="editor" className="hover:bg-secondary">Editor</SelectItem>
                         <SelectItem value="admin" className="hover:bg-secondary">Admin</SelectItem>
                       </SelectContent>
                     </Select>
@@ -186,7 +196,7 @@ const UserManagement = () => {
                   ) : (
                     <div className="space-y-3">
                       {users.map((user) => {
-                        const isSelf = currentUser && currentUser.username === user.username;
+                        const isSelf = currentUser && currentUser.id === user.id;
                         return (
                           <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted border-border">
                             <div className="flex items-center gap-3">
@@ -207,6 +217,8 @@ const UserManagement = () => {
                                 </SelectTrigger>
                                 <SelectContent className="bg-card text-foreground border-border">
                                   <SelectItem value="user" className="hover:bg-secondary">User</SelectItem>
+                                  <SelectItem value="viewer" className="hover:bg-secondary">Viewer</SelectItem>
+                                  <SelectItem value="editor" className="hover:bg-secondary">Editor</SelectItem>
                                   <SelectItem value="admin" className="hover:bg-secondary">Admin</SelectItem>
                                 </SelectContent>
                               </Select>

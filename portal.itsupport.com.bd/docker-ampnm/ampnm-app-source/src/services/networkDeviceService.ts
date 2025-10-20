@@ -80,11 +80,11 @@ export interface FullDashboardData {
   recent_activity: RecentActivity[];
 }
 
-// NEW: User interface
+// NEW: User interface - UPDATED to include 'editor' and 'viewer'
 export interface User {
   id: string;
   username: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'editor' | 'viewer' | 'user';
   created_at: string;
 }
 
@@ -137,7 +137,7 @@ export const getDevices = async (map_id?: string | null) => {
     warning_latency_threshold: d.warning_latency_threshold,
     warning_packetloss_threshold: d.warning_packetloss_threshold,
     critical_latency_threshold: d.critical_latency_threshold,
-    critical_packetloss_threshold: d.critical_packetloss_threshold,
+    critical_packetloss_threshold: d.critical_latency_threshold,
     last_avg_time: d.last_avg_time,
     last_ttl: d.last_ttl,
     show_live_ping: Boolean(parseInt(d.show_live_ping)),
@@ -168,7 +168,7 @@ export const getUnmappedDevices = async (): Promise<NetworkDevice[]> => {
     warning_latency_threshold: d.warning_latency_threshold,
     warning_packetloss_threshold: d.warning_packetloss_threshold,
     critical_latency_threshold: d.critical_latency_threshold,
-    critical_packetloss_threshold: d.critical_packetloss_threshold,
+    critical_packetloss_threshold: d.critical_latency_threshold,
     last_avg_time: d.last_avg_time,
     last_ttl: d.last_ttl,
     show_live_ping: Boolean(parseInt(d.show_live_ping)),
@@ -211,7 +211,7 @@ export const addDevice = async (device: Omit<NetworkDevice, 'id' | 'user_id' | '
     warning_latency_threshold: device.warning_latency_threshold,
     warning_packetloss_threshold: device.warning_packetloss_threshold,
     critical_latency_threshold: device.critical_latency_threshold,
-    critical_packetloss_threshold: device.critical_packetloss_threshold,
+    critical_packetloss_threshold: device.critical_latency_threshold,
     show_live_ping: device.show_live_ping,
   };
   const data = await callPhpApi('create_device', 'POST', undefined, payload);
