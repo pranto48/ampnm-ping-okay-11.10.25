@@ -1,5 +1,5 @@
 <?php
 require_once __DIR__ . '/includes/auth_check.php';
-header('Location: index.php?tab=email-notifications');
+header('Location: /email-notifications'); // Assuming this will be a new tab/route
 exit;
 ?>

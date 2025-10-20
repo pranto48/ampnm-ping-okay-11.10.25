@@ -1,26 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom"; // Import useLocation and useNavigate
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Activity,
-  Wifi,
   Server,
-  Clock,
-  RefreshCw,
+  Wifi,
   Network,
-  Key,
-  Users,
-  Package,
-  Settings,
+  Search,
+  History,
   Map,
-  WifiOff,
-  Desktop, // Added for Server Ping icon
-  Search, // Added for Network Scanner icon
-  History, // Added for Ping History icon
-  ShieldHalf, // Added for License icon
-  BoxOpen, // Added for Products icon
-  UserCog, // Added for Users icon
-  Tools, // Added for Maintenance icon
+  Mail, // Import Mail icon for Email Notifications
 } from "lucide-react";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
@@ -30,21 +19,22 @@ import PingHistory from "@/components/PingHistory";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import NetworkMap from "@/components/NetworkMap";
 import { getLicenseStatus, LicenseStatus, User } from "@/services/networkDeviceService";
-import { Skeleton } from "@/components/ui/skeleton";
 import DashboardContent from "@/components/DashboardContent";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import LicenseManager from "@/components/LicenseManager";
 import UserManagement from "@/components/UserManagement";
 import DockerUpdate from "@/components/DockerUpdate";
 import Products from "./Products";
-import Maintenance from "./Maintenance";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Import Card components
+import Maintenance from "./Maintenance"; // Corrected import path
+import EmailNotifications from "./EmailNotifications";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import AppNavigation from "@/components/AppNavigation";
 
 // Helper to get initial tab from URL path or query params
 const getInitialTab = (pathname: string, search: string) => {
   const validTabs = [
     "dashboard", "devices", "ping", "server-ping", "status", "scanner", 
-    "history", "map", "license", "products", "users", "maintenance",
+    "history", "map", "license", "products", "users", "maintenance", "email-notifications",
   ];
   
   // 1. Check query parameter (used for PHP redirects)
@@ -170,6 +160,9 @@ const MainApp = () => {
 
   return (
     <div className="flex w-full flex-col">
+      {/* Render the new AppNavigation component */}
+      <AppNavigation activeTab={activeTab} handleTabChange={handleTabChange} isAdmin={isAdmin} />
+
       <div className="flex-1 space-y-4 p-4 pt-6 sm:p-8">
         {/* Temporary debug display for user role */}
         {/* <div className="bg-blue-500/20 text-blue-300 p-2 rounded-md text-sm mb-4">
@@ -177,60 +170,10 @@ const MainApp = () => {
         </div> */}
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="flex flex-wrap h-auto p-1">
-            <TabsTrigger value="dashboard">
-              <Activity className="mr-2 h-4 w-4" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="devices">
-              <Server className="mr-2 h-4 w-4" />
-              Devices
-            </TabsTrigger>
-            <TabsTrigger value="ping">
-              <Wifi className="mr-2 h-4 w-4" />
-              Browser Ping
-            </TabsTrigger>
-            <TabsTrigger value="server-ping">
-              <Desktop className="mr-2 h-4 w-4" />
-              Server Ping
-            </TabsTrigger>
-            <TabsTrigger value="status">
-              <Network className="mr-2 h-4 w-4" />
-              Network Status
-            </TabsTrigger>
-            <TabsTrigger value="scanner">
-              <Search className="mr-2 h-4 w-4" />
-              Network Scanner
-            </TabsTrigger>
-            <TabsTrigger value="history">
-              <History className="mr-2 h-4 w-4" />
-              Ping History
-            </TabsTrigger>
-            <TabsTrigger value="map">
-              <Map className="mr-2 h-4 w-4" />
-              Network Map
-            </TabsTrigger>
-            <TabsTrigger value="license">
-              <ShieldHalf className="mr-2 h-4 w-4" />
-              License
-            </TabsTrigger>
-            <TabsTrigger value="products">
-              <BoxOpen className="mr-2 h-4 w-4" />
-              Products
-            </TabsTrigger>
-            {isAdmin && (
-              <>
-                <TabsTrigger value="users">
-                  <UserCog className="mr-2 h-4 w-4" />
-                  Users
-                </TabsTrigger>
-                <TabsTrigger value="maintenance">
-                  <Tools className="mr-2 h-4 w-4" />
-                  Maintenance
-                </TabsTrigger>
-              </>
-            )}
-          </TabsList>
+          {/* TabsList is now inside AppNavigation */}
+          {/* <TabsList className="flex flex-wrap h-auto p-1">
+            ... (removed) ...
+          </TabsList> */}
 
           <TabsContent value="dashboard">
             <DashboardContent
@@ -377,6 +320,10 @@ const MainApp = () => {
           
           <TabsContent value="products">
             <Products />
+          </TabsContent>
+
+          <TabsContent value="email-notifications">
+            <EmailNotifications />
           </TabsContent>
 
           {isAdmin && (

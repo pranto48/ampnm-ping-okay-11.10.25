@@ -4,19 +4,8 @@
         <p>Copyright © <?php echo date("Y"); ?> <a href="https://itsupport.com.bd" target="_blank" class="text-cyan-400 hover:underline">IT Support BD</a>. All rights reserved.</p>
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
-    <script src="assets/js/shared.js"></script>
-    
-    <!-- Modular Map Scripts (Keeping only core map dependencies) -->
-    <script src="assets/js/map/config.js"></script>
-    <script src="assets/js/map/state.js"></script>
-    <script src="assets/js/map/api.js"></script>
-    <script src="assets/js/map/utils.js"></script>
-    <script src="assets/js/map/ui.js"></script>
+    <!-- Removed old PHP-based map scripts and shared.js -->
     <script src="assets/js/soundManager.js"></script>
-    <script src="assets/js/map/deviceManager.js"></script>
-    <script src="assets/js/map/mapManager.js"></script>
-    <script src="assets/js/map/network.js"></script>
-    
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {

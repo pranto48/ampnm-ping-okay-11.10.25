@@ -1,5 +1,5 @@
 <?php
 require_once __DIR__ . '/includes/auth_check.php';
-header('Location: index.php?tab=map');
+header('Location: /map');
 exit;
 ?>

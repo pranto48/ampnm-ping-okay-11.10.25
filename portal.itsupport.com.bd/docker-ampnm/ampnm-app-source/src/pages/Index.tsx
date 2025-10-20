@@ -3,6 +3,7 @@ import MainApp from "./MainApp";
 import NotFound from "./NotFound";
 import Products from "./Products";
 import Maintenance from "./Maintenance"; // Import Maintenance page
+import EmailNotifications from "./EmailNotifications"; // Import new EmailNotifications page
 
 const Index = () => (
   <BrowserRouter>
@@ -12,6 +13,7 @@ const Index = () => (
       {/* We keep other routes for direct access if needed, but MainApp handles the primary navigation */}
       <Route path="/products" element={<Products />} />
       <Route path="/maintenance" element={<Maintenance />} />
+      <Route path="/email-notifications" element={<EmailNotifications />} /> {/* New route */}
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
