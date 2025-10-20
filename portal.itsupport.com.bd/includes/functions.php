@@ -698,9 +698,6 @@ function portal_header($title = "IT Support BD Portal") {
     $nav_links = [
         'products.php' => 'Products',
         'dashboard.php' => 'Dashboard',
-        'support.php' => '<i class="fas fa-headset mr-1"></i> Support',
-        'profile.php' => '<i class="fas fa-user-circle mr-1"></i> Profile',
-        'change_password.php' => '<i class="fas fa-key mr-1"></i> Change Password', // Added Change Password link
         'cart.php' => '<i class="fas fa-shopping-cart mr-1"></i> Cart',
     ];
 
@@ -709,7 +706,24 @@ function portal_header($title = "IT Support BD Portal") {
             $active_class = ($current_page === $href) ? 'active' : '';
             echo '<a href="' . htmlspecialchars($href) . '" class="nav-link ' . $active_class . '">' . $text . '</a>';
         }
-        echo '<a href="logout.php" class="nav-link"><i class="fas fa-sign-out-alt mr-1"></i> Logout (' . htmlspecialchars($_SESSION['customer_email']) . ')</a>';
+        
+        // User Icon Dropdown Menu
+        echo '<div class="relative group">
+                <button class="nav-link flex items-center space-x-2">
+                    <i class="fas fa-user-circle text-lg"></i>
+                    <span class="hidden md:inline">' . htmlspecialchars($_SESSION['customer_name']) . '</span>
+                    <i class="fas fa-chevron-down text-xs ml-1 transition-transform duration-200 group-hover:rotate-180"></i>
+                </button>
+                <div class="absolute right-0 mt-2 w-48 bg-slate-800/90 backdrop-blur-lg border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <a href="profile.php" class="block px-4 py-2 text-sm text-gray-200 hover:bg-slate-700 rounded-t-lg"><i class="fas fa-user-edit mr-2"></i> Profile</a>
+                    <a href="change_password.php" class="block px-4 py-2 text-sm text-gray-200 hover:bg-slate-700"><i class="fas fa-key mr-2"></i> Change Password</a>
+                    <a href="support.php" class="block px-4 py-2 text-sm text-gray-200 hover:bg-slate-700"><i class="fas fa-headset mr-2"></i> My Tickets</a>
+                    <a href="dashboard.php" class="block px-4 py-2 text-sm text-gray-200 hover:bg-slate-700"><i class="fas fa-box-open mr-2"></i> My Products</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-slate-700 cursor-not-allowed opacity-70"><i class="fas fa-file-invoice-dollar mr-2"></i> Billing Information <span class="text-xs text-gray-400">(Coming Soon)</span></a>
+                    <div class="border-t border-slate-700 my-1"></div>
+                    <a href="logout.php" class="block px-4 py-2 text-sm text-red-400 hover:bg-red-900/30 rounded-b-lg"><i class="fas fa-sign-out-alt mr-2"></i> Logout</a>
+                </div>
+            </div>';
     } else {
         $public_nav_links = [
             'products.php' => 'Products',
