@@ -9,7 +9,7 @@ import {
   Search,
   History,
   Map,
-  Mail, // Import Mail icon for Email Notifications
+  Mail,
 } from "lucide-react";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
@@ -25,10 +25,11 @@ import LicenseManager from "@/components/LicenseManager";
 import UserManagement from "@/components/UserManagement";
 import DockerUpdate from "@/components/DockerUpdate";
 import Products from "./Products";
-import Maintenance from "./Maintenance"; // Corrected import path
+import Maintenance from "./Maintenance";
 import EmailNotifications from "./EmailNotifications";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import AppNavigation from "@/components/AppNavigation";
+import { showError } from "@/utils/toast"; // Ensure showError is imported
 
 // Helper to get initial tab from URL path or query params
 const getInitialTab = (pathname: string, search: string) => {
@@ -37,15 +38,13 @@ const getInitialTab = (pathname: string, search: string) => {
     "history", "map", "license", "products", "users", "maintenance", "email-notifications",
   ];
   
-  // 1. Check query parameter (used for PHP redirects)
   const params = new URLSearchParams(search);
   const queryTab = params.get('tab');
   if (queryTab && validTabs.includes(queryTab)) {
     return queryTab;
   }
 
-  // 2. Check path (used for direct React Router navigation)
-  const path = pathname.substring(1); // Remove leading slash
+  const path = pathname.substring(1);
   if (validTabs.includes(path)) {
     return path;
   }
@@ -82,7 +81,6 @@ const MainApp = () => {
   const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
   const [isLicenseStatusLoading, setIsLicenseStatusLoading] = useState(true);
   
-  // Initialize activeTab based on current path and search params
   const [activeTab, setActiveTab] = useState(getInitialTab(location.pathname, location.search));
 
   const fetchLicenseStatus = useCallback(async () => {
@@ -90,11 +88,12 @@ const MainApp = () => {
     try {
       const status = await getLicenseStatus();
       setLicenseStatus(status);
-    } catch (error) {
+    } catch (error: any) { // Catch error as 'any' for more flexibility
       console.error("Failed to load license status:", error);
+      showError(`Failed to load license status: ${error.message || 'Unknown error'}`);
       setLicenseStatus(prev => ({
         ...prev,
-        license_message: "Error loading license status.",
+        license_message: `Error loading license status: ${error.message || 'Unknown error'}`,
         license_status_code: "error",
       }));
     } finally {
@@ -106,14 +105,15 @@ const MainApp = () => {
     setIsUserRoleLoading(true);
     try {
       const response = await fetch('/api.php?action=get_user_info'); 
-      if (response.ok) {
-        const data = await response.json();
-        setUserRole(data.role);
-      } else {
-        setUserRole('user');
+      if (!response.ok) {
+        const errorText = await response.text(); // Get raw text for debugging
+        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
       }
-    } catch (error) {
+      const data = await response.json();
+      setUserRole(data.role);
+    } catch (error: any) {
       console.error("Failed to fetch user role:", error);
+      showError(`Failed to fetch user role: ${error.message || 'Unknown error'}`);
       setUserRole('user'); 
     } finally {
       setIsUserRoleLoading(false);
@@ -124,27 +124,27 @@ const MainApp = () => {
   const isAppLoading = isUserRoleLoading || isLicenseStatusLoading;
 
   useEffect(() => {
+    console.log("MainApp: isUserRoleLoading", isUserRoleLoading, "isLicenseStatusLoading", isLicenseStatusLoading, "isAppLoading", isAppLoading);
+  }, [isUserRoleLoading, isLicenseStatusLoading, isAppLoading]);
+
+  useEffect(() => {
     fetchUserRole();
     fetchLicenseStatus();
   }, [fetchUserRole, fetchLicenseStatus]);
 
   useEffect(() => {
-    // Fetch dashboard data only after we know the license status and user role
     if (!isAppLoading) {
       fetchDashboardData();
       fetchMaps();
     }
   }, [isAppLoading, fetchDashboardData, fetchMaps]);
 
-  // Update activeTab when location changes (due to browser back/forward or external link)
   useEffect(() => {
     setActiveTab(getInitialTab(location.pathname, location.search));
   }, [location.pathname, location.search]);
 
-  // Update URL path when tab changes
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    // Use navigate to update the URL without reloading the page
     navigate(value === 'dashboard' ? '/' : `/${value}`);
   };
 
@@ -160,21 +160,10 @@ const MainApp = () => {
 
   return (
     <div className="flex w-full flex-col">
-      {/* Render the new AppNavigation component */}
       <AppNavigation activeTab={activeTab} handleTabChange={handleTabChange} isAdmin={isAdmin} />
 
       <div className="flex-1 space-y-4 p-4 pt-6 sm:p-8">
-        {/* Temporary debug display for user role */}
-        {/* <div className="bg-blue-500/20 text-blue-300 p-2 rounded-md text-sm mb-4">
-          Debug: Current User Role is <span className="font-bold capitalize">{userRole}</span>
-        </div> */}
-
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          {/* TabsList is now inside AppNavigation */}
-          {/* <TabsList className="flex flex-wrap h-auto p-1">
-            ... (removed) ...
-          </TabsList> */}
-
           <TabsContent value="dashboard">
             <DashboardContent
               maps={maps}
