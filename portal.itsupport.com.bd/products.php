@@ -32,7 +32,7 @@ portal_header("Our Products - IT Support BD Portal");
                     <form action="cart.php" method="POST" class="space-y-4">
                         <div>
                             <label for="ampnm_product_select" class="block text-gray-200 text-sm font-bold mb-2">Choose License:</label>
-                            <select id="ampnm_product_select" name="product_id" class="form-glass-input max-w-xs" required>
+                            <select id="ampnm_product_select" name="product_id" class="form-glass-input w-fit mx-auto" required>
                                 <?php foreach ($category_products as $product): ?>
                                     <option value="<?= htmlspecialchars($product['id']) ?>">
                                         <?= htmlspecialchars($product['name']) ?> - $<?= htmlspecialchars(number_format($product['price'], 2)) ?>
