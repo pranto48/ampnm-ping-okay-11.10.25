@@ -1,15 +1,25 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Activity,
-  Server,
   Wifi,
+  Server,
+  Clock,
+  RefreshCw,
   Network,
-  Search,
-  History,
+  Key,
+  Users,
+  Package,
+  Settings,
   Map,
-  Mail,
+  WifiOff,
+  Desktop, // Added for Server Ping icon
+  Search, // Added for Network Scanner icon
+  History, // Added for Ping History icon
+  ShieldHalf, // Added for License icon
+  BoxOpen, // Added for Products icon
+  UserCog, // Added for Users icon
+  Tools, // Added for Maintenance icon
 } from "lucide-react";
 import PingTest from "@/components/PingTest";
 import NetworkStatus from "@/components/NetworkStatus";
@@ -19,6 +29,7 @@ import PingHistory from "@/components/PingHistory";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import NetworkMap from "@/components/NetworkMap";
 import { getLicenseStatus, LicenseStatus, User } from "@/services/networkDeviceService";
+import { Skeleton } from "@/components/ui/skeleton";
 import DashboardContent from "@/components/DashboardContent";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import LicenseManager from "@/components/LicenseManager";
@@ -26,36 +37,22 @@ import UserManagement from "@/components/UserManagement";
 import DockerUpdate from "@/components/DockerUpdate";
 import Products from "./Products";
 import Maintenance from "./Maintenance";
-import EmailNotifications from "./EmailNotifications";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import AppNavigation from "@/components/AppNavigation";
-import { showError } from "@/utils/toast"; // Ensure showError is imported
+import { Card, CardContent } from "@/components/ui/card";
 
-// Helper to get initial tab from URL path or query params
-const getInitialTab = (pathname: string, search: string) => {
+// Helper to get initial tab from URL hash
+const getInitialTab = () => {
+  const hash = window.location.hash.substring(1);
   const validTabs = [
     "dashboard", "devices", "ping", "server-ping", "status", "scanner", 
-    "history", "map", "license", "products", "users", "maintenance", "email-notifications",
+    "history", "map", "license", "products", "users", "maintenance",
   ];
-  
-  const params = new URLSearchParams(search);
-  const queryTab = params.get('tab');
-  if (queryTab && validTabs.includes(queryTab)) {
-    return queryTab;
+  if (validTabs.includes(hash)) {
+    return hash;
   }
-
-  const path = pathname.substring(1);
-  if (validTabs.includes(path)) {
-    return path;
-  }
-  
   return "dashboard";
 };
 
 const MainApp = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  
   const {
     maps,
     currentMapId,
@@ -80,20 +77,18 @@ const MainApp = () => {
   const [userRole, setUserRole] = useState<User["role"]>("user");
   const [isUserRoleLoading, setIsUserRoleLoading] = useState(true);
   const [isLicenseStatusLoading, setIsLicenseStatusLoading] = useState(true);
-  
-  const [activeTab, setActiveTab] = useState(getInitialTab(location.pathname, location.search));
+  const [activeTab, setActiveTab] = useState(getInitialTab());
 
   const fetchLicenseStatus = useCallback(async () => {
     setIsLicenseStatusLoading(true);
     try {
       const status = await getLicenseStatus();
       setLicenseStatus(status);
-    } catch (error: any) { // Catch error as 'any' for more flexibility
+    } catch (error) {
       console.error("Failed to load license status:", error);
-      showError(`Failed to load license status: ${error.message || 'Unknown error'}`);
       setLicenseStatus(prev => ({
         ...prev,
-        license_message: `Error loading license status: ${error.message || 'Unknown error'}`,
+        license_message: "Error loading license status.",
         license_status_code: "error",
       }));
     } finally {
@@ -105,15 +100,14 @@ const MainApp = () => {
     setIsUserRoleLoading(true);
     try {
       const response = await fetch('/api.php?action=get_user_info'); 
-      if (!response.ok) {
-        const errorText = await response.text(); // Get raw text for debugging
-        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUserRole(data.role);
+      } else {
+        setUserRole('user');
       }
-      const data = await response.json();
-      setUserRole(data.role);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to fetch user role:", error);
-      showError(`Failed to fetch user role: ${error.message || 'Unknown error'}`);
       setUserRole('user'); 
     } finally {
       setIsUserRoleLoading(false);
@@ -124,29 +118,32 @@ const MainApp = () => {
   const isAppLoading = isUserRoleLoading || isLicenseStatusLoading;
 
   useEffect(() => {
-    console.log("MainApp: isUserRoleLoading", isUserRoleLoading, "isLicenseStatusLoading", isLicenseStatusLoading, "isAppLoading", isAppLoading);
-  }, [isUserRoleLoading, isLicenseStatusLoading, isAppLoading]);
-
-  useEffect(() => {
     fetchUserRole();
     fetchLicenseStatus();
   }, [fetchUserRole, fetchLicenseStatus]);
 
   useEffect(() => {
+    // Fetch dashboard data only after we know the license status and user role
     if (!isAppLoading) {
       fetchDashboardData();
       fetchMaps();
     }
   }, [isAppLoading, fetchDashboardData, fetchMaps]);
 
-  useEffect(() => {
-    setActiveTab(getInitialTab(location.pathname, location.search));
-  }, [location.pathname, location.search]);
-
+  // Update URL hash when tab changes
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    navigate(value === 'dashboard' ? '/' : `/${value}`);
+    window.location.hash = value;
   };
+
+  // Listen for hash changes (e.g., back button)
+  useEffect(() => {
+    const handleHashChange = () => {
+      setActiveTab(getInitialTab());
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   if (isAppLoading) {
     return (
@@ -160,10 +157,68 @@ const MainApp = () => {
 
   return (
     <div className="flex w-full flex-col">
-      <AppNavigation activeTab={activeTab} handleTabChange={handleTabChange} isAdmin={isAdmin} />
-
       <div className="flex-1 space-y-4 p-4 pt-6 sm:p-8">
+        {/* Temporary debug display for user role */}
+        {/* <div className="bg-blue-500/20 text-blue-300 p-2 rounded-md text-sm mb-4">
+          Debug: Current User Role is <span className="font-bold capitalize">{userRole}</span>
+        </div> */}
+
         <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList className="flex flex-wrap h-auto p-1">
+            <TabsTrigger value="dashboard">
+              <Activity className="mr-2 h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="devices">
+              <Server className="mr-2 h-4 w-4" />
+              Devices
+            </TabsTrigger>
+            <TabsTrigger value="ping">
+              <Wifi className="mr-2 h-4 w-4" />
+              Browser Ping
+            </TabsTrigger>
+            <TabsTrigger value="server-ping">
+              <Desktop className="mr-2 h-4 w-4" />
+              Server Ping
+            </TabsTrigger>
+            <TabsTrigger value="status">
+              <Network className="mr-2 h-4 w-4" />
+              Network Status
+            </TabsTrigger>
+            <TabsTrigger value="scanner">
+              <Search className="mr-2 h-4 w-4" />
+              Network Scanner
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="mr-2 h-4 w-4" />
+              Ping History
+            </TabsTrigger>
+            <TabsTrigger value="map">
+              <Map className="mr-2 h-4 w-4" />
+              Network Map
+            </TabsTrigger>
+            <TabsTrigger value="license">
+              <ShieldHalf className="mr-2 h-4 w-4" />
+              License
+            </TabsTrigger>
+            <TabsTrigger value="products">
+              <BoxOpen className="mr-2 h-4 w-4" />
+              Products
+            </TabsTrigger>
+            {isAdmin && (
+              <>
+                <TabsTrigger value="users">
+                  <UserCog className="mr-2 h-4 w-4" />
+                  Users
+                </TabsTrigger>
+                <TabsTrigger value="maintenance">
+                  <Tools className="mr-2 h-4 w-4" />
+                  Maintenance
+                </TabsTrigger>
+              </>
+            )}
+          </TabsList>
+
           <TabsContent value="dashboard">
             <DashboardContent
               maps={maps}
@@ -309,10 +364,6 @@ const MainApp = () => {
           
           <TabsContent value="products">
             <Products />
-          </TabsContent>
-
-          <TabsContent value="email-notifications">
-            <EmailNotifications />
           </TabsContent>
 
           {isAdmin && (

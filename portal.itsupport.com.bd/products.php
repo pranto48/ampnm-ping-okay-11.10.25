@@ -30,9 +30,9 @@ portal_header("Our Products - IT Support BD Portal");
                 <div class="glass-card p-6 max-w-md mx-auto">
                     <h3 class="text-2xl font-semibold text-white mb-4">Select Your AMPNM License</h3>
                     <form action="cart.php" method="POST" class="space-y-4">
-                        <div class="flex flex-col items-center">
+                        <div>
                             <label for="ampnm_product_select" class="block text-gray-200 text-sm font-bold mb-2">Choose License:</label>
-                            <select id="ampnm_product_select" name="product_id" class="form-glass-input w-64" required>
+                            <select id="ampnm_product_select" name="product_id" class="form-glass-input" required>
                                 <?php foreach ($category_products as $product): ?>
                                     <option value="<?= htmlspecialchars($product['id']) ?>">
                                         <?= htmlspecialchars($product['name']) ?> - $<?= htmlspecialchars(number_format($product['price'], 2)) ?>

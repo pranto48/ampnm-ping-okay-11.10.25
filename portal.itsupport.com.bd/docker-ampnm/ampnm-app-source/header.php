@@ -18,6 +18,45 @@ if (session_status() === PHP_SESSION_NONE) {
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="bg-slate-900 text-slate-300 min-h-screen">
-    <!-- Navigation is now handled by the React application (AppNavigation.tsx) -->
-    <!-- License status display is also handled by the React application -->
+    <nav class="bg-slate-800/50 backdrop-blur-lg shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="#/dashboard" class="flex items-center gap-2 text-white font-bold">
+                        <i class="fas fa-shield-halved text-cyan-400 text-2xl"></i>
+                        <span>AMPNM</span>
+                    </a>
+                </div>
+                <div class="hidden md:block">
+                    <div id="main-nav" class="ml-10 flex items-baseline space-x-1">
+                        <!-- Navigation links now point to the SPA routes -->
+                        <a href="#/dashboard" class="nav-link"><i class="fas fa-tachometer-alt fa-fw mr-2"></i>Dashboard</a>
+                        <a href="#/devices" class="nav-link"><i class="fas fa-server fa-fw mr-2"></i>Devices</a>
+                        <a href="#/ping" class="nav-link"><i class="fas fa-wifi fa-fw mr-2"></i>Browser Ping</a>
+                        <a href="#/server-ping" class="nav-link"><i class="fas fa-desktop fa-fw mr-2"></i>Server Ping</a>
+                        <a href="#/status" class="nav-link"><i class="fas fa-network-wired fa-fw mr-2"></i>Network Status</a>
+                        <a href="#/scanner" class="nav-link"><i class="fas fa-search fa-fw mr-2"></i>Network Scanner</a>
+                        <a href="#/history" class="nav-link"><i class="fas fa-history fa-fw mr-2"></i>Ping History</a>
+                        <a href="#/map" class="nav-link"><i class="fas fa-project-diagram fa-fw mr-2"></i>Network Map</a>
+                        <a href="#/license" class="nav-link"><i class="fas fa-key fa-fw mr-2"></i>License</a>
+                        <a href="#/products" class="nav-link"><i class="fas fa-box-open fa-fw mr-2"></i>Products</a>
+                        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                            <a href="#/users" class="nav-link"><i class="fas fa-users-cog fa-fw mr-2"></i>Users</a>
+                            <a href="#/maintenance" class="nav-link"><i class="fas fa-tools fa-fw mr-2"></i>Maintenance</a>
+                        <?php endif; ?>
+                        <a href="logout.php" class="nav-link"><i class="fas fa-sign-out-alt fa-fw mr-2"></i>Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <?php if (isset($_SESSION['license_status_code']) && ($_SESSION['license_status_code'] === 'grace_period' || $_SESSION['license_status_code'] === 'expired' || $_SESSION['license_status_code'] === 'error' || $_SESSION['license_status_code'] === 'in_use' || $_SESSION['license_status_code'] === 'disabled')): ?>
+        <div class="bg-red-600/20 border-b border-red-500 text-red-300 p-3 text-center text-sm font-medium">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <?= htmlspecialchars($_SESSION['license_message']) ?>
+            <?php if ($_SESSION['license_status_code'] !== 'disabled'): ?>
+                <a href="https://portal.itsupport.com.bd/products.php" target="_blank" class="underline ml-2 hover:text-red-100">Renew License</a>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
     <div class="page-content">

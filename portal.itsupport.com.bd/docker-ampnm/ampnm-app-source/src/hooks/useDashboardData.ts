@@ -42,8 +42,6 @@ export const useDashboardData = (): UseDashboardDataResult => {
     } catch (error) {
       showError("Failed to load maps from database.");
       console.error("Failed to load maps:", error);
-      // Crucial: If map loading fails, we still need to stop loading state.
-      // We handle the overall loading state in MainApp.tsx based on license/user role loading.
     }
   }, [currentMapId]);
 
