@@ -102,7 +102,7 @@ const MainApp = () => {
         license_status_code: "error",
       }));
     } finally {
-      setIsLicenseStatusLoading(false);
+      setIsLicenseStatusLoading(false); // Ensure loading state is reset
     }
   }, []);
 
@@ -115,12 +115,13 @@ const MainApp = () => {
         setUserRole(data.role);
       } else {
         setUserRole('user');
+        console.error("Failed to fetch user role: Response not OK", response.status);
       }
     } catch (error) {
       console.error("Failed to fetch user role:", error);
       setUserRole('user'); 
     } finally {
-      setIsUserRoleLoading(false);
+      setIsUserRoleLoading(false); // Ensure loading state is reset
     }
   }, []);
 
