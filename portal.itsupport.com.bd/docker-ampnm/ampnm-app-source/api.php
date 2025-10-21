@@ -15,30 +15,37 @@ $dashboardActions = ['get_dashboard_data'];
 $userActions = ['get_users', 'create_user', 'delete_user', 'update_user_role'];
 $logActions = ['get_status_logs'];
 $notificationActions = ['get_smtp_settings', 'save_smtp_settings', 'get_device_subscriptions', 'save_device_subscription', 'delete_device_subscription', 'get_all_devices_for_subscriptions'];
-$authActions = ['get_license_status', 'force_license_recheck', 'update_app_license_key'];
-$maintenanceActions = ['docker_update']; // NEW
+$authActions = ['get_license_status', 'force_license_recheck', 'update_app_license_key', 'get_user_info']; // Added get_user_info here
+$maintenanceActions = ['docker_update'];
 
-if (in_array($action, $pingActions)) {
-    require __DIR__ . '/api/handlers/ping_handler.php';
-} elseif (in_array($action, $deviceActions)) {
-    require __DIR__ . '/api/handlers/device_handler.php';
-} elseif (in_array($action, $mapActions)) {
-    require __DIR__ . '/api/handlers/map_handler.php';
-} elseif (in_array($action, $dashboardActions)) {
-    require __DIR__ . '/api/handlers/dashboard_handler.php';
-} elseif (in_array($action, $userActions)) {
-    require __DIR__ . '/api/handlers/user_handler.php';
-} elseif (in_array($action, $logActions)) {
-    require __DIR__ . '/api/handlers/log_handler.php';
-} elseif (in_array($action, $notificationActions)) {
-    require __DIR__ . '/api/handlers/notification_handler.php';
-} elseif (in_array($action, $authActions)) {
-    require __DIR__ . '/api/handlers/auth_handler.php';
-} elseif (in_array($action, $maintenanceActions)) { // NEW
-    require __DIR__ . '/api/handlers/maintenance_handler.php';
-} elseif ($action === 'health') {
-    echo json_encode(['status' => 'ok', 'timestamp' => date('c')]);
-} else {
-    http_response_code(404);
-    echo json_encode(['error' => 'Invalid action']);
+try {
+    if (in_array($action, $pingActions)) {
+        require __DIR__ . '/api/handlers/ping_handler.php';
+    } elseif (in_array($action, $deviceActions)) {
+        require __DIR__ . '/api/handlers/device_handler.php';
+    } elseif (in_array($action, $mapActions)) {
+        require __DIR__ . '/api/handlers/map_handler.php';
+    } elseif (in_array($action, $dashboardActions)) {
+        require __DIR__ . '/api/handlers/dashboard_handler.php';
+    } elseif (in_array($action, $userActions)) {
+        require __DIR__ . '/api/handlers/user_handler.php';
+    } elseif (in_array($action, $logActions)) {
+        require __DIR__ . '/api/handlers/log_handler.php';
+    } elseif (in_array($action, $notificationActions)) {
+        require __DIR__ . '/api/handlers/notification_handler.php';
+    } elseif (in_array($action, $authActions)) {
+        require __DIR__ . '/api/handlers/auth_handler.php';
+    } elseif (in_array($action, $maintenanceActions)) {
+        require __DIR__ . '/api/handlers/maintenance_handler.php';
+    } elseif ($action === 'health') {
+        echo json_encode(['status' => 'ok', 'timestamp' => date('c')]);
+    } else {
+        http_response_code(404);
+        echo json_encode(['error' => 'Invalid API action']);
+    }
+} catch (Throwable $e) {
+    // Catch any uncaught exceptions or errors and return a JSON error response
+    http_response_code(500);
+    error_log("API Error for action '{$action}': " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
+    echo json_encode(['error' => 'An unexpected server error occurred.', 'details' => $e->getMessage()]);
 }
