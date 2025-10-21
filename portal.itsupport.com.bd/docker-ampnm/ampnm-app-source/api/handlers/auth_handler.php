@@ -5,7 +5,29 @@
 switch ($action) {
     case 'get_license_status':
         // This information is already set in the session by auth_check.php
-        // It should NOT trigger revalidateLicenseSession here to avoid blocking.
+        // However, if the status is 'unknown' or stale, we need to force a revalidation.
+        
+        $last_check_timestamp = getLastLicenseCheck();
+        $recheck_interval_seconds = 300; // Recheck every 5 minutes
+
+        // Force recheck if status is unknown, or if last check was too long ago
+        if (
+            ($_SESSION['license_status_code'] ?? 'unknown') === 'unknown' ||
+            ($last_check_timestamp === null || (time() - strtotime($last_check_timestamp)) > $recheck_interval_seconds)
+        ) {
+            // Ensure we have the necessary data before revalidating
+            $app_license_key_from_db = getAppLicenseKey();
+            $installation_id_from_db = getInstallationId();
+
+            if (!empty($app_license_key_from_db) && !empty($installation_id_from_db)) {
+                revalidateLicenseSession($pdo, $_SESSION['user_id']);
+            } else {
+                // If key or installation ID is missing, set status to disabled and message
+                $_SESSION['license_message'] = 'Application license key or installation ID not configured.';
+                $_SESSION['license_status_code'] = 'disabled';
+            }
+        }
+
         echo json_encode([
             'app_license_key' => getAppLicenseKey(),
             'can_add_device' => $_SESSION['can_add_device'] ?? false,
